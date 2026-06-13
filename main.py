@@ -1,5 +1,4 @@
-
-     import streamlit as st
+import streamlit as st
 import ccxt
 import pandas as pd
 import numpy as np
@@ -216,7 +215,7 @@ def analisar_confluencia_smc_total(df):
         justificativa = "Rastreador SMC aponta Distribuição Institucional e quebra estrutural para baixo. Presença de Bearish FVG ativo e fluxo de capital em forte declínio."
         return "🔴 VENDA FORTE (SMC ALINHADO)", "#ff3333", justificativa
     else:
-        justificativa = f"Estrutura do Smart Money travada em faixa de liquidez (Pontos Alta: {pontos_alta} / Baixa: {pontos_baixa}). Osciladores operando em compressão lateral."
+        justificativa = f"Estrutura do Smart Money travada em faixa de liquidez (Pontos Alta: {pontos_alta} / Baixa: {pontos_baixa}). Osciladores operando em micro-compressão."
         return "🟡 NEUTRO (AGUARDAR SMC)", "#ffcc00", justificativa
 
 # --- CARREGAMENTO INTEGRADO DE DADOS ---
@@ -269,8 +268,8 @@ def obter_variacao_24h_precisa(simbolo_id):
     try:
         dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
         if dados_24h and len(dados_24h) >= 2:
-            preco_abertura_dia = dados_24h[-1][1] # Abertura do candle de hoje
-            preco_atual = dados_24h[-1][4]       # Último fechamento (Preço Spot corrente)
+            preco_abertura_dia = dados_24h[-1][1] 
+            preco_atual = dados_24h[-1][4]       
             
             if preco_abertura_dia > 0:
                 variacao_real = ((preco_atual - preco_abertura_dia) / preco_abertura_dia) * 100
@@ -311,7 +310,6 @@ if st.session_state["execucao_inicializada"]:
         # Cálculo de Variação Real e Incontestável da Exchange
         variacao_real_exchange = obter_variacao_24h_precisa(simbolo_id)
         if variacao_real_exchange is None:
-            # Fallback matemático seguro caso o endpoint '1d' sofra rate limit
             variacao_real_exchange = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
 
         recomendacao, cor_sinal, analise_justificada = analisar_confluencia_smc_total(df_dados)
@@ -356,7 +354,7 @@ if st.session_state["execucao_inicializada"]:
             })
             st.table(df_tabela_2)
 
-        # SEÇÃO 4: MULTI-SUBPLOTS GRÁFICOS AVANÇADOS
+        # SEÇÃO 4: MULTI-SUBPLOTS GRÁFICOS AVANÇADOS (Correção dos parâmetros de largura efetuada)
         fig = make_subplots(
             rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06, 
             subplot_titles=(f'Candlesticks + Indicadores AlphaTrend/SSL/ATR - {simbolo_id}', 'RSI & Stochastic RSI', 'Fluxo de Dinheiro Permanente (Chaikin Money Flow)'),
@@ -378,7 +376,7 @@ if st.session_state["execucao_inicializada"]:
         fig.add_hline(y=0, line_dash="solid", line_color="white", row=3, col=1)
 
         fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         # --- SEÇÃO 5: LEGENDAS DINÂMICAS EXCLUSIVAS (SEM VOLUME HISTÓRICO) ---
         st.markdown("---")
