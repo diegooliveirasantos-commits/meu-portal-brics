@@ -6,6 +6,54 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import time
 
+import math
+
+# ─────────────────────────────────────────────────────────────
+# FORMATACAO DE PRECO — notacao compacta para valores micro
+# ─────────────────────────────────────────────────────────────
+# Logica:
+#   Se preco < 0.001 -> contar zeros entre "0." e o 1o digito significativo
+#   Exibir: "0.0{N}x{digitos significativos}"
+#   Exemplos:
+#     0.0000000789 -> 7 zeros -> "0.07x789"
+#     0.0000765    -> 4 zeros -> "0.04x765"
+#   Se preco >= 0.001 -> formatacao decimal convencional
+#
+def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
+    """
+    Formatacao inteligente de precos de criptomoedas.
+    Valores micro (< 0.001) usam notacao compacta: 0.0{N_zeros}x{digitos_significativos}
+    Exemplos:
+      0.0000000789 -> "$ 0.07x789"
+      0.0000765    -> "$ 0.04x765"
+    Valores normais usam formatacao decimal convencional.
+    """
+    import math
+    from decimal import Decimal
+    if valor is None or (isinstance(valor, float) and math.isnan(valor)):
+        return f"{prefixo}—"
+    if valor <= 0:
+        return f"{prefixo}{valor}"
+    if valor < 0.001:
+        d = Decimal(str(valor))
+        s = f"{d:.20f}".rstrip("0")
+        partes = s.split(".")
+        if len(partes) != 2:
+            return f"{prefixo}{valor:.8f}"
+        parte_decimal = partes[1]
+        n_zeros = len(parte_decimal) - len(parte_decimal.lstrip("0"))
+        digitos_sig = parte_decimal.lstrip("0")
+        return f"{prefixo}0.0{n_zeros}x{digitos_sig}"
+    elif valor < 1:
+        return f"{prefixo}{valor:.6f}"
+    elif valor < 10:
+        return f"{prefixo}{valor:.4f}"
+    elif valor < 1000:
+        return f"{prefixo}{valor:,.2f}"
+    else:
+        return f"{prefixo}{valor:,.2f}"
+
+
 # Configuração da Página do Streamlit
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -365,9 +413,6 @@ def calcular_wavetrend_oscillator(df, n1=10, n2=21):
     return df
 
 def calcular_mfi(df, periodo=14):
-    """
-    CORRIGIDO: versão completamente vetorizada (era O(n) com loop Python).
-    """
     tp  = (df['high'] + df['low'] + df['close']) / 3
     rmf = tp * df['volume']
     tp_shift = tp.shift(1)
@@ -378,13 +423,8 @@ def calcular_mfi(df, periodo=14):
     return 100 - (100 / (1 + pos_sum / neg_sum))
 
 def calcular_ssl_hybrid(df, periodo=20):
-    """
-    CORRIGIDO: substituído df.apply+get_loc (O(n²)) por np.where vetorizado.
-    """
     sma_high = df['high'].rolling(window=periodo).mean()
     sma_low  = df['low'].rolling(window=periodo).mean()
-
-    # Direção via loop simples em arrays numpy (necessário pela lógica stateful)
     close_arr  = df['close'].values
     sma_h_arr  = sma_high.values
     sma_l_arr  = sma_low.values
@@ -397,9 +437,7 @@ def calcular_ssl_hybrid(df, periodo=20):
         if   close_arr[i] > sma_h_arr[i]: current = 1
         elif close_arr[i] < sma_l_arr[i]: current = -1
         ssl_dir[i] = current
-
     df['ssl_dir']      = ssl_dir
-    # CORRIGIDO: np.where vetorizado em vez de apply+get_loc
     df['SSL_Baseline'] = np.where(df['ssl_dir'] == 1, sma_high, sma_low)
     return df
 
@@ -411,12 +449,10 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
         (low  - close.shift(1)).abs()
     ], axis=1).max(axis=1)
     atr = tr.ewm(span=periodo, adjust=False).mean()
-
     atr_stop  = np.zeros(len(df))
-    tendencia = np.zeros(len(df), dtype=int)   # CORRIGIDO: dtype=int explícito
+    tendencia = np.zeros(len(df), dtype=int)
     close_arr = close.values
     atr_arr   = atr.values
-
     for i in range(1, len(df)):
         if i == 1:
             atr_stop[i]  = close_arr[i] - (atr_arr[i] * multiplicador)
@@ -436,15 +472,11 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
             else:
                 tendencia[i] = -1
                 atr_stop[i]  = min(atr_stop[i-1], close_arr[i] + (atr_arr[i] * multiplicador))
-
     df['ATR_Stop'] = atr_stop
     df['atr_dir']  = tendencia
     return df
 
 def calcular_alpha_trend(df, periodo=14, coeff=1.0):
-    """
-    CORRIGIDO: reutiliza df['MFI'] já calculado em vez de recalcular internamente.
-    """
     high, low, close = df['high'], df['low'], df['close']
     tr  = pd.concat([
         high - low,
@@ -468,33 +500,23 @@ def calcular_alpha_trend(df, periodo=14, coeff=1.0):
     return df
 
 def mapear_estrutura_smc(df):
-    """
-    CORRIGIDO: FVG agora acumula sinal (o mais recente prevalece mas sem silenciar gaps).
-    """
     fechamentos = df['close'].values
     maximas     = df['high'].values
     minimas     = df['low'].values
-
-    bos_detectado  = 0
+    bos_detectado   = 0
     choch_detectado = 0
-    fvg_pendente   = 0
-
-    # FVG: verifica os dois gaps mais recentes
+    fvg_pendente    = 0
     for i in range(len(df) - 3, len(df) - 1):
         if minimas[i+1] > maximas[i-1]:
-            fvg_pendente = 1   # último gap prevalece
+            fvg_pendente = 1
         elif maximas[i+1] < minimas[i-1]:
             fvg_pendente = -1
-
     topo_local  = np.max(fechamentos[-15:-2])
     fundo_local = np.min(fechamentos[-15:-2])
-
     if   fechamentos[-1] > topo_local:  bos_detectado  = 1
     elif fechamentos[-1] < fundo_local: bos_detectado  = -1
-
     if   fechamentos[-1] > topo_local  and fechamentos[-2] <= topo_local:  choch_detectado = 1
     elif fechamentos[-1] < fundo_local and fechamentos[-2] >= fundo_local: choch_detectado = -1
-
     df['SMC_BOS']   = bos_detectado
     df['SMC_CHOCH'] = choch_detectado
     df['SMC_FVG']   = fvg_pendente
@@ -515,30 +537,24 @@ def calcular_retracao_fibonacci(df):
     }
 
 # ─────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS  (sem cache para modo ao vivo)
+# CARREGAMENTO DE DADOS
 # ─────────────────────────────────────────────────────────────
 
 def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
-    """
-    CORRIGIDO: @st.cache_data removido desta função.
-    Com modo ao vivo o cache congelaria os dados indefinidamente.
-    O controle de frequência é feito pelo st.rerun() + time.sleep() no bloco principal.
-    """
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
         if not velas:
             return None
         df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-
         df['RSI_14'] = calcular_rsi(df, 'close', 14)
         df = calcular_stoch_rsi(df)
         macd, sinal, hist = calcular_macd(df, 'close')
         df['MACD'], df['MACD_SIGNAL'], df['MACD_HIST'] = macd, sinal, hist
-        df['MFI'] = calcular_mfi(df)           # MFI calculado aqui 1x
+        df['MFI'] = calcular_mfi(df)
         df = calcular_ssl_hybrid(df)
         df = calcular_atr_stop(df)
-        df = calcular_alpha_trend(df)           # reutiliza df['MFI']
+        df = calcular_alpha_trend(df)
         df = calcular_chaikin_money_flow(df)
         df = calcular_wavetrend_oscillator(df)
         df = mapear_estrutura_smc(df)
@@ -548,15 +564,11 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         return None
 
 def obter_variacao_24h_precisa(simbolo_id):
-    """
-    CORRIGIDO: variação 24h = (close_hoje - close_ontem) / close_ontem.
-    Era calculado como (close - open) / open do candle atual (variação intraday).
-    """
     try:
         dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
         if dados_24h and len(dados_24h) >= 2:
-            close_hoje   = dados_24h[-1][4]
-            close_ontem  = dados_24h[-2][4]
+            close_hoje  = dados_24h[-1][4]
+            close_ontem = dados_24h[-2][4]
             return ((close_hoje - close_ontem) / close_ontem) * 100
     except Exception:
         pass
@@ -568,15 +580,13 @@ def obter_variacao_24h_precisa(simbolo_id):
 
 def analisar_confluencia_smc_total(df, fib_niveis):
     u = df.iloc[-1]
-    preco_atual = u['close']
-    pontos_alta = 0.0
+    preco_atual  = u['close']
+    pontos_alta  = 0.0
     pontos_baixa = 0.0
-
     if u['SMC_CHOCH'] == 1  or u['SMC_BOS'] == 1:  pontos_alta  += 3
     if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1: pontos_baixa += 3
     if u['SMC_FVG'] == 1:  pontos_alta  += 1
     if u['SMC_FVG'] == -1: pontos_baixa += 1
-
     if preco_atual <= fib_niveis['fib_618']:
         pontos_alta  += 2.0
         contexto_fib  = txt["ctx_desconto"]
@@ -585,14 +595,12 @@ def analisar_confluencia_smc_total(df, fib_niveis):
         contexto_fib  = txt["ctx_premium"]
     else:
         contexto_fib  = txt["ctx_neutro"]
-
-    if u['CMF'] > 0:       pontos_alta  += 1.5
-    else:                  pontos_baixa += 1.5
+    if u['CMF'] > 0:        pontos_alta  += 1.5
+    else:                   pontos_baixa += 1.5
     if u['WT1'] > u['WT2']: pontos_alta  += 1
     else:                   pontos_baixa += 1
-    if u['MACD_HIST'] > 0: pontos_alta  += 1
-    else:                  pontos_baixa += 1
-
+    if u['MACD_HIST'] > 0:  pontos_alta  += 1
+    else:                   pontos_baixa += 1
     if pontos_alta >= 7.5:
         return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Structure.", pontos_alta, pontos_baixa
     elif pontos_baixa >= 7.5:
@@ -617,41 +625,28 @@ def construir_grafico(df, fib_niveis, simbolo_id):
             "CMF / WaveTrend"
         )
     )
-
-    # ── Candlestick ──────────────────────────────────────────
     fig.add_trace(go.Candlestick(
         x=df['time'], open=df['open'], high=df['high'],
         low=df['low'], close=df['close'],
         name="OHLC", increasing_line_color='#00cc66',
         decreasing_line_color='#ff3333'
     ), row=1, col=1)
-
-    # ATR Stop
     atr_colors = df['atr_dir'].apply(lambda d: '#00cc66' if d == 1 else '#ff3333')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['ATR_Stop'], mode='markers',
-        marker=dict(color=atr_colors, size=3),
-        name="ATR Stop"
+        marker=dict(color=atr_colors, size=3), name="ATR Stop"
     ), row=1, col=1)
-
-    # SSL Baseline
     ssl_colors = df['ssl_dir'].apply(lambda d: '#00aaff' if d == 1 else '#ff6600')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['SSL_Baseline'], mode='lines',
-        line=dict(width=1.5), marker=dict(color=ssl_colors),
-        name="SSL Hybrid"
+        line=dict(width=1.5), marker=dict(color=ssl_colors), name="SSL Hybrid"
     ), row=1, col=1)
-
-    # Alpha Trend
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['AT_K1'], mode='lines',
-        line=dict(color='#aa44ff', width=1, dash='dot'),
-        name="Alpha Trend"
+        line=dict(color='#aa44ff', width=1, dash='dot'), name="Alpha Trend"
     ), row=1, col=1)
-
-    # Fibonacci
     fib_cores = {
-        'fib_0': ('#ff4444', '0.0%'), 'fib_236': ('#ffaa00', '23.6%'),
+        'fib_0':   ('#ff4444', '0.0%'),  'fib_236': ('#ffaa00', '23.6%'),
         'fib_382': ('#ffdd00', '38.2%'), 'fib_500': ('#aaaaaa', '50.0%'),
         'fib_618': ('#00cc66', '61.8%'), 'fib_786': ('#00aaff', '78.6%'),
         'fib_100': ('#4444ff', '100%')
@@ -662,51 +657,22 @@ def construir_grafico(df, fib_niveis, simbolo_id):
             line_width=1, annotation_text=label,
             annotation_position="right", row=1, col=1
         )
-
-    # ── MACD ─────────────────────────────────────────────────
     hist_colors = df['MACD_HIST'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
-    fig.add_trace(go.Bar(
-        x=df['time'], y=df['MACD_HIST'],
-        marker_color=hist_colors, name="MACD Hist"
-    ), row=2, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['MACD'], line=dict(color='#00aaff', width=1), name="MACD"
-    ), row=2, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['MACD_SIGNAL'], line=dict(color='#ff6600', width=1), name="Signal"
-    ), row=2, col=1)
-
-    # ── RSI / Stoch RSI ──────────────────────────────────────
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['RSI_14'], line=dict(color='#ffdd00', width=1.5), name="RSI 14"
-    ), row=3, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['StochRSI_K'], line=dict(color='#00cc66', width=1), name="Stoch K"
-    ), row=3, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['StochRSI_D'], line=dict(color='#ff4444', width=1), name="Stoch D"
-    ), row=3, col=1)
+    fig.add_trace(go.Bar(x=df['time'], y=df['MACD_HIST'], marker_color=hist_colors, name="MACD Hist"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['MACD'], line=dict(color='#00aaff', width=1), name="MACD"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['MACD_SIGNAL'], line=dict(color='#ff6600', width=1), name="Signal"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['RSI_14'], line=dict(color='#ffdd00', width=1.5), name="RSI 14"), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['StochRSI_K'], line=dict(color='#00cc66', width=1), name="Stoch K"), row=3, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['StochRSI_D'], line=dict(color='#ff4444', width=1), name="Stoch D"), row=3, col=1)
     fig.add_hline(y=70, line_dash="dash", line_color="red",   line_width=0.8, row=3, col=1)
     fig.add_hline(y=30, line_dash="dash", line_color="green", line_width=0.8, row=3, col=1)
-
-    # ── CMF / WaveTrend ──────────────────────────────────────
     cmf_colors = df['CMF'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
-    fig.add_trace(go.Bar(
-        x=df['time'], y=df['CMF'], marker_color=cmf_colors, name="CMF"
-    ), row=4, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['WT1'], line=dict(color='#00aaff', width=1), name="WT1"
-    ), row=4, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['WT2'], line=dict(color='#ffaa00', width=1), name="WT2"
-    ), row=4, col=1)
-
+    fig.add_trace(go.Bar(x=df['time'], y=df['CMF'], marker_color=cmf_colors, name="CMF"), row=4, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['WT1'], line=dict(color='#00aaff', width=1), name="WT1"), row=4, col=1)
+    fig.add_trace(go.Scatter(x=df['time'], y=df['WT2'], line=dict(color='#ffaa00', width=1), name="WT2"), row=4, col=1)
     fig.update_layout(
-        height=800,
-        paper_bgcolor='#0e1117',
-        plot_bgcolor='#0e1117',
-        font=dict(color='#ffffff', size=11),
-        xaxis_rangeslider_visible=False,
+        height=800, paper_bgcolor='#0e1117', plot_bgcolor='#0e1117',
+        font=dict(color='#ffffff', size=11), xaxis_rangeslider_visible=False,
         legend=dict(orientation='h', y=1.02, bgcolor='rgba(0,0,0,0)'),
         margin=dict(l=60, r=80, t=40, b=20)
     )
@@ -738,50 +704,25 @@ def renderizar_matriz(df, txt):
             &nbsp;<span style='color:#ccc;font-size:12px;'>{label}</span>"""
 
     indicadores = []
-
-    # BOS
     bos = int(u['SMC_BOS'])
     if bos != 0:
         indicadores.append(badge(bos == 1, txt["bos"], txt["bos"]))
     else:
         indicadores.append(neutro_badge(txt["bos"]))
-
-    # CHoCH
     choch = int(u['SMC_CHOCH'])
     if choch != 0:
         indicadores.append(badge(choch == 1, txt["choch"], txt["choch"]))
     else:
         indicadores.append(neutro_badge(txt["choch"]))
-
-    # FVG
     fvg = int(u['SMC_FVG'])
     if fvg != 0:
         indicadores.append(badge(fvg == 1, txt["fvg"], txt["fvg"]))
     else:
         indicadores.append(neutro_badge(txt["fvg"]))
-
-    # SSL
     indicadores.append(badge(u['ssl_dir'] == 1, txt["ssl"], txt["ssl"]))
-
-    # MACD
-    indicadores.append(badge(
-        u['MACD_HIST'] > 0, txt["macd_hist"], txt["macd_hist"],
-        f"({u['MACD_HIST']:+.4f})"
-    ))
-
-    # CMF
-    indicadores.append(badge(
-        u['CMF'] > 0, txt["cmf"], txt["cmf"],
-        f"({u['CMF']:+.4f})"
-    ))
-
-    # WaveTrend
-    indicadores.append(badge(
-        u['WT1'] > u['WT2'], txt["wt"], txt["wt"],
-        f"(WT1={u['WT1']:.1f} / WT2={u['WT2']:.1f})"
-    ))
-
-    # RSI
+    indicadores.append(badge(u['MACD_HIST'] > 0, txt["macd_hist"], txt["macd_hist"], f"({u['MACD_HIST']:+.4f})"))
+    indicadores.append(badge(u['CMF'] > 0, txt["cmf"], txt["cmf"], f"({u['CMF']:+.4f})"))
+    indicadores.append(badge(u['WT1'] > u['WT2'], txt["wt"], txt["wt"], f"(WT1={u['WT1']:.1f} / WT2={u['WT2']:.1f})"))
     rsi_val = u['RSI_14']
     if rsi_val >= 70:
         indicadores.append(badge(False, txt["rsi"], txt["rsi"], f"({rsi_val:.1f} — Sobrecomprado)"))
@@ -789,21 +730,9 @@ def renderizar_matriz(df, txt):
         indicadores.append(badge(True, txt["rsi"], txt["rsi"], f"({rsi_val:.1f} — Sobrevendido)"))
     else:
         indicadores.append(neutro_badge(f"{txt['rsi']} ({rsi_val:.1f})"))
-
-    # Stoch RSI K/D
-    indicadores.append(badge(
-        u['StochRSI_K'] > u['StochRSI_D'],
-        txt["stoch_rsi_k"], txt["stoch_rsi_k"],
-        f"(K={u['StochRSI_K']:.1f} / D={u['StochRSI_D']:.1f})"
-    ))
-
-    # MFI
+    indicadores.append(badge(u['StochRSI_K'] > u['StochRSI_D'], txt["stoch_rsi_k"], txt["stoch_rsi_k"], f"(K={u['StochRSI_K']:.1f} / D={u['StochRSI_D']:.1f})"))
     mfi_val = u['MFI']
-    indicadores.append(badge(
-        mfi_val >= 50, txt["mfi"], txt["mfi"], f"({mfi_val:.1f})"
-    ))
-
-    # Renderiza em 2 colunas
+    indicadores.append(badge(mfi_val >= 50, txt["mfi"], txt["mfi"], f"({mfi_val:.1f})"))
     cols = st.columns(2)
     for i, ind in enumerate(indicadores):
         with cols[i % 2]:
@@ -819,25 +748,18 @@ def renderizar_fibonacci(df, fib_niveis, txt):
     preco_atual = df.iloc[-1]['close']
     chaves = ['fib_0', 'fib_236', 'fib_382', 'fib_500', 'fib_618', 'fib_786', 'fib_100']
     fib_df = pd.DataFrame({
-        "Nível Fibonacci":     txt["fib_nomes"],
-        "Posição de Mercado":  txt["fib_posicoes"],
-        "Preço (USDT)":        [f"$ {fib_niveis[k]:,.4f}" for k in chaves],
-        "Δ Preço Atual":       [f"{((fib_niveis[k] - preco_atual) / preco_atual * 100):+.2f}%" for k in chaves],
+        "Nível Fibonacci":    txt["fib_nomes"],
+        "Posição de Mercado": txt["fib_posicoes"],
+        "Preço (USDT)":       [formatar_preco(fib_niveis[k]) for k in chaves],
+        "Δ Preço Atual":      [f"{((fib_niveis[k] - preco_atual) / preco_atual * 100):+.2f}%" for k in chaves],
     })
-    # Destaca a linha mais próxima do preço atual
     distancias = [abs(fib_niveis[k] - preco_atual) for k in chaves]
     idx_mais_proximo = int(np.argmin(distancias))
-
     def highlight_row(row):
         if row.name == idx_mais_proximo:
             return ['background-color: #ffffff18; font-weight: bold'] * len(row)
         return [''] * len(row)
-
-    st.dataframe(
-        fib_df.style.apply(highlight_row, axis=1),
-        use_container_width=True,
-        hide_index=True
-    )
+    st.dataframe(fib_df.style.apply(highlight_row, axis=1), use_container_width=True, hide_index=True)
 
 # ─────────────────────────────────────────────────────────────
 # INTERFACE PRINCIPAL
@@ -873,13 +795,11 @@ timeframe  = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()),
 st.sidebar.caption("⚠️ Gate.io não suporta 12h nem 1M (mensal). Todos os intervalos listados são os oficialmente disponíveis na exchange.")
 
 st.sidebar.markdown("---")
-modo_vivo        = st.sidebar.toggle(txt["modo_vivo"], value=True)
+modo_vivo         = st.sidebar.toggle(txt["modo_vivo"], value=True)
 intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
 
-# Placeholder de status ao vivo
 status_placeholder = st.empty()
 
-# ── Carregamento de dados ─────────────────────────────────────
 df_dados = carregar_dados_bricsvault_smc(simbolo_id, timeframe)
 
 if df_dados is None or df_dados.empty:
@@ -893,7 +813,6 @@ else:
     recomendacao, cor_sinal, analise_justificada, pontos_alta, pontos_baixa = \
         analisar_confluencia_smc_total(df_dados, fib_niveis)
 
-    # ── Banner de sinal ───────────────────────────────────────
     st.markdown(f"""
     <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
                 border:2px solid {cor_sinal};margin-bottom:20px;">
@@ -902,24 +821,19 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Métricas ──────────────────────────────────────────────
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric(txt["preco_spot"],   f"$ {preco_atual:,.4f}")
-    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
-    m3.metric(txt["stop_atr"],     f"$ {ultimo_reg['ATR_Stop']:,.4f}")
+    m1.metric(txt["preco_spot"],    formatar_preco(preco_atual))
+    m2.metric(txt["variacao_24h"],  f"{variacao_24h:+.2f}%")
+    m3.metric(txt["stop_atr"],      formatar_preco(ultimo_reg['ATR_Stop']))
     m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
     m5.metric(txt["pontos_venda"],  f"{pontos_baixa:.1f}")
 
     st.markdown("---")
-
-    # ── Gráfico ───────────────────────────────────────────────
     st.markdown(f"### {txt['grafico_titulo']}")
     fig = construir_grafico(df_dados, fib_niveis, simbolo_id)
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-
-    # ── Fibonacci + Matriz em colunas ─────────────────────────
     col_fib, col_mat = st.columns([1, 1])
     with col_fib:
         renderizar_fibonacci(df_dados, fib_niveis, txt)
@@ -927,8 +841,6 @@ else:
         renderizar_matriz(df_dados, txt)
 
     st.markdown("---")
-
-    # ── Status ao vivo ────────────────────────────────────────
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     if modo_vivo:
         status_placeholder.info(
