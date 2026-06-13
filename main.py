@@ -97,30 +97,64 @@ def obter_todos_pares_usdt():
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-# Mapeamento CoinGecko para Market Cap
-MAPEAMENTO_COINGECKO = {
-    'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple',
-    'BNB': 'binancecoin', 'ADA': 'cardano', 'DOGE': 'dogecoin', 'DOT': 'polkadot',
-    'MATIC': 'matic-network', 'AVAX': 'avalanche-2', 'LINK': 'chainlink',
-    'UNI': 'uniswap', 'LTC': 'litecoin', 'ATOM': 'cosmos', 'TRX': 'tron',
-    'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'OP': 'optimism',
-    'SUI': 'sui', 'PEPE': 'pepe', 'SHIB': 'shiba-inu', 'BONK': 'bonk',
-    'WIF': 'dogwifcoin', 'JUP': 'jupiter-exchange-solana',
-}
-
+# Função aprimorada para obter Market Cap
 @st.cache_data(ttl=300)
 def obter_market_cap_para_simbolo(simbolo_usdt):
+    """
+    Obtém o market cap usando a API da CoinGecko.
+    Primeiro tenta pelo nome da moeda, depois faz uma busca geral.
+    """
     try:
-        moeda_base = simbolo_usdt.split('/')[0]
-        coin_id = MAPEAMENTO_COINGECKO.get(moeda_base)
-        if coin_id:
-            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                return data['market_data']['market_cap']['usd']
+        moeda_base = simbolo_usdt.split('/')[0].lower()
+        
+        # Método 1: Buscar lista de moedas e encontrar o ID correto
+        url_lista = "https://api.coingecko.com/api/v3/coins/list"
+        response_lista = requests.get(url_lista, timeout=10)
+        
+        if response_lista.status_code == 200:
+            lista_moedas = response_lista.json()
+            
+            # Procurar pelo símbolo exato
+            coin_id = None
+            for moeda in lista_moedas:
+                if moeda['symbol'].lower() == moeda_base:
+                    coin_id = moeda['id']
+                    break
+            
+            if coin_id:
+                # Método 2: Obter dados detalhados da moeda
+                url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+                response_dados = requests.get(url_dados, timeout=10)
+                
+                if response_dados.status_code == 200:
+                    dados = response_dados.json()
+                    market_cap = dados.get('market_data', {}).get('market_cap', {}).get('usd')
+                    if market_cap:
+                        return market_cap
+        
+        # Método 3: Tentar busca direta por symbol
+        url_busca = f"https://api.coingecko.com/api/v3/search?query={moeda_base}"
+        response_busca = requests.get(url_busca, timeout=10)
+        
+        if response_busca.status_code == 200:
+            dados_busca = response_busca.json()
+            coins = dados_busca.get('coins', [])
+            
+            for coin in coins:
+                if coin['symbol'].lower() == moeda_base:
+                    coin_id = coin['id']
+                    url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+                    response_dados = requests.get(url_dados, timeout=10)
+                    
+                    if response_dados.status_code == 200:
+                        dados = response_dados.json()
+                        market_cap = dados.get('market_data', {}).get('market_cap', {}).get('usd')
+                        if market_cap:
+                            return market_cap
+        
         return None
-    except Exception:
+        
+    except Exception as e:
         return None
 
 # Indicadores
@@ -397,7 +431,10 @@ else:
     preco_atual = ultimo_reg['close']
     fib_niveis = calcular_retracao_fibonacci(df_dados)
     variacao_24h = obter_variacao_24h(simbolo_id)
-    market_cap = obter_market_cap_para_simbolo(simbolo_id)
+    
+    # Mostrar spinner enquanto carrega o market cap
+    with st.spinner('Carregando Market Cap...'):
+        market_cap = obter_market_cap_para_simbolo(simbolo_id)
     
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis)
     
