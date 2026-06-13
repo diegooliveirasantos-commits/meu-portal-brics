@@ -140,9 +140,9 @@ intervalos = {
 intervalo_escolhido = st.sidebar.selectbox("Tempo Gráfico:", list(intervalos.keys()))
 timeframe = intervalos[intervalo_escolhido]
 
-# BOTÃO EXECUTAR ANÁLISE (GO)
+# BOTÃO EXECUTAR ANÁLISE (GO) - Corrigido removendo o width inválido e usando use_container_width conforme a versão 1.58
 st.sidebar.markdown("---")
-executar_botao = st.sidebar.button("🚀 EXECUTAR ANÁLISE (GO)", width=None)
+executar_botao = st.sidebar.button("🚀 EXECUTAR ANÁLISE (GO)", use_container_width=True)
 
 # Armazenar estado para o ciclo de renderização inicial
 if "analise_ativa" not in st.session_state:
@@ -211,18 +211,19 @@ if st.session_state["analise_ativa"]:
         fig.add_trace(go.Bar(x=df_dados['time'], y=df_dados['MACD_HIST'], name="Hist MACD", marker_color='cyan'), row=3, col=1)
 
         fig.update_layout(height=700, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
-        st.plotly_chart(fig, width='stretch')
+        st.plotly_chart(fig, use_container_width=True)
 
         # SEÇÃO 5: TABELA DE AUDITORIA ATUALIZÁVEL E DINÂMICA
         st.markdown("### 📋 Tabela Dinâmica de Transações e Fechamentos Recentes")
         tabela_viva = df_dados.tail(15)[['time', 'open', 'high', 'low', 'close', 'volume', 'RSI_14']].sort_values(by='time', ascending=False)
-        st.dataframe(tabela_viva, width='stretch')
+        st.dataframe(tabela_viva, use_container_width=True)
 
         # Forçador de atualização reativa em tempo real na tela do Streamlit
         st.markdown("---")
-        if st.button("🔄 Sincronizar e Atualizar Mercado Agora", width='stretch'):
+        if st.button("🔄 Sincronizar e Atualizar Mercado Agora", use_container_width=True):
             st.rerun()
     else:
         st.error("Não foi possível carregar os dados. Mude o ativo ou tente novamente.")
 else:
     st.info("🎯 Configure o Ativo e o Tempo Gráfico na barra lateral e clique em '🚀 EXECUTAR ANÁLISE (GO)' para iniciar o monitoramento ao vivo.")
+          
