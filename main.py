@@ -1,27 +1,3 @@
-Olá! Analisei os logs e o seu código com atenção. A mensagem de erro não está nos logs que você forneceu, mas posso identificar vários problemas no código **atual** e no **antigo** que impedem o site de funcionar corretamente e de mostrar o Market Cap.
-
-O problema principal não é um erro de sintaxe, mas sim **conceitual e de lógica**, tanto na construção do código quanto na expectativa de funcionalidade. Vamos por partes:
-
-1.  **O "Erro" do Market Cap**: Nem no código novo, nem no antigo, existe qualquer chamada de API ou cálculo para obter o Market Cap (Capitalização de Mercado). O Market Cap é um dado que a API da Gate.io (via CCXT) **não fornece diretamente** no endpoint de ticker que você está usando (`fetch_ohlcv`). Portanto, a informação não aparece porque você nunca a programou para ser buscada e exibida. A mensagem de erro "DESCUBRA A RAZÃO..." provavelmente é um aviso que você mesmo adicionou ou uma reação à ausência da informação, e não um erro de execução do Python/Streamlit.
-
-2.  **Comparação e Correção do Código**: O código "novo" que você passou tem várias funções vetorizadas (usando `pandas` de forma mais eficiente) e uma lógica de formatação de preço mais robusta. No entanto, ele foi escrito para um ambiente Streamlit, mas com uma estrutura que pode ser problemática. O código "antigo" é mais simples, mas também funcional.
-
-    **Vou reescrever o código, fundindo o melhor dos dois e adicionando a funcionalidade de Market Cap de forma correta, além de corrigir inconsistências.**
-
-### Análise dos Problemas e Soluções:
-
-*   **Problema 1: Market Cap Ausente**: A Gate.io fornece dados de ticker via `fetch_ticker`, que inclui `quoteVolume` (volume em USDT nas últimas 24h), mas não o Market Cap. O Market Cap é `preço_atual * oferta_circulante`. A oferta circulante **não é um dado padronizado no CCXT** para todas as exchanges. Algumas exchanges fornecem em endpoints específicos, mas não é confiável. Para obter o Market Cap, o mais comum é usar uma API de terceiros como a CoinGecko ou CoinMarketCap. **Solução**: Vou integrar uma chamada simples e cacheada à API da CoinGecko para buscar o Market Cap, o que é uma prática muito comum e robusta.
-
-*   **Problema 2: Log de Erro Inexistente**: Os logs que você mostrou são logs de *deploy* bem-sucedido do Streamlit Cloud. Eles não contêm erros de execução do seu código Python. O erro que você está vendo provavelmente é um `st.warning` ou `st.error` que você mesmo programou para quando `df_dados` é `None` ou vazio, ou um erro silencioso que trava a execução.
-
-*   **Problema 3: Inconsistências no Código Novo (COMPARE ESSE CÓDIGO)**:
-    *   O `st.rerun()` no modo vivo, junto com `st.cache_data`, pode causar loops de recarregamento e cache inválido.
-    *   A função `mapear_estrutura_smc` tem um loop que itera sobre `range(len(df) - 3, len(df) - 1)` que só avalia as últimas duas velas, o que está correto, mas a lógica de BOS/CHoCH é um pouco frágil.
-    *   A formatação de preço `formatar_preco` é excelente para valores micro, mas a forma como é chamada em alguns lugares (ex: `m1.metric(txt["preco_spot"], formatar_preco(preco_atual))`) pode quebrar se `formatar_preco` retornar algo inesperado para o `st.metric`, que espera um número ou uma string simples. Vou garantir que o retorno seja sempre uma string segura.
-
-### Código Corrigido e Aprimorado (Copie e cole tudo em `main.py`):
-
-```python
 import streamlit as st
 import ccxt
 import pandas as pd
