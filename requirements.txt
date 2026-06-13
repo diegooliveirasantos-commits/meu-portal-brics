@@ -1,6 +1,6 @@
 streamlit
 ccxt
 pandas
-pandas-ta
 plotly
 requests
+git+https://github.com/twopirllc/pandas-ta.git@development
