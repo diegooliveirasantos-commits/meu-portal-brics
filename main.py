@@ -853,8 +853,24 @@ simbolo_id    = st.sidebar.selectbox(
     index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
 )
 
-intervalos = {"1m": "1m", "5m": "5m", "1h": "1h", "4h": "4h", "1d": "1d", "1w": "1w"}
-timeframe  = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=2)
+# Todos os timeframes reais suportados pela Gate.io (fonte: ccxt gate().timeframes)
+# 10s | 1m | 5m | 15m | 30m | 1h | 2h | 4h | 8h | 1d | 7d
+# Nota: 12h e 1M (mensal) NÃO são suportados pela Gate.io e foram omitidos intencionalmente.
+intervalos = {
+    "10s": "10s",
+    "1m":  "1m",
+    "5m":  "5m",
+    "15m": "15m",
+    "30m": "30m",
+    "1h":  "1h",
+    "2h":  "2h",
+    "4h":  "4h",
+    "8h":  "8h",
+    "1d":  "1d",
+    "7d":  "7d",
+}
+timeframe  = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=5)
+st.sidebar.caption("⚠️ Gate.io não suporta 12h nem 1M (mensal). Todos os intervalos listados são os oficialmente disponíveis na exchange.")
 
 st.sidebar.markdown("---")
 modo_vivo        = st.sidebar.toggle(txt["modo_vivo"], value=True)
