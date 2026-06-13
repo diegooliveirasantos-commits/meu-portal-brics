@@ -6,21 +6,13 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import time
 import requests
-from datetime import datetime, timezone
+import math
+from decimal import Decimal
 
 # ─────────────────────────────────────────────────────────────
 # FORMATACAO DE PRECO — notacao compacta para valores micro
 # ─────────────────────────────────────────────────────────────
 def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
-    """
-    Formatacao inteligente de precos de criptomoedas.
-    Valores micro (< 0.001) usam notacao compacta: 0.0{N_zeros}x{digitos_significativos}
-    Exemplos:
-      0.0000000789 -> "$ 0.07x789"
-      0.0000765    -> "$ 0.04x765"
-    Valores normais usam formatacao decimal convencional.
-    """
-    from decimal import Decimal
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
@@ -44,6 +36,20 @@ def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
     else:
         return f"{prefixo}{valor:,.2f}"
 
+def formatar_market_cap(valor):
+    if valor is None:
+        return "N/A"
+    if valor >= 1_000_000_000_000:
+        return f"$ {valor/1_000_000_000_000:.2f}T"
+    elif valor >= 1_000_000_000:
+        return f"$ {valor/1_000_000_000:.2f}B"
+    elif valor >= 1_000_000:
+        return f"$ {valor/1_000_000:.2f}M"
+    elif valor >= 1_000:
+        return f"$ {valor/1_000:.2f}K"
+    else:
+        return f"$ {valor:.2f}"
+
 # Configuração da Página do Streamlit
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -63,7 +69,7 @@ DICIONARIO_LINGUAS = {
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
         "preco_spot": "Preço Spot Real",
         "variacao_24h": "Variação 24h (Exchange)",
-        "market_cap": "Market Cap (CoinGecko)",
+        "market_cap": "Market Cap",
         "stop_atr": "Preço Stop ATR",
         "fib_niveis_titulo": "📐 Níveis Críticos de Retração de Fibonacci (Ciclo Atual)",
         "matriz_detalhada": "📊 Matriz Detalhada de Momentum e Exaustão",
@@ -100,21 +106,114 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": "📈 Gráfico de Preço com Indicadores SMC",
         "sem_dados": "Nenhum dado disponível. Verifique a conexão.",
     },
-    # ... (mantenha os outros idiomas como estão)
+    "Inglés (EN)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
+        "config_globais": "⚙️ Global Settings",
+        "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
+        "tempo_grafico": "Timeframe:",
+        "modo_vivo": "Enable Real-Time Monitoring",
+        "intervalo_refresh": "Refresh Interval (Seconds):",
+        "preco_spot": "Real Spot Price",
+        "variacao_24h": "24h Variation (Exchange)",
+        "market_cap": "Market Cap",
+        "stop_atr": "ATR Stop Price",
+        "fib_niveis_titulo": "📐 Critical Fibonacci Retraction Levels (Current Cycle)",
+        "matriz_detalhada": "📊 Detailed Momentum & Exhaustion Matrix",
+        "compra_forte": "🟢 STRONG BUY (SMC + FIBONACCI ALIGNED)",
+        "venda_forte": "🔴 STRONG SELL (SMC + FIBONACCI ALIGNED)",
+        "neutro": "🟡 NEUTRAL (AWAIT SMC)",
+        "erro_dados": "Insufficient historical data on this Exchange to calculate SMC structural confluence. Choose another Asset or reduce the Timeframe.",
+        "fib_nomes": ["0.0% (MAXIMUM)", "23.6%", "38.2% (Premium Frontier)", "50.0% (Equilibrium)", "61.8% (Golden Ratio / Discount)", "78.6%", "100.0% (MINIMUM)"],
+        "fib_posicoes": ["Cycle Top", "Shallow Retraction", "Seller Load Zone", "Fair Price", "Institutional Buy Zone", "Deep Retraction", "Cycle Bottom"],
+        "ctx_desconto": "Asset positioned in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
+        "ctx_premium": "Asset positioned in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
+        "ctx_neutro": "Price in neutral Fibonacci equilibrium zone (Fair Value Zone).",
+        "ultima_atualizacao": "Last Update",
+        "proximo_refresh": "Next refresh in",
+        "segundos": "seconds",
+        "indicadores_smc": "🧠 SMC Indicators",
+        "bos": "BOS (Break of Structure)",
+        "choch": "CHoCH (Change of Character)",
+        "fvg": "FVG (Fair Value Gap)",
+        "ssl": "SSL Hybrid",
+        "macd_hist": "MACD Histogram",
+        "cmf": "CMF (Chaikin Money Flow)",
+        "wt": "WaveTrend WT1 vs WT2",
+        "rsi": "RSI (14)",
+        "stoch_rsi_k": "Stoch RSI %K",
+        "stoch_rsi_d": "Stoch RSI %D",
+        "mfi": "MFI (14)",
+        "alta": "BULLISH",
+        "baixa": "BEARISH",
+        "neutro_curto": "NEUTRAL",
+        "resumo_confluencia": "Confluence Summary",
+        "pontos_compra": "Buy Points",
+        "pontos_venda": "Sell Points",
+        "grafico_titulo": "📈 Price Chart with SMC Indicators",
+        "sem_dados": "No data available. Check connection.",
+    },
+    "Español (ESP)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️ Configuraciones Globales",
+        "selecione_cripto": "Seleccione Cualquier Criptomoneda (/USDT):",
+        "tempo_grafico": "Período de Tiempo:",
+        "modo_vivo": "Activar Monitoreo en Tiempo Real",
+        "intervalo_refresh": "Intervalo de Actualización (Segundos):",
+        "preco_spot": "Precio Spot Real",
+        "variacao_24h": "Variación 24h (Exchange)",
+        "market_cap": "Cap. de Mercado",
+        "stop_atr": "Precio Stop ATR",
+        "fib_niveis_titulo": "📐 Niveles Críticos de Retracción de Fibonacci (Ciclo Actual)",
+        "matriz_detalhada": "📊 Matriz Detallada de Momentum y Agotamiento",
+        "compra_forte": "🟢 COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "venda_forte": "🔴 VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "neutro": "🟡 NEUTRO (ESPERAR SMC)",
+        "erro_dados": "Datos históricos insuficientes en esta Exchange para calcular la confluencia estructural SMC. Elija otro Activo o reduzca el Tiempo Gráfico.",
+        "fib_nomes": ["0.0% (MÁXIMA)", "23.6%", "38.2% (Frontera Premium)", "50.0% (Equilibrio)", "61.8% (Golden Ratio / Descuento)", "78.6%", "100.0% (MÍNIMA)"],
+        "fib_posicoes": ["Techo del Ciclo", "Retracción Superficial", "Zona de Carga Vendedora", "Precio Justo", "Zona de Compra Institucional", "Retracción Profunda", "Fondo del Ciclo"],
+        "ctx_desconto": "Activo posicionado en Zona de Descuento de Fibonacci (Excelente riesgo/beneficio para Institucionales).",
+        "ctx_premium": "Activo posicionado en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
+        "ctx_neutro": "Precio en zona neutral de equilibrio de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Última Actualización",
+        "proximo_refresh": "Próximo refresh en",
+        "segundos": "segundos",
+        "indicadores_smc": "🧠 Indicadores SMC",
+        "bos": "BOS (Ruptura de Estructura)",
+        "choch": "CHoCH (Cambio de Carácter)",
+        "fvg": "FVG (Gap de Valor Justo)",
+        "ssl": "SSL Hybrid",
+        "macd_hist": "Histograma MACD",
+        "cmf": "CMF (Flujo de Dinero Chaikin)",
+        "wt": "WaveTrend WT1 vs WT2",
+        "rsi": "RSI (14)",
+        "stoch_rsi_k": "Stoch RSI %K",
+        "stoch_rsi_d": "Stoch RSI %D",
+        "mfi": "MFI (14)",
+        "alta": "ALCISTA",
+        "baixa": "BAJISTA",
+        "neutro_curto": "NEUTRAL",
+        "resumo_confluencia": "Resumen de Confluencia",
+        "pontos_compra": "Puntos de Compra",
+        "pontos_venda": "Puntos de Venta",
+        "grafico_titulo": "📈 Gráfico de Precio con Indicadores SMC",
+        "sem_dados": "Sin datos disponibles. Verifique la conexión.",
+    }
 }
-# Simplificando para foco, mas você pode manter o dicionário completo
-# Selecione o idioma
+
+# SELETOR DE IDIOMA CONFIGURADO NO MENU LATERAL
 st.sidebar.markdown("### 🌐 Language / Idioma / Langue")
 idioma_selecionado = st.sidebar.selectbox(
     "Select Interface Language:",
     options=list(DICIONARIO_LINGUAS.keys()),
     index=0
 )
+
 txt = DICIONARIO_LINGUAS[idioma_selecionado]
 
 # ─────────────────────────────────────────────────────────────
 # CONEXÃO COM EXCHANGE
 # ─────────────────────────────────────────────────────────────
+
 @st.cache_resource
 def inicializar_exchange():
     return ccxt.gate({
@@ -135,25 +234,6 @@ def obter_todos_pares_usdt():
 # ─────────────────────────────────────────────────────────────
 # FUNÇÃO PARA OBTER MARKET CAP (CoinGecko)
 # ─────────────────────────────────────────────────────────────
-@st.cache_data(ttl=300)  # Cache por 5 minutos
-def obter_market_cap(coin_id):
-    """
-    Busca o market cap de uma moeda usando a API gratuita da CoinGecko.
-    Mapeia símbolos comuns para os IDs da CoinGecko.
-    """
-    try:
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            market_cap = data['market_data']['market_cap']['usd']
-            return market_cap
-        else:
-            return None
-    except Exception:
-        return None
-
-# Mapeamento de símbolo para ID da CoinGecko (adicione mais conforme necessário)
 MAPEAMENTO_COINGECKO = {
     'BTC': 'bitcoin',
     'ETH': 'ethereum',
@@ -167,11 +247,78 @@ MAPEAMENTO_COINGECKO = {
     'AVAX': 'avalanche-2',
     'LINK': 'chainlink',
     'UNI': 'uniswap',
+    'LTC': 'litecoin',
+    'ATOM': 'cosmos',
+    'ETC': 'ethereum-classic',
+    'XLM': 'stellar',
+    'VET': 'vechain',
+    'FIL': 'filecoin',
+    'TRX': 'tron',
+    'NEAR': 'near',
+    'APT': 'aptos',
+    'ARB': 'arbitrum',
+    'OP': 'optimism',
+    'SUI': 'sui',
+    'PEPE': 'pepe',
+    'SHIB': 'shiba-inu',
+    'BONK': 'bonk',
+    'WIF': 'dogwifcoin',
+    'JUP': 'jupiter-exchange-solana',
+    'PYTH': 'pyth-network',
+    'TIA': 'celestia',
+    'SEI': 'sei-network',
+    'INJ': 'injective-protocol',
+    'RUNE': 'thorchain',
+    'AAVE': 'aave',
+    'GRT': 'the-graph',
+    'FTM': 'fantom',
+    'ALGO': 'algorand',
+    'SAND': 'the-sandbox',
+    'MANA': 'decentraland',
+    'AXS': 'axie-infinity',
+    'EGLD': 'elrond-erd-2',
+    'EOS': 'eos',
+    'FLOW': 'flow',
+    'CHZ': 'chiliz',
+    'KLAY': 'klay-token',
+    'CRV': 'curve-dao-token',
+    'COMP': 'compound-ether',
+    'SNX': 'havven',
+    'SUSHI': 'sushi',
+    'YFI': 'yearn-finance',
+    '1INCH': '1inch',
+    'BAT': 'basic-attention-token',
+    'ZRX': '0x',
+    'ENJ': 'enjincoin',
+    'KSM': 'kusama',
+    'ICP': 'internet-computer',
+    'XTZ': 'tezos',
+    'DASH': 'dash',
+    'ZEC': 'zcash',
+    'XMR': 'monero',
+    'CAKE': 'pancakeswap-token',
+    'RAY': 'raydium',
+    'ORCA': 'orca',
+    'MNGO': 'mango-markets',
+    'SRM': 'serum',
 }
 
 @st.cache_data(ttl=300)
+def obter_market_cap(coin_id):
+    try:
+        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            market_cap = data['market_data']['market_cap']['usd']
+            return market_cap
+        else:
+            return None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=300)
 def obter_market_cap_para_simbolo(simbolo_usdt):
-    """Obtém o market cap para um par como 'BTC/USDT'."""
     moeda_base = simbolo_usdt.split('/')[0]
     coin_id = MAPEAMENTO_COINGECKO.get(moeda_base)
     if coin_id:
@@ -183,6 +330,7 @@ def obter_market_cap_para_simbolo(simbolo_usdt):
 # ─────────────────────────────────────────────────────────────
 # FUNÇÕES DE INDICADORES (todas vetorizadas)
 # ─────────────────────────────────────────────────────────────
+
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -351,6 +499,7 @@ def calcular_retracao_fibonacci(df):
 # ─────────────────────────────────────────────────────────────
 # CARREGAMENTO DE DADOS
 # ─────────────────────────────────────────────────────────────
+
 def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
@@ -388,6 +537,7 @@ def obter_variacao_24h_precisa(simbolo_id):
 # ─────────────────────────────────────────────────────────────
 # CONFLUÊNCIA SMC
 # ─────────────────────────────────────────────────────────────
+
 def analisar_confluencia_smc_total(df, fib_niveis):
     u = df.iloc[-1]
     preco_atual  = u['close']
@@ -421,6 +571,7 @@ def analisar_confluencia_smc_total(df, fib_niveis):
 # ─────────────────────────────────────────────────────────────
 # GRÁFICO PRINCIPAL
 # ─────────────────────────────────────────────────────────────
+
 def construir_grafico(df, fib_niveis, simbolo_id):
     fig = make_subplots(
         rows=4, cols=1,
@@ -453,60 +604,3 @@ def construir_grafico(df, fib_niveis, simbolo_id):
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['AT_K1'], mode='lines',
         line=dict(color='#aa44ff', width=1, dash='dot'), name="Alpha Trend"
-    ), row=1, col=1)
-    fib_cores = {
-        'fib_0':   ('#ff4444', '0.0%'),  'fib_236': ('#ffaa00', '23.6%'),
-        'fib_382': ('#ffdd00', '38.2%'), 'fib_500': ('#aaaaaa', '50.0%'),
-        'fib_618': ('#00cc66', '61.8%'), 'fib_786': ('#00aaff', '78.6%'),
-        'fib_100': ('#4444ff', '100%')
-    }
-    for chave, (cor, label) in fib_cores.items():
-        fig.add_hline(
-            y=fib_niveis[chave], line_dash="dot", line_color=cor,
-            line_width=1, annotation_text=label,
-            annotation_position="right", row=1, col=1
-        )
-    hist_colors = df['MACD_HIST'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
-    fig.add_trace(go.Bar(x=df['time'], y=df['MACD_HIST'], marker_color=hist_colors, name="MACD Hist"), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['MACD'], line=dict(color='#00aaff', width=1), name="MACD"), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['MACD_SIGNAL'], line=dict(color='#ff6600', width=1), name="Signal"), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['RSI_14'], line=dict(color='#ffdd00', width=1.5), name="RSI 14"), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['StochRSI_K'], line=dict(color='#00cc66', width=1), name="Stoch K"), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['StochRSI_D'], line=dict(color='#ff4444', width=1), name="Stoch D"), row=3, col=1)
-    fig.add_hline(y=70, line_dash="dash", line_color="red",   line_width=0.8, row=3, col=1)
-    fig.add_hline(y=30, line_dash="dash", line_color="green", line_width=0.8, row=3, col=1)
-    cmf_colors = df['CMF'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
-    fig.add_trace(go.Bar(x=df['time'], y=df['CMF'], marker_color=cmf_colors, name="CMF"), row=4, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['WT1'], line=dict(color='#00aaff', width=1), name="WT1"), row=4, col=1)
-    fig.add_trace(go.Scatter(x=df['time'], y=df['WT2'], line=dict(color='#ffaa00', width=1), name="WT2"), row=4, col=1)
-    fig.update_layout(
-        height=800, paper_bgcolor='#0e1117', plot_bgcolor='#0e1117',
-        font=dict(color='#ffffff', size=11), xaxis_rangeslider_visible=False,
-        legend=dict(orientation='h', y=1.02, bgcolor='rgba(0,0,0,0)'),
-        margin=dict(l=60, r=80, t=40, b=20)
-    )
-    fig.update_xaxes(gridcolor='#222', showgrid=True)
-    fig.update_yaxes(gridcolor='#222', showgrid=True)
-    return fig
-
-# ─────────────────────────────────────────────────────────────
-# MATRIZ DE INDICADORES
-# ─────────────────────────────────────────────────────────────
-def renderizar_matriz(df, txt):
-    u = df.iloc[-1]
-    st.markdown(f"### {txt['matriz_detalhada']}")
-
-    def badge(condicao_alta, label_alta, label_baixa, valor_str=""):
-        if condicao_alta:
-            cor, sinal = "#00cc66", txt["alta"]
-        else:
-            cor, sinal = "#ff3333", txt["baixa"]
-        label = label_alta if condicao_alta else label_baixa
-        return f"""<span style='background:{cor}22;border:1px solid {cor};border-radius:6px;
-            padding:3px 10px;color:{cor};font-size:13px;font-weight:600;'>{sinal}</span>
-            &nbsp;<span style='color:#ccc;font-size:12px;'>{label} {valor_str}</span>"""
-
-    def neutro_badge(label):
-        return f"""<span style='background:#ffcc0022;border:1px solid #ffcc00;border-radius:6px;
-            padding:3px 10px;color:#ffcc00;font-size:13px;font-weight:600;'>{txt['neutro_curto']}</span>
-            &nbsp;<span style='color:#ccc;font-size:12
