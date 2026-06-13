@@ -1,9 +1,9 @@
 import streamlit as st
 import ccxt
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import random
 import time
 
 # Configuração da Página do Streamlit
@@ -32,13 +32,9 @@ def obter_todos_pares_usdt():
         pares_usdt = [simbolo for simbolo in mercados.keys() if simbolo.endswith('/USDT')]
         return sorted(pares_usdt)
     except Exception:
-        # Fallback de segurança caso a API falhe temporariamente
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-# --- FUNÇÕES DE CÁLCULO MATEMÁTICO NATIVO (INCLUINDO SSL HYBRID) ---
-def calcular_ema(df, col, periodo):
-    return df[col].ewm(span=periodo, adjust=False).mean()
-
+# --- FUNÇÕES DE CÁLCULO MATEMÁTICO NATIVO ---
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -57,19 +53,21 @@ def calcular_macd(df, col):
     return macd, sinal, hist
 
 def calcular_ssl_hybrid(df, periodo=20):
-    """Gera as linhas base do indicador de tendência SSL Hybrid"""
     sma_high = df['high'].rolling(window=periodo).mean()
     sma_low = df['low'].rolling(window=periodo).mean()
     
     ssl_direction = []
     current_dir = 1
     
-    # Simulação reativa do canal SSL Hybrid
     for idx in range(len(df)):
         close = df['close'].iloc[idx]
         h = sma_high.iloc[idx]
         l = sma_low.iloc[idx]
         
+        if pd.isna(h) or pd.isna(l):
+            ssl_direction.append(current_dir)
+            continue
+            
         if close > h:
             current_dir = 1
         elif close < l:
@@ -79,108 +77,169 @@ def calcular_ssl_hybrid(df, periodo=20):
     df['ssl_dir'] = ssl_direction
     df['SSL_High'] = sma_high
     df['SSL_Low'] = sma_low
-    # SSL Baseline (Linha de sinal híbrida)
     df['SSL_Baseline'] = df.apply(lambda row: row['SSL_High'] if row['ssl_dir'] == 1 else row['SSL_Low'], axis=1)
     return df
 
-# --- GERADOR DE DADOS ON-CHAIN DINÂMICOS ---
-def obter_dados_onchain_vivos(preco_atual):
-    semente = int(time.time()) + int(preco_atual)
-    random.seed(semente)
-    netflow = random.uniform(-2500, 2100)
-    zscore = random.uniform(1.1, 4.2)
-    baleias = random.uniform(40.0, 68.5)
-    leverage = random.uniform(0.10, 0.32)
+def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
+    high = df['high']
+    low = df['low']
+    close = df['close']
     
-    return {
-        "netflow": f"{netflow:+,.2f} ATIVO",
-        "zscore": f"{zscore:.2f}",
-        "baleias": f"{baleias:.2f}%",
-        "leverage": f"{leverage:.3f}"
-    }
+    tr1 = high - low
+    tr2 = (high - close.shift(1)).abs()
+    tr3 = (low - close.shift(1)).abs()
+    
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    atr = tr.ewm(span=periodo, adjust=False).mean()
+    
+    atr_stop = np.zeros(len(df))
+    tendencia = np.zeros(len(df))
+    
+    for i in range(1, len(df)):
+        preco_fechamento = close.iloc[i]
+        atr_atual = atr.iloc[i]
+        
+        if i == 1:
+            atr_stop[i] = preco_fechamento - (atr_atual * multiplicador)
+            tendencia[i] = 1
+            continue
+            
+        stop_anterior = atr_stop[i-1]
+        tendencia_anterior = tendencia[i-1]
+        
+        if tendencia_anterior == 1:
+            if preco_fechamento < stop_anterior:
+                tendencia[i] = -1
+                atr_stop[i] = preco_fechamento + (atr_atual * multiplicador)
+            else:
+                tendencia[i] = 1
+                valor_calculado = preco_fechamento - (atr_atual * multiplicador)
+                atr_stop[i] = max(stop_anterior, valor_calculado)
+        else:
+            if preco_fechamento > stop_anterior:
+                tendencia[i] = 1
+                atr_stop[i] = preco_fechamento - (atr_atual * multiplicador)
+            else:
+                tendencia[i] = -1
+                valor_calculado = preco_fechamento + (atr_atual * multiplicador)
+                atr_stop[i] = min(stop_anterior, valor_calculado)
+                
+    df['ATR_Stop'] = atr_stop
+    df['atr_dir'] = tendencia
+    return df
 
-# --- SISTEMA DE SINALIZAÇÃO DE AÇÃO (MECANISMO DE DECISÃO INTEGRANDO SSL) ---
+# --- SISTEMA DE SINALIZAÇÃO DE AÇÃO CONFLUENTE (SSL + ATR STOP + RSI + MACD) ---
 def calcular_sinal_BRICS(df):
     ultimo = df.iloc[-1]
     rsi = ultimo['RSI_14']
     macd_hist = ultimo['MACD_HIST']
     close = ultimo['close']
-    ssl_baseline = ultimo['SSL_Baseline']
     ssl_dir = ultimo['ssl_dir']
+    atr_dir = ultimo['atr_dir']
     
     ponto_compra = 0
     ponto_venda = 0
     
-    # Validação pelo SSL Hybrid (Peso Maior)
-    if ssl_dir == 1 and close > ssl_baseline: ponto_compra += 2
-    else: ponto_venda += 2
+    if ssl_dir == 1: ponto_compra += 1.5
+    else: ponto_venda += 1.5
+        
+    if atr_dir == 1: ponto_compra += 1.5
+    else: ponto_venda += 1.5
     
-    # Filtros Tradicionais adicionais
-    if rsi < 40: ponto_compra += 1
-    elif rsi > 60: ponto_venda += 1
+    if rsi < 45: ponto_compra += 1
+    elif rsi > 55: ponto_venda += 1
     
     if macd_hist > 0: ponto_compra += 1
     else: ponto_venda += 1
     
-    if ponto_compra >= 3:
-        return "🟢 COMPRA FORTE", "#00cc66", close * 1.04, "SSL Hybrid confirmou reversão de alta com suporte comprador ativo."
-    elif ponto_venda >= 3:
-        return "🔴 VENDA FORTE", "#ff3333", close * 0.96, "Tendência rompida no SSL Hybrid. Pressão vendedora dominante."
+    if ponto_compra >= 4:
+        return "🟢 COMPRA FORTE", "#00cc66", close * 1.05, "Tendência Confluente: Preço trabalhando acima do SSL Baseline e validado pelo Stop ATR."
+    elif ponto_venda >= 4:
+        return "🔴 VENDA FORTE", "#ff3333", close * 0.95, "Tendência de Baixa: Preço abaixo do SSL Baseline e rompido pelo Stop ATR."
     else:
-        return "🟡 NEUTRO (AGUARDAR)", "#ffcc00", close, "SSL Hybrid em zona de indecisão. Aguarde o rompimento das bandas."
+        return "🟡 NEUTRO (AGUARDAR)", "#ffcc00", close, "Indicadores sem consenso macro absoluto. Aguarde o alinhamento das bandas."
 
-# --- CARREGAMENTO DE DADOS ---
-def carregar_dados_bricsvault(simbolo_id, timeframe):
+# --- CARREGAMENTO E TRATAMENTO DE DADOS COM AGREGADOR TEMPORAL REAL ---
+def carregar_dados_bricsvault(simbolo_id, timeframe_selecionado):
     try:
-        velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe, limit=150)
+        limite = 500
+        timeframe_fetch = timeframe_selecionado
+        agrupar_meses = None
+        
+        # Consolidação matemática exata para tempos gráficos não nativos da API
+        if timeframe_selecionado == "3M":
+            timeframe_fetch = "1M"
+            agrupar_meses = 3
+        elif timeframe_selecionado == "6M":
+            timeframe_fetch = "1M"
+            agrupar_meses = 6
+        elif timeframe_selecionado == "1Y":
+            timeframe_fetch = "1M"
+            agrupar_meses = 12
+
+        velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_fetch, limit=limite)
         if not velas: return None
             
         df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
         
-        df['EMA_9']   = calcular_ema(df, 'close', 9)
-        df['RSI_14']  = calcular_rsi(df, 'close', 14)
+        if agrupar_meses:
+            df.set_index('time', inplace=True)
+            df = df.resample(f'{agrupar_meses}ME').agg({
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum'
+            }).dropna().reset_index()
         
+        if len(df) < 20:
+            return None
+            
+        df['RSI_14'] = calcular_rsi(df, 'close', 14)
         macd, sinal, hist = calcular_macd(df, 'close')
         df['MACD'] = macd
         df['MACD_SIGNAL'] = sinal
         df['MACD_HIST'] = hist
         
-        # Injeção do SSL Hybrid
-        df = calcular_ssl_hybrid(df)
+        df = calcular_ssl_hybrid(df, periodo=20)
+        df = calcular_atr_stop(df, periodo=14, multiplicador=3.0)
 
-        return df.dropna(subset=['close', 'SSL_Baseline'])
+        return df.dropna(subset=['close', 'SSL_Baseline', 'ATR_Stop'])
     except Exception as e:
-        st.error(f"Erro na conexão com a exchange: {e}")
+        st.error(f"Erro na extração de dados: {e}")
         return None
 
-# --- INTERFACE DO USUÁRIO ---
-st.title("🏦 BRICSVAULT PORTAL - Sistema de Monitoramento em Tempo Real")
+# --- INTERFACE DO PORTAL ---
+st.title("🏦 BRICSVAULT PORTAL - Análise de Precisão de Mercado")
 
-# Configurações na Barra Lateral
 st.sidebar.header("⚙️ Configurações Globais")
 
-# Carrega todos os ativos de maneira dinâmica da API
 lista_criptos = obter_todos_pares_usdt()
-simbolo_id = st.sidebar.selectbox("Selecione Qualquer Criptomoeda (/USDT):", lista_criptos)
+simbolo_id = st.sidebar.selectbox("Selecione Qualquer Criptomoeda (/USDT):", lista_criptos, index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0)
 
 intervalos = {
-    "1 Minuto (Scalping)": "1m",
-    "5 Minutos (Day Trade)": "5m",
-    "15 Minutos (Day Trade)": "15m",
-    "1 Hora (Swing Trade)": "1h",
-    "1 Dia (Posicional)": "1d"
+    "1 Minuto": "1m",
+    "5 Minutos": "5m",
+    "1 Hora": "1h",
+    "4 Horas": "4h",
+    "8 Horas": "8h",
+    "12 Horas": "12h",
+    "1 Dia": "1d",
+    "1 Semana": "1w",
+    "1 Mês": "1M",
+    "3 Meses": "3M",
+    "6 Meses": "6M",
+    "1 Ano": "1Y"
 }
 intervalo_escolhido = st.sidebar.selectbox("Tempo Gráfico:", list(intervalos.keys()))
 timeframe = intervalos[intervalo_escolhido]
 
-# MECANISMO DE ATIVAÇÃO LIVE (TEMPO REAL AUTOMÁTICO)
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔄 Controle de Transmissão Live")
 modo_vivo = st.sidebar.toggle("Ativar Monitoramento em Tempo Real", value=True)
 intervalo_refresh = st.sidebar.slider("Intervalo de Atualização (Segundos):", min_value=3, max_value=30, value=5)
 
-# Botão GO manual para forçar disparo inicial ou reconfiguração
 executar_botao = st.sidebar.button("🚀 EXECUTAR ANÁLISE COMPLETA (GO)", use_container_width=True)
 
 if "execucao_inicializada" not in st.session_state:
@@ -197,56 +256,51 @@ if st.session_state["execucao_inicializada"]:
         preco_atual = ultimo_reg['close']
         
         variacao = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
-        onchain = obter_dados_onchain_vivos(preco_atual)
         recomendacao, cor_sinal, alvo_tecnico, justificativa = calcular_sinal_BRICS(df_dados)
 
-        # 🚨 SEÇÃO 1: CAIXA DE SINALIZAÇÃO BASEADA NO SSL HYBRID 🚨
+        # 🚨 SEÇÃO 1: PAINEL DE CONFLUÊNCIA DE SINAIS 🚨
         st.markdown(f"""
         <div style="background-color: {cor_sinal}22; padding: 20px; border-radius: 10px; border: 2px solid {cor_sinal}; margin-bottom: 25px;">
-            <h2 style="margin: 0; color: {cor_sinal}; font-size: 26px;">SINAL ESTRATÉGICO: {recomendacao}</h2>
-            <p style="margin: 8px 0 0 0; font-size: 16px; color: #ffffff;"><b>Alvo Técnico Projetado:</b> $ {alvo_tecnico:,.4f}</p>
-            <p style="margin: 5px 0 0 0; font-size: 14px; color: #bbbbbb;"><b>Filtro de Inteligência (SSL Hybrid):</b> {justificativa}</p>
+            <h2 style="margin: 0; color: {cor_sinal}; font-size: 26px;">SINAL EMITIDO: {recomendacao}</h2>
+            <p style="margin: 8px 0 0 0; font-size: 16px; color: #ffffff;"><b>Alvo Estimado:</b> $ {alvo_tecnico:,.4f} | <b>Stop ATR Atual:</b> $ {ultimo_reg['ATR_Stop']:,.4f}</p>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #bbbbbb;"><b>Filtro Confluente (SSL Hybrid + Stop ATR):</b> {justificativa}</p>
         </div>
         """, unsafe_allow_html=True)
 
-        # SEÇÃO 2: MÉTRICAS DINÂMICAS DE PREÇO
+        # SEÇÃO 2: CARD DE MÉTRICAS REAIS
         col1, col2, col3 = st.columns(3)
-        col1.metric("Preço ao Vivo", f"$ {preco_atual:,.4f}", f"{variacao:+.2f}%")
-        col2.metric("RSI (14) Dinâmico", f"{ultimo_reg['RSI_14']:.2f}")
-        col3.metric("Volume Recente", f"{ultimo_reg['volume']:,.2f}")
+        col1.metric("Preço Spot Real", f"$ {preco_atual:,.4f}", f"{variacao:+.2f}%")
+        col2.metric("RSI (14)", f"{ultimo_reg['RSI_14']:.2f}")
+        col3.metric("Volume Histórico", f"{ultimo_reg['volume']:,.2f}")
 
-        # SEÇÃO 3: DADOS ON-CHAIN COMPLEMENTARES
-        st.markdown("### 🌐 Indicadores Avançados de Rede & Dados On-Chain")
-        onc_col1, onc_col2, onc_col3, onc_col4 = st.columns(4)
-        onc_col1.metric("Fluxo Líquido das Exchanges (Netflow)", onchain["netflow"])
-        onc_col2.metric("MVRV Z-Score", onchain["zscore"])
-        onc_col3.metric("Concentração de Grandes Carteiras", onchain["baleias"])
-        onc_col4.metric("Alavancagem Estimada", onchain["leverage"])
-
-        # SEÇÃO 4: GRÁFICO SUBPLOTS (COM AS LINHAS DO SSL HYBRID)
+        # SEÇÃO 3: GRÁFICO AVANÇADO SUBPLOTS
         fig = make_subplots(
             rows=3, cols=1, 
             shared_xaxes=True, 
             vertical_spacing=0.06, 
-            subplot_titles=(f'Candlesticks + Rastreamento SSL Hybrid - {simbolo_id}', 'Índice de Força Relativa (RSI)', 'Histograma MACD'),
+            subplot_titles=(f'Candlesticks + SSL Hybrid + Stop ATR - {simbolo_id}', 'Índice de Força Relativa (RSI)', 'Histograma MACD'),
             row_width=[0.2, 0.2, 0.6]
         )
 
-        # Preço principal
         fig.add_trace(go.Candlestick(
             x=df_dados['time'], open=df_dados['open'], high=df_dados['high'],
             low=df_dados['low'], close=df_dados['close'], name="Preço"
         ), row=1, col=1)
         
-        # 🟢 PLOTAGEM DAS LINHAS DO SSL HYBRID 🟢
+        # Linhas do SSL Hybrid
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['SSL_Baseline'], line=dict(color='#00ffff', width=2), name="SSL Baseline"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['SSL_High'], line=dict(color='#00cc66', width=1, dash='dot'), name="SSL Banda Alta"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['SSL_Low'], line=dict(color='#ff3333', width=1, dash='dot'), name="SSL Banda Baixa"), row=1, col=1)
         
-        # EMA Auxiliar
-        fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['EMA_9'], line=dict(color='yellow', width=1), name="EMA 9"), row=1, col=1)
+        # Linha do Stop ATR
+        cor_atr = '#00ffcc' if ultimo_reg['atr_dir'] == 1 else '#ff0055'
+        fig.add_trace(go.Scatter(
+            x=df_dados['time'], y=df_dados['ATR_Stop'], 
+            line=dict(color=cor_atr, width=2.5, dash='solid'), 
+            name="Stop ATR"
+        ), row=1, col=1)
 
-        # RSI e MACD
+        # Subplots Auxiliares
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['RSI_14'], line=dict(color='purple', width=2), name="RSI"), row=2, col=1)
         fig.add_hline(y=70, line_dash="dash", line_color="red", row=2, col=1)
         fig.add_hline(y=30, line_dash="dash", line_color="green", row=2, col=1)
@@ -255,9 +309,8 @@ if st.session_state["execucao_inicializada"]:
         fig.update_layout(height=720, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
         st.plotly_chart(fig, use_container_width=True)
 
-        # Código do loop reativo para atualização automatizada sem intervenção do usuário
         if modo_vivo:
             time.sleep(intervalo_refresh)
             st.rerun()
     else:
-        st.error("Sem resposta dos servidores de mercado. Escolha outro par ou reduza o tempo gráfico.")
+        st.error("Erro técnico: O histórico desta moeda na exchange é muito curto para calcular os indicadores neste tempo gráfico específico. Escolha um tempo menor ou outro ativo.")
