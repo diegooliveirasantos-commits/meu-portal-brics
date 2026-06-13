@@ -15,8 +15,30 @@ st.set_page_config(
 )
 
 # --- REPOSITÓRIO INTERNO DE TRADUÇÃO (i18n) ---
-# Mapeamento completo dos textos para os 5 idiomas com a nova adição do Francês
+# Mapeamento completo dos textos para os 6 idiomas (Português-BR incluso como padrão)
 DICIONARIO_LINGUAS = {
+    "Português (BR)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️ Configurações Globais",
+        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
+        "tempo_grafico": "Tempo Gráfico:",
+        "modo_vivo": "Ativar Monitoramento em Tempo Real",
+        "intervalo_refresh": "Intervalo de Atualização (Segundos):",
+        "preco_spot": "Preço Spot Real",
+        "variacao_24h": "Variação 24h (Exchange)",
+        "stop_atr": "Preço Stop ATR",
+        "fib_niveis_titulo": "📐 Níveis Críticos de Retração de Fibonacci (Ciclo Atual)",
+        "matriz_detalhada": "📊 Matriz Detalhada de Momentum e Exaustão",
+        "compra_forte": "🟢 COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "venda_forte": "🔴 VENTA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "neutro": "🟡 NEUTRO (AGUARDAR SMC)",
+        "erro_dados": "Dados históricos insuficientes nesta Exchange para calcular a confluência estrutural SMC. Escolha outro Ativo ou reduza o Tempo Gráfico.",
+        "fib_nomes": ["0.0% (MÁXIMA)", "23.6%", "38.2% (Fronteira Premium)", "50.0% (Equilíbrio)", "61.8% (Golden Ratio / Desconto)", "78.6%", "100.0% (MÍNIMA)"],
+        "fib_posicoes": ["Topo do Ciclo", "Retração Rasa", "Zona de Carga Vendedora", "Preço Justo", "Zona de Compra Institucional", "Retração Profunda", "Fundo do Ciclo"],
+        "ctx_desconto": "Ativo posicionado em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
+        "ctx_premium": "Ativo posicionado em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
+        "ctx_neutro": "Preço em zona neutra de equilíbrio de Fibonacci (Fair Value Zone)."
+    },
     "Inglés (EN)": {
         "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
         "config_globais": "⚙️ Global Settings",
@@ -54,7 +76,7 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢 COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "venda_forte": "🔴 VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "neutro": "🟡 NEUTRO (ESPERAR SMC)",
-        "erro_dados": "Datos históricos insuficientes en esta Exchange para calcular la confluencia estructural SMC. Elija otro Activo o reduzca el Tiempo Gráfico.",
+        "erro_dados": "Datos históricos insuficientes en esta Exchange para calcular la confluencia estrutural SMC. Elija otro Activo o reduzca el Tiempo Gráfico.",
         "fib_nomes": ["0.0% (MÁXIMA)", "23.6%", "38.2% (Frontera Premium)", "50.0% (Equilibrio)", "61.8% (Golden Ratio / Descuento)", "78.6%", "100.0% (MÍNIMA)"],
         "fib_posicoes": ["Techo del Ciclo", "Retracción Superficial", "Zona de Carga Vendedora", "Precio Justo", "Zona de Compra Institucional", "Retracción Profunda", "Fondo del Ciclo"],
         "ctx_desconto": "Activo posicionado en Zona de Descuento de Fibonacci (Excelente riesgo/beneficio para Institucionales).",
@@ -120,285 +142,3 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢 ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
         "venda_forte": "🔴 VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
         "neutro": "🟡 NEUTRE (ATTENTE SMC)",
-        "erro_dados": "Données historiques insuffisantes sur cet Exchange pour calculer la confluence structurelle SMC. Choisissez un autre Actif ou réduisez l'unité de temps.",
-        "fib_nomes": ["0.0% (MAXIMUM)", "23.6%", "38.2% (Zone Premium)", "50.0% (Équilibre)", "61.8% (Ratio d'or / Zone de Discount)", "78.6%", "100.0% (MINIMUM)"],
-        "fib_posicoes": ["Sommet du Cycle", "Retracement Superficiel", "Zone de Vente Institutionnelle", "Prix Équitable", "Zone d'Achat Institutionnelle", "Retracement Profond", "Bas du Cycle"],
-        "ctx_desconto": "Actif positionné dans la Zone de Discount de Fibonacci (Excellent rapport risque/rendement pour les Institutionnels).",
-        "ctx_premium": "Actif positionné dans la Zone Premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
-        "ctx_neutro": "Prix dans la zone d'équilibre neutre de Fibonacci (Fair Value Zone)."
-    }
-}
-
-# SELETOR DE IDIOMA CONFIGURADO COM NOME NATIVO + SIGLA
-st.sidebar.markdown("### 🌐 Language / Langue / Idioma")
-idioma_selecionado = st.sidebar.selectbox(
-    "Select Interface Language:",
-    options=list(DICIONARIO_LINGUAS.keys()),
-    index=0
-)
-
-# Atalho dinâmico para o dicionário ativo com base no clique do usuário
-txt = DICIONARIO_LINGUAS[idioma_selecionado]
-
-# Inicialização segura do cliente Gate.io via CCXT
-@st.cache_resource
-def inicializar_exchange():
-    return ccxt.gate({
-        'enableRateLimit': True,
-        'options': {'defaultType': 'spot'}
-    })
-
-gateio_client = inicializar_exchange()
-
-@st.cache_data(ttl=3600)
-def obter_todos_pares_usdt():
-    try:
-        mercados = gateio_client.load_markets()
-        return sorted([simbolo for simbolo in mercados.keys() if simbolo.endswith('/USDT')])
-    except Exception:
-        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
-
-# --- MATRIZ DE INDICADORES MATEMÁTICOS ---
-def calcular_rsi(df, col, periodo=14):
-    delta = df[col].diff()
-    ganho = delta.clip(lower=0)
-    perda = -delta.clip(upper=0)
-    ma_ganho = ganho.ewm(span=periodo, adjust=False).mean()
-    ma_perda = perda.ewm(span=periodo, adjust=False).mean()
-    return 100 - (100 / (1 + (ma_ganho / ma_perda.replace(0, 0.00001))))
-
-def calcular_stoch_rsi(df, periodo=14, k_period=3, d_period=3):
-    rsi = df['RSI_14']
-    min_rsi = rsi.rolling(window=periodo).min()
-    max_rsi = rsi.rolling(window=periodo).max()
-    df['StochRSI_K'] = ((rsi - min_rsi) / (max_rsi - min_rsi).replace(0, 0.00001)).rolling(window=k_period).mean() * 100
-    df['StochRSI_D'] = df['StochRSI_K'].rolling(window=d_period).mean()
-    return df
-
-def calcular_macd(df, col):
-    ema_rapida = df[col].ewm(span=12, adjust=False).mean()
-    ema_lenta = df[col].ewm(span=26, adjust=False).mean()
-    macd = ema_rapida - ema_lenta
-    return macd, macd.ewm(span=9, adjust=False).mean(), macd - macd.ewm(span=9, adjust=False).mean()
-
-def calcular_chaikin_money_flow(df, periodo=20):
-    mfv = (((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low']).replace(0, 0.00001)) * df['volume']
-    df['CMF'] = mfv.rolling(window=periodo).sum() / df['volume'].rolling(window=periodo).sum().replace(0, 0.00001)
-    return df
-
-def calcular_wavetrend_oscillator(df, n1=10, n2=21):
-    ap = (df['high'] + df['low'] + df['close']) / 3
-    esa = ap.ewm(span=n1, adjust=False).mean()
-    d = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
-    df['WT1'] = ((ap - esa) / (0.015 * d).replace(0, 0.00001)).ewm(span=n2, adjust=False).mean()
-    df['WT2'] = df['WT1'].rolling(window=4).mean().bfill()
-    return df
-
-def calcular_mfi(df, periodo=14):
-    tp = (df['high'] + df['low'] + df['close']) / 3
-    rmf = tp * df['volume']
-    pos_flow, neg_flow = pd.Series(0.0, index=df.index), pd.Series(0.0, index=df.index)
-    for i in range(1, len(df)):
-        if tp.iloc[i] > tp.iloc[i-1]: pos_flow.iloc[i] = rmf.iloc[i]
-        elif tp.iloc[i] < tp.iloc[i-1]: neg_flow.iloc[i] = rmf.iloc[i]
-    return 100 - (100 / (1 + (pos_flow.rolling(window=periodo).sum() / neg_flow.rolling(window=periodo).sum().replace(0, 0.00001))))
-
-def calcular_ssl_hybrid(df, periodo=20):
-    sma_high = df['high'].rolling(window=periodo).mean()
-    sma_low = df['low'].rolling(window=periodo).mean()
-    ssl_direction, current_dir = [], 1
-    for idx in range(len(df)):
-        close = df['close'].iloc[idx]
-        h, l = sma_high.iloc[idx], sma_low.iloc[idx]
-        if pd.isna(h) or pd.isna(l): ssl_direction.append(current_dir); continue
-        if close > h: current_dir = 1
-        elif close < l: current_dir = -1
-        ssl_direction.append(current_dir)
-    df['ssl_dir'] = ssl_direction
-    df['SSL_Baseline'] = df.apply(lambda r: sma_high.iloc[df.index.get_loc(r.name)] if r['ssl_dir'] == 1 else sma_low.iloc[df.index.get_loc(r.name)], axis=1)
-    return df
-
-def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
-    high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
-    atr = tr.ewm(span=periodo, adjust=False).mean()
-    atr_stop, tendencia = np.zeros(len(df)), np.zeros(len(df))
-    for i in range(1, len(df)):
-        if i == 1: atr_stop[i] = close.iloc[i] - (atr.iloc[i] * multiplicador); tendencia[i] = 1; continue
-        if tendencia[i-1] == 1:
-            if close.iloc[i] < atr_stop[i-1]: tendencia[i] = -1; atr_stop[i] = close.iloc[i] + (atr.iloc[i] * multiplicador)
-            else: tendencia[i] = 1; atr_stop[i] = max(atr_stop[i-1], close.iloc[i] - (atr.iloc[i] * multiplicador))
-        else:
-            if close.iloc[i] > atr_stop[i-1]: tendencia[i] = 1; atr_stop[i] = close.iloc[i] - (atr.iloc[i] * multiplicador)
-            else: tendencia[i] = -1; atr_stop[i] = min(atr_stop[i-1], close.iloc[i] + (atr.iloc[i] * multiplicador))
-    df['ATR_Stop'], df['atr_dir'] = atr_stop, tendencia
-    return df
-
-def calcular_alpha_trend(df, periodo=14, coeff=1.0):
-    high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
-    atr = tr.rolling(window=periodo).mean()
-    df['MFI'] = calcular_mfi(df, periodo)
-    up_t = low - coeff * atr
-    down_t = high + coeff * atr
-    alpha_trend = np.zeros(len(df))
-    for i in range(len(df)):
-        if i < periodo: alpha_trend[i] = close.iloc[i]; continue
-        if df['MFI'].iloc[i] >= 50: alpha_trend[i] = max(up_t.iloc[i], alpha_trend[i-1])
-        else: alpha_trend[i] = min(down_t.iloc[i], alpha_trend[i-1])
-    df['AT_K1'] = alpha_trend
-    return df
-
-def mapear_estrutura_smc(df):
-    fechamentos, maximas, minimas = df['close'].values, df['high'].values, df['low'].values
-    bos_detectado, choch_detectado, fvg_pendente = 0, 0, 0
-    for i in range(len(df) - 3, len(df) - 1):
-        if minimas[i+1] > maximas[i-1]: fvg_pendente = 1
-        elif maximas[i+1] < minimas[i-1]: fvg_pendente = -1
-    topo_local, fundo_local = np.max(fechamentos[-15:-2]), np.min(fechamentos[-15:-2])
-    if fechamentos[-1] > topo_local: bos_detectado = 1
-    elif fechamentos[-1] < fundo_local: bos_detectado = -1
-    if fechamentos[-1] > topo_local and fechamentos[-2] <= topo_local: choch_detectado = 1
-    elif fechamentos[-1] < fundo_local and fechamentos[-2] >= fundo_local: choch_detectado = -1
-    df['SMC_BOS'], df['SMC_CHOCH'], df['SMC_FVG'] = bos_detectado, choch_detectado, fvg_pendente
-    return df
-
-# --- MOTOR DE DECISÃO INTEGRADA ---
-def analisar_confluencia_smc_total(df, fib_niveis):
-    u = df.iloc[-1]
-    preco_atual = u['close']
-    pontos_alta = 0
-    pontos_baixa = 0
-    
-    if u['SMC_CHOCH'] == 1 or u['SMC_BOS'] == 1: pontos_alta += 3
-    if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1: pontos_baixa += 3
-    if u['SMC_FVG'] == 1: pontos_alta += 1
-    if u['SMC_FVG'] == -1: pontos_baixa += 1
-    
-    if preco_atual <= fib_niveis['fib_618']:
-        pontos_alta += 2.0
-        contexto_fib = txt["ctx_desconto"]
-    elif preco_atual >= fib_niveis['fib_382']:
-        pontos_baixa += 2.0
-        contexto_fib = txt["ctx_premium"]
-    else:
-        contexto_fib = txt["ctx_neutro"]
-
-    if u['CMF'] > 0: pontos_alta += 1.5
-    else: pontos_baixa += 1.5
-    if u['WT1'] > u['WT2']: pontos_alta += 1
-    else: pontos_baixa += 1
-    if u['MACD_HIST'] > 0: pontos_alta += 1
-    else: pontos_baixa += 1
-
-    if pontos_alta >= 7.5:
-        return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Context."
-    elif pontos_baixa >= 7.5:
-        return txt["venda_forte"], "#ff3333", f"{contexto_fib} SMC Order Flow Bearish Context."
-    else:
-        return txt["neutro"], "#ffcc00", f"{contexto_fib}"
-
-def calcular_retracao_fibonacci(df):
-    maxima_absoluta, minima_absoluta = df['high'].max(), df['low'].min()
-    diff = maxima_absoluta - minima_absoluta
-    return {
-        'fib_0': maxima_absoluta, 'fib_236': maxima_absoluta - (0.236 * diff),
-        'fib_382': maxima_absoluta - (0.382 * diff), 'fib_500': maxima_absoluta - (0.500 * diff),
-        'fib_618': maxima_absoluta - (0.618 * diff), 'fib_786': maxima_absoluta - (0.786 * diff),
-        'fib_100': minima_absoluta
-    }
-
-def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
-    try:
-        velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
-        if not velas: return None
-        df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-        
-        df['RSI_14'] = calcular_rsi(df, 'close', 14)
-        df = calcular_stoch_rsi(df)
-        macd, sinal, hist = calcular_macd(df, 'close')
-        df['MACD'], df['MACD_SIGNAL'], df['MACD_HIST'] = macd, sinal, hist
-        df = calcular_ssl_hybrid(df)
-        df = calcular_atr_stop(df)
-        df = calcular_alpha_trend(df)
-        df = calcular_chaikin_money_flow(df)
-        df = calcular_wavetrend_oscillator(df)
-        df = mapear_estrutura_smc(df)
-        return df.dropna(subset=['close', 'SSL_Baseline'])
-    except Exception:
-        return None
-
-def obter_variacao_24h_precisa(simbolo_id):
-    try:
-        dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
-        if dados_24h and len(dados_24h) >= 2:
-            return ((dados_24h[-1][4] - dados_24h[-1][1]) / dados_24h[-1][1]) * 100
-    except Exception:
-        pass
-    return 0.0
-
-# --- INTERFACE DINÂMICA TRADUZIDA ---
-st.title(txt["titulo"])
-
-st.sidebar.header(txt["config_globais"])
-lista_criptos = obter_todos_pares_usdt()
-simbolo_id = st.sidebar.selectbox(txt["selecione_cripto"], lista_criptos, index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0)
-
-intervalos = {"1m": "1m", "5m": "5m", "1h": "1h", "4h": "4h", "1d": "1d", "1w": "1w"}
-timeframe = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=2)
-
-st.sidebar.markdown("---")
-modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=True)
-intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=30, value=10)
-
-df_dados = carregar_dados_bricsvault_smc(simbolo_id, timeframe)
-    
-if df_dados is not None and not df_dados.empty:
-    ultimo_reg = df_dados.iloc[-1]
-    preco_atual = ultimo_reg['close']
-    fib_niveis = calcular_retracao_fibonacci(df_dados)
-    variacao_real_exchange = obter_variacao_24h_precisa(simbolo_id)
-
-    recomendacao, cor_sinal, analise_justificada = analisar_confluencia_smc_total(df_dados, fib_niveis)
-
-    # Painel Principal de Decisão Alinhado ao Idioma Escolhido
-    st.markdown(f"""
-    <div style="background-color: {cor_sinal}22; padding: 20px; border-radius: 10px; border: 2px solid {cor_sinal}; margin-bottom: 25px;">
-        <h2 style="margin: 0; color: {cor_sinal}; font-size: 24px;">{recomendacao}</h2>
-        <p style="margin: 8px 0 0 0; font-size: 16px; color: #ffffff;">{analise_justificada}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    m_col1, m_col2, m_col3 = st.columns(3)
-    m_col1.metric(txt["preco_spot"], f"$ {preco_atual:,.4f}")
-    m_col2.metric(txt["variacao_24h"], f"{variacao_real_exchange:+.2f}%")
-    m_col3.metric(txt["stop_atr"], f"$ {ultimo_reg['ATR_Stop']:,.4f}")
-
-    # Tabela Fibonacci Dinâmica
-    st.markdown(f"### {txt['fib_niveis_titulo']}")
-    fib_df = pd.DataFrame({
-        "Nível Fibonacci": txt["fib_nomes"],
-        "Preço / Target": [f"$ {fib_niveis['fib_0']:,.4f}", f"$ {fib_niveis['fib_236']:,.4f}", f"$ {fib_niveis['fib_382']:,.4f}", f"$ {fib_niveis['fib_500']:,.4f}", f"$ {fib_niveis['fib_618']:,.4f}", f"$ {fib_niveis['fib_786']:,.4f}", f"$ {fib_niveis['fib_100']:,.4f}"],
-        "SMC Zone": txt["fib_posicoes"]
-    })
-    st.table(fib_df)
-
-    # Visualização Gráfica Multi-Sinais
-    st.markdown(f"### {txt['matriz_detalhada']}")
-    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.08, row_width=[0.3, 0.7])
-    fig.add_trace(go.Candlestick(x=df_dados['time'], open=df_dados['open'], high=df_dados['high'], low=df_dados['low'], close=df_dados['close'], name="Price"), row=1, col=1)
-    
-    # Adicionar as retas horizontais do ciclo de Fibonacci no gráfico principal
-    for k, v in fib_niveis.items():
-        fig.add_trace(go.Scatter(x=[df_dados['time'].iloc[0], df_dados['time'].iloc[-1]], y=[v, v], mode="lines", line=dict(color='rgba(255,215,0,0.25)', width=1, dash='dash'), showlegend=False), row=1, col=1)
-
-    fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['CMF'], line=dict(color='#00ff55', width=1.5), name="CMF"), row=2, col=1)
-    fig.update_layout(height=650, template="plotly_dark", xaxis_rangeslider_visible=False)
-    st.plotly_chart(fig, width='stretch')
-
-    if modo_vivo:
-        time.sleep(intervalo_refresh)
-        st.rerun()
-else:
-    st.error(txt["erro_dados"])
