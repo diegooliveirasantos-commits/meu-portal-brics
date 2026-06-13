@@ -1,10 +1,3 @@
-O erro **`SyntaxError: unterminated string literal`** aconteceu porque o código anterior foi cortado bem no finalzinho da resposta devido ao limite de caracteres (na linha do `"5 Minutos"`), deixando as aspas abertas.
-
-Para resolver isso de forma definitiva, eu dividi o código abaixo em partes limpas e **ajustei a lógica de tempo real para usar o sistema reativo nativo do Streamlit (`st.rerun()`)**. Assim, os dados on-chain, os preços e as tabelas vão atualizar automaticamente sem travar.
-
-Aqui está o código completo e fechado para você apenas copiar e colar por cima de tudo no seu **`main.py`**:
-
-```python
 import streamlit as st
 import ccxt
 import pandas as pd
@@ -54,7 +47,6 @@ def calcular_macd(df, col):
 
 # --- GERADOR DE DADOS ON-CHAIN DINÂMICOS E REATIVOS ---
 def obter_dados_onchain_vivos(preco_atual):
-    # Usa o timestamp atual + preço para gerar oscilações dinâmicas em tempo real
     semente = int(time.time()) + int(preco_atual)
     random.seed(semente)
     
@@ -100,7 +92,6 @@ def calcular_sinal_BRICS(df):
 # --- CARREGAMENTO DE DADOS ---
 def carregar_dados_bricsvault(simbolo_id, timeframe):
     try:
-        # Ignora o cache para trazer sempre dados novos ao clicar no botão ou atualizar
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe, limit=200)
         if not velas: return None
             
@@ -151,15 +142,16 @@ timeframe = intervalos[intervalo_escolhido]
 
 # BOTÃO EXECUTAR ANÁLISE (GO)
 st.sidebar.markdown("---")
-executar_botao = st.sidebar.button("🚀 EXECUTAR ANÁLISE (GO)", use_container_width=True)
+executar_botao = st.sidebar.button("🚀 EXECUTAR ANÁLISE (GO)", width=None)
 
-# Armazenar estado para atualização em tempo real
-if "primeira_execucao" not in st.session_state:
-    st.session_state["primeira_execucao"] = True
+# Armazenar estado para o ciclo de renderização inicial
+if "analise_ativa" not in st.session_state:
+    st.session_state["analise_ativa"] = False
 
-if executar_botao or st.session_state["primeira_execucao"]:
-    st.session_state["primeira_execucao"] = False
-    
+if executar_botao:
+    st.session_state["analise_ativa"] = True
+
+if st.session_state["analise_ativa"]:
     with st.spinner("Puxando dados em tempo real das APIs globais..."):
         df_dados = carregar_dados_bricsvault(simbolo_id, timeframe)
         
@@ -167,13 +159,8 @@ if executar_botao or st.session_state["primeira_execucao"]:
         ultimo_reg = df_dados.iloc[-1]
         preco_atual = ultimo_reg['close']
         
-        # Calcular variação baseada no início da tabela puxada
         variacao = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
-        
-        # Obter os dados On-Chain reativos e dinâmicos
         onchain = obter_dados_onchain_vivos(preco_atual)
-        
-        # Obter a Sinalização de Ação Recomendada
         recomendacao, cor_sinal, alvo_tecnico, justificativa = calcular_sinal_BRICS(df_dados)
 
         # 🚨 SEÇÃO 1: CAIXA DE SINALIZAÇÃO E TOMADA DE DECISÃO 🚨
@@ -224,17 +211,18 @@ if executar_botao or st.session_state["primeira_execucao"]:
         fig.add_trace(go.Bar(x=df_dados['time'], y=df_dados['MACD_HIST'], name="Hist MACD", marker_color='cyan'), row=3, col=1)
 
         fig.update_layout(height=700, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
         # SEÇÃO 5: TABELA DE AUDITORIA ATUALIZÁVEL E DINÂMICA
         st.markdown("### 📋 Tabela Dinâmica de Transações e Fechamentos Recentes")
         tabela_viva = df_dados.tail(15)[['time', 'open', 'high', 'low', 'close', 'volume', 'RSI_14']].sort_values(by='time', ascending=False)
-        st.dataframe(tabela_viva, use_container_width=True)
+        st.dataframe(tabela_viva, width='stretch')
 
         # Forçador de atualização reativa em tempo real na tela do Streamlit
-        if st.button("🔄 Atualizar e Sincronizar Dados Agora", use_container_width=True):
+        st.markdown("---")
+        if st.button("🔄 Sincronizar e Atualizar Mercado Agora", width='stretch'):
             st.rerun()
     else:
-        st.error("Não foi possível renderizar a análise. Verifique sua conexão ou altere o ativo.")
-
-```
+        st.error("Não foi possível carregar os dados. Mude o ativo ou tente novamente.")
+else:
+    st.info("🎯 Configure o Ativo e o Tempo Gráfico na barra lateral e clique em '🚀 EXECUTAR ANÁLISE (GO)' para iniciar o monitoramento ao vivo.")
