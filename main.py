@@ -37,6 +37,19 @@ def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
     else:
         return f"{prefixo}{valor:,.2f}"
 
+def formatar_marketcap(valor: float) -> str:
+    """Formatador para bilhoes (B), milhoes (M) ou milhares (K)"""
+    if valor is None or math.isnan(valor) or valor == 0:
+        return "$ —"
+    if valor >= 1_000_000_000_000:
+        return f"$ {valor / 1_000_000_000_000:.2f} T"
+    elif valor >= 1_000_000_000:
+        return f"$ {valor / 1_000_000_000:.2f} B"
+    elif valor >= 1_000_000:
+        return f"$ {valor / 1_000_000:.2f} M"
+    else:
+        return f"$ {valor:,.2f}"
+
 # Configuração da Página do Streamlit
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -56,6 +69,7 @@ DICIONARIO_LINGUAS = {
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
         "preco_spot": "Preço Spot Real",
         "variacao_24h": "Variação 24h (Exchange)",
+        "market_cap": "Market Cap",
         "stop_atr": "Preço Stop ATR",
         "fib_niveis_titulo": "📐 Níveis Críticos de Retração de Fibonacci (Ciclo Atual)",
         "matriz_detalhada": "📊 Matriz Detalhada de Momentum e Exaustão",
@@ -101,6 +115,7 @@ DICIONARIO_LINGUAS = {
         "intervalo_refresh": "Refresh Interval (Seconds):",
         "preco_spot": "Real Spot Price",
         "variacao_24h": "24h Variation (Exchange)",
+        "market_cap": "Market Cap",
         "stop_atr": "ATR Stop Price",
         "fib_niveis_titulo": "📐 Critical Fibonacci Retraction Levels (Current Cycle)",
         "matriz_detalhada": "📊 Detailed Momentum & Exhaustion Matrix",
@@ -139,7 +154,6 @@ DICIONARIO_LINGUAS = {
     }
 }
 
-# SELETOR DE IDIOMA CONFIGURADO NO MENU LATERAL
 st.sidebar.markdown("### 🌐 Language / Idioma / Langue")
 idioma_selecionado = st.sidebar.selectbox(
     "Select Interface Language:",
@@ -363,16 +377,20 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         st.error(f"Erro ao carregar dados: {e}")
         return None
 
-def obter_variacao_24h_precisa(simbolo_id):
+def obter_marketcap_e_variacao(simbolo_id):
+    """Busca o Ticker em tempo real para extrair a variação de 24h e o Market Cap"""
+    var_24h = 0.0
+    mcap = 0.0
     try:
-        dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
-        if dados_24h and len(dados_24h) >= 2:
-            close_hoje  = dados_24h[-1][4]
-            close_ontem = dados_24h[-2][4]
-            return ((close_hoje - close_ontem) / close_ontem) * 100
+        ticker = gateio_client.fetch_ticker(simbolo_id)
+        if ticker:
+            var_24h = ticker.get('percentage', 0.0)
+            info_raw = ticker.get('info', {})
+            # A API da Gate.io costuma retornar capitalizacao sob as chaves 'market_cap' ou 'quote_volume'
+            mcap = float(info_raw.get('market_cap', 0.0))
     except Exception:
         pass
-    return 0.0
+    return var_24h, mcap
 
 # ─────────────────────────────────────────────────────────────
 # CONFLUÊNCIA SMC
@@ -491,7 +509,7 @@ def construir_grafico(df, fib_niveis, simbolo_id):
     return fig
 
 # ─────────────────────────────────────────────────────────────
-# MATRIZ DE INDICADORES (Seção Finalizada e Corrigida)
+# MATRIZ DE INDICADORES
 # ─────────────────────────────────────────────────────────────
 def renderizar_matriz(df, txt):
     u = df.iloc[-1]
@@ -535,7 +553,6 @@ def renderizar_matriz(df, txt):
 # ─────────────────────────────────────────────────────────────
 st.title(txt["titulo"])
 
-# Sidebar de Configurações adicionais
 st.sidebar.markdown(f"## {txt['config_globais']}")
 todos_pares = obter_todos_pares_usdt()
 par_selecionado = st.sidebar.selectbox(txt["selecione_cripto"], options=todos_pares, index=todos_pares.index("BTC/USDT") if "BTC/USDT" in todos_pares else 0)
@@ -550,19 +567,21 @@ while True:
     
     if df_dados is not None and not df_dados.empty:
         fib_niveis = calcular_retracao_fibonacci(df_dados)
-        v24h = obter_variacao_24h_precisa(par_selecionado)
+        v24h, market_cap = obter_marketcap_e_variacao(par_selecionado)
         preco_atual = df_dados.iloc[-1]['close']
         stop_atr = df_dados.iloc[-1]['ATR_Stop']
         
         status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
         
         with placeholder_dashboard.container():
-            c1, c2, c3, c4 = st.columns(4)
+            # Dividido em 5 colunas para acomodar o Market Cap
+            c1, c2, c3, c4, c5 = st.columns(5)
             c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
             c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%", delta_color="normal")
-            c3.metric(txt["stop_atr"], formatar_preco(stop_atr))
+            c3.metric(txt["market_cap"], formatar_marketcap(market_cap))
+            c4.metric(txt["stop_atr"], formatar_preco(stop_atr))
             
-            with c4:
+            with c5:
                 st.markdown(f"""
                 <div style='background:{cor_status}15; border:2px solid {cor_status}; border-radius:10px; padding:12px; text-align:center;'>
                     <h4 style='margin:0; color:{cor_status}; font-size:14px;'>{txt['resumo_confluencia']}</h4>
@@ -574,7 +593,6 @@ while True:
             st.info(desc_status)
             
             figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
-            
             st.plotly_chart(figura_dinamica, key=f"chart_{par_selecionado}_{timeframe}")
             
             col_esq, col_dir = st.columns([1, 1])
