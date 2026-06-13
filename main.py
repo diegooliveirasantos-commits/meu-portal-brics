@@ -378,7 +378,7 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         return None
 
 def obter_marketcap_e_variacao(simbolo_id):
-    """Busca o Ticker em tempo real para extrair a variação de 24h e o Market Cap"""
+    """Busca dados atualizados do Ticker para extrair Variação e MarketCap"""
     var_24h = 0.0
     mcap = 0.0
     try:
@@ -386,8 +386,9 @@ def obter_marketcap_e_variacao(simbolo_id):
         if ticker:
             var_24h = ticker.get('percentage', 0.0)
             info_raw = ticker.get('info', {})
-            # A API da Gate.io costuma retornar capitalizacao sob as chaves 'market_cap' ou 'quote_volume'
-            mcap = float(info_raw.get('market_cap', 0.0))
+            # Gate.io retorna a capitalização como 'market_cap' ou 'marketCap' na estrutura interna 'info'
+            mcap_bruto = info_raw.get('market_cap' if 'market_cap' in info_raw else 'marketCap', 0.0)
+            mcap = float(mcap_bruto) if mcap_bruto else 0.0
     except Exception:
         pass
     return var_24h, mcap
@@ -560,7 +561,8 @@ timeframe = st.sidebar.selectbox(txt["tempo_grafico"], options=['1m', '5m', '15m
 modo_live = st.sidebar.checkbox(txt["modo_vivo"], value=False)
 intervalo = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=10, step=5)
 
-placeholder_dashboard = st.empty()
+# Container fixo para renderizar dados sem acumular chaves ou clonar elementos na tela
+placeholder_dashboard = st.container()
 
 while True:
     df_dados = carregar_dados_bricsvault_smc(par_selecionado, timeframe)
@@ -573,11 +575,14 @@ while True:
         
         status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
         
-        with placeholder_dashboard.container():
-            # Dividido em 5 colunas para acomodar o Market Cap
+        # .empty() limpa o bloco inteiro antes de cada redesenho em tempo real
+        with placeholder_dashboard:
+            placeholder_dashboard.empty()
+            
+            # Métricas em 5 colunas estruturadas
             c1, c2, c3, c4, c5 = st.columns(5)
             c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
-            c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%", delta_color="normal")
+            c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%")
             c3.metric(txt["market_cap"], formatar_marketcap(market_cap))
             c4.metric(txt["stop_atr"], formatar_preco(stop_atr))
             
@@ -593,7 +598,9 @@ while True:
             st.info(desc_status)
             
             figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
-            st.plotly_chart(figura_dinamica, key=f"chart_{par_selecionado}_{timeframe}")
+            
+            # Adicionado timestamp int(time.time()) para forçar chaves únicas em cada ciclo do loop
+            st.plotly_chart(figura_dinamica, key=f"chart_{par_selecionado}_{timeframe}_{int(time.time())}")
             
             col_esq, col_dir = st.columns([1, 1])
             
