@@ -108,7 +108,7 @@ DICIONARIO_LINGUAS = {
         "venda_forte": "🔴 STRONG SELL (SMC + FIBONACCI ALIGNED)",
         "neutro": "🟡 NEUTRAL (AWAIT SMC)",
         "erro_dados": "Insufficient historical data on this Exchange to calculate SMC structural confluence. Choose another Asset or reduce the Timeframe.",
-        "fib_nomes": ["0.0% (MAXIMUM)", "23.6%", "38.2% (Premium Frontier)", "50.0% (Equilibrium)", "61.8% (Golden Ratio / Discount)", "78.6%", "100.0% (MINIMUM)"],
+        "fib_nomes": ["0.0% (MAXIMUM)", "23.6%", "38.2% (Premium Frontier)", "50.0% (Equilíbrio)", "61.8% (Golden Ratio / Discount)", "78.6%", "100.0% (MINIMUM)"],
         "fib_posicoes": ["Cycle Top", "Shallow Retraction", "Seller Load Zone", "Fair Price", "Institutional Buy Zone", "Deep Retraction", "Cycle Bottom"],
         "ctx_desconto": "Asset positioned in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
         "ctx_premium": "Asset positioned in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
@@ -207,7 +207,8 @@ def calcular_wavetrend_oscillator(df, n1=10, n2=21):
     ap  = (df['high'] + df['low'] + df['close']) / 3
     esa = ap.ewm(span=n1, adjust=False).mean()
     d   = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
-    ci  = (ap - esa) / (0.015 * d.replace(0, 1e-10))
+    close_val = 0.015 * d.replace(0, 1e-10)
+    ci  = (ap - esa) / close_val
     df['WT1'] = ci.ewm(span=n2, adjust=False).mean()
     df['WT2'] = df['WT1'].rolling(window=4).mean().bfill()
     return df
@@ -313,9 +314,9 @@ def mapear_estrutura_smc(df):
             fvg_pendente = -1
     topo_local  = np.max(fechamentos[-15:-2])
     fundo_local = np.min(fechamentos[-15:-2])
-    if   fechamentos[-1] > topo_local:  bos_detectado  = 1
+    if   fechamentos[-1] > topo_local: bos_detectado  = 1
     elif fechamentos[-1] < fundo_local: bos_detectado  = -1
-    if   fechamentos[-1] > topo_local  and fechamentos[-2] <= topo_local:  choch_detectado = 1
+    if   fechamentos[-1] > topo_local  and fechamentos[-2] <= topo_local: choch_detectado = 1
     elif fechamentos[-1] < fundo_local and fechamentos[-2] >= fundo_local: choch_detectado = -1
     df['SMC_BOS']   = bos_detectado
     df['SMC_CHOCH'] = choch_detectado
@@ -382,9 +383,9 @@ def analisar_confluencia_smc_total(df, fib_niveis):
     pontos_alta  = 0.0
     pontos_baixa = 0.0
     
-    if u['SMC_CHOCH'] == 1  or u['SMC_BOS'] == 1:  pontos_alta  += 3
+    if u['SMC_CHOCH'] == 1  or u['SMC_BOS'] == 1: pontos_alta  += 3
     if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1: pontos_baixa += 3
-    if u['SMC_FVG'] == 1:  pontos_alta  += 1
+    if u['SMC_FVG'] == 1:   pontos_alta  += 1
     if u['SMC_FVG'] == -1: pontos_baixa += 1
     
     if preco_atual <= fib_niveis['fib_618']:
@@ -396,12 +397,12 @@ def analisar_confluencia_smc_total(df, fib_niveis):
     else:
         contexto_fib  = txt["ctx_neutro"]
         
-    if u['CMF'] > 0:        pontos_alta  += 1.5
-    else:                   pontos_baixa += 1.5
+    if u['CMF'] > 0:         pontos_alta  += 1.5
+    else:                    pontos_baixa += 1.5
     if u['WT1'] > u['WT2']: pontos_alta  += 1
-    else:                   pontos_baixa += 1
+    else:                    pontos_baixa += 1
     if u['MACD_HIST'] > 0:  pontos_alta  += 1
-    else:                   pontos_baixa += 1
+    else:                    pontos_baixa += 1
     
     if pontos_alta >= 7.5:
         return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Structure.", pontos_alta, pontos_baixa
@@ -508,12 +509,10 @@ def renderizar_matriz(df, txt):
             &nbsp;<span style='color:#ccc;font-size:12px;'>{label} {valor_str}</span>"""
 
     def neutro_badge(label):
-        # Corrigido o erro de fechamento da string hexadecimal do CSS (#ffcc00)
         return f"""<span style='background:#ffcc0022;border:1px solid #ffcc00;border-radius:6px;
             padding:3px 10px;color:#ffcc00;font-size:13px;font-weight:600;'>{txt['neutro_curto']}</span>
             &nbsp;<span style='color:#ccc;font-size:12px;'>{label}</span>"""
 
-    # Geração dos badges dinâmicos baseados nas condições matemáticas dos blocos
     b_bos = badge(u['SMC_BOS'] == 1, "Bullish Breakout", "Bearish Breakdown") if u['SMC_BOS'] != 0 else neutro_badge("Sem quebra recente")
     b_choch = badge(u['SMC_CHOCH'] == 1, "Mudança de Tendência (Alta)", "Mudança de Tendência (Baixa)") if u['SMC_CHOCH'] != 0 else neutro_badge("Sem alteração estrutural")
     b_fvg = badge(u['SMC_FVG'] == 1, "Gap de Alta Ativo", "Gap de Baixa Ativo") if u['SMC_FVG'] != 0 else neutro_badge("Gaps balanceados")
@@ -523,7 +522,6 @@ def renderizar_matriz(df, txt):
     b_wt = badge(u['WT1'] > u['WT2'], "Gatilho WT Bullish Cross", "Gatilho WT Bearish Cross")
     b_rsi = badge(u['RSI_14'] < 70, "Abaixo de Sobrecompra", "Sobrecomprado (Risco)", f"({u['RSI_14']:.1f})")
 
-    # Construção da visualização organizada em formato de tabela Markdown estruturada
     dados_matriz = {
         "Indicador / Mapeamento": [txt["bos"], txt["choch"], txt["fvg"], txt["ssl"], txt["macd_hist"], txt["cmf"], txt["wt"], txt["rsi"]],
         "Status Operacional": [b_bos, b_choch, b_fvg, b_ssl, b_macd, b_cmf, b_wt, b_rsi]
@@ -559,13 +557,11 @@ while True:
         status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
         
         with placeholder_dashboard.container():
-            # Métricas Principais superiores
             c1, c2, c3, c4 = st.columns(4)
             c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
             c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%", delta_color="normal")
             c3.metric(txt["stop_atr"], formatar_preco(stop_atr))
             
-            # Caixa de Bloco de Decisão (Confluência SMC)
             with c4:
                 st.markdown(f"""
                 <div style='background:{cor_status}15; border:2px solid {cor_status}; border-radius:10px; padding:12px; text-align:center;'>
@@ -577,11 +573,11 @@ while True:
                 
             st.info(desc_status)
             
-            # Gráfico Interativo do Plotly
             figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
-            st.plotly_chart(figura_dinamica, use_container_width=True, key=f"chart_{par_selecionado}_{timeframe}")
             
-            # Grade Inferior: Fibonacci à esquerda e Matriz de Indicadores à direita
+            # PARÂMETRO CORRIGIDO AQUI: use_container_width substituído por width="stretch"
+            st.plotly_chart(figura_dinamica, width="stretch", key=f"chart_{par_selecionado}_{timeframe}")
+            
             col_esq, col_dir = st.columns([1, 1])
             
             with col_esq:
