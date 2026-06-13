@@ -14,10 +14,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Inicialização do cliente Gate.io via CCXT
+# Inicialização do cliente Gate.io via CCXT (Corrigido para ccxt.gate)
 @st.cache_resource
 def inicializar_exchange():
-    return ccxt.gateio({
+    return ccxt.gate({
         'enableRateLimit': True,
         'options': {'defaultType': 'spot'}
     })
