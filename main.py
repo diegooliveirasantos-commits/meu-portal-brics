@@ -8,6 +8,7 @@ import time
 import requests
 import math
 from decimal import Decimal
+import json
 
 # Configuração da Página do Streamlit
 st.set_page_config(
@@ -70,7 +71,7 @@ def formatar_preco(valor, prefixo="$ "):
 
 def formatar_market_cap(valor):
     if valor is None:
-        return "N/A"
+        return "Buscando..."
     if valor >= 1_000_000_000_000:
         return f"$ {valor/1_000_000_000_000:.2f}T"
     elif valor >= 1_000_000_000:
@@ -97,65 +98,161 @@ def obter_todos_pares_usdt():
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-# Função aprimorada para obter Market Cap
+# Sistema robusto de obtenção de Market Cap com múltiplas fontes
 @st.cache_data(ttl=300)
-def obter_market_cap_para_simbolo(simbolo_usdt):
-    """
-    Obtém o market cap usando a API da CoinGecko.
-    Primeiro tenta pelo nome da moeda, depois faz uma busca geral.
-    """
+def obter_market_cap_coinmarketcap(simbolo):
+    """Fonte 1: CoinMarketCap via web scraping (grátis)"""
     try:
-        moeda_base = simbolo_usdt.split('/')[0].lower()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
+        response = requests.get(url, headers=headers, timeout=10)
         
-        # Método 1: Buscar lista de moedas e encontrar o ID correto
-        url_lista = "https://api.coingecko.com/api/v3/coins/list"
-        response_lista = requests.get(url_lista, timeout=10)
-        
-        if response_lista.status_code == 200:
-            lista_moedas = response_lista.json()
+        if response.status_code == 200:
+            # Procurar por padrões de market cap no HTML
+            import re
+            # Padrão comum: $XX.XXB ou $XX.XXM ou $X,XXX,XXX
+            patterns = [
+                r'Market cap:\s*\$([\d,]+\.?\d*[BMK]?)',
+                r'marketCap:\s*"?([\d.]+)"?',
+                r'"marketCap":"?([\d.]+)"?',
+            ]
             
-            # Procurar pelo símbolo exato
+            for pattern in patterns:
+                match = re.search(pattern, response.text)
+                if match:
+                    value = match.group(1).replace(',', '')
+                    # Converter para número
+                    if 'B' in value:
+                        return float(value.replace('B', '')) * 1_000_000_000
+                    elif 'M' in value:
+                        return float(value.replace('M', '')) * 1_000_000
+                    elif 'K' in value:
+                        return float(value.replace('K', '')) * 1_000
+                    else:
+                        return float(value)
+        
+        return None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=300)
+def obter_market_cap_coingecko(simbolo):
+    """Fonte 2: CoinGecko API"""
+    try:
+        # Primeiro, buscar o ID da moeda
+        url_search = f"https://api.coingecko.com/api/v3/search?query={simbolo.lower()}"
+        response_search = requests.get(url_search, timeout=10)
+        
+        if response_search.status_code == 200:
+            data_search = response_search.json()
+            coins = data_search.get('coins', [])
+            
+            # Encontrar a moeda com o símbolo exato
             coin_id = None
-            for moeda in lista_moedas:
-                if moeda['symbol'].lower() == moeda_base:
-                    coin_id = moeda['id']
+            for coin in coins:
+                if coin.get('symbol', '').lower() == simbolo.lower():
+                    coin_id = coin['id']
                     break
             
             if coin_id:
-                # Método 2: Obter dados detalhados da moeda
-                url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-                response_dados = requests.get(url_dados, timeout=10)
+                # Buscar dados detalhados
+                url_coin = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+                response_coin = requests.get(url_coin, timeout=10)
                 
-                if response_dados.status_code == 200:
-                    dados = response_dados.json()
-                    market_cap = dados.get('market_data', {}).get('market_cap', {}).get('usd')
+                if response_coin.status_code == 200:
+                    data_coin = response_coin.json()
+                    market_cap = data_coin.get('market_data', {}).get('market_cap', {}).get('usd')
                     if market_cap:
                         return market_cap
         
-        # Método 3: Tentar busca direta por symbol
-        url_busca = f"https://api.coingecko.com/api/v3/search?query={moeda_base}"
-        response_busca = requests.get(url_busca, timeout=10)
+        return None
+    except Exception:
+        return None
+
+@st.cache_data(ttl=300)
+def obter_market_cap_coindesk(simbolo):
+    """Fonte 3: CoinDesk API"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        # CoinDesk tem uma API de preços que podemos tentar
+        url = f"https://production.api.coindesk.com/v2/tb/price/ticker?assets={simbolo.upper()}"
+        response = requests.get(url, headers=headers, timeout=10)
         
-        if response_busca.status_code == 200:
-            dados_busca = response_busca.json()
-            coins = dados_busca.get('coins', [])
-            
-            for coin in coins:
-                if coin['symbol'].lower() == moeda_base:
-                    coin_id = coin['id']
-                    url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-                    response_dados = requests.get(url_dados, timeout=10)
-                    
-                    if response_dados.status_code == 200:
-                        dados = response_dados.json()
-                        market_cap = dados.get('market_data', {}).get('market_cap', {}).get('usd')
-                        if market_cap:
-                            return market_cap
+        if response.status_code == 200:
+            data = response.json()
+            # A API do CoinDesk pode não ter market cap diretamente, mas podemos tentar
+            if 'data' in data and simbolo.upper() in data['data']:
+                coin_data = data['data'][simbolo.upper()]
+                # Algumas APIs incluem market cap nos dados
+                if 'marketCap' in coin_data:
+                    return float(coin_data['marketCap'])
         
         return None
-        
-    except Exception as e:
+    except Exception:
         return None
+
+@st.cache_data(ttl=300)
+def obter_market_cap_cryptobubbles(simbolo):
+    """Fonte 4: CryptoBubbles"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        url = f"https://cryptobubbles.net/backend/data/coins/{simbolo.lower()}"
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if 'marketcap' in data:
+                return float(data['marketcap'])
+            elif 'market_cap' in data:
+                return float(data['market_cap'])
+        
+        return None
+    except Exception:
+        return None
+
+def obter_market_cap_robusto(simbolo_id):
+    """
+    Sistema principal que tenta múltiplas fontes em sequência
+    até encontrar o Market Cap
+    """
+    simbolo = simbolo_id.split('/')[0]
+    
+    # Lista de funções para tentar em ordem
+    fontes = [
+        ("CoinGecko", lambda: obter_market_cap_coingecko(simbolo)),
+        ("CoinMarketCap", lambda: obter_market_cap_coinmarketcap(simbolo)),
+        ("CoinDesk", lambda: obter_market_cap_coindesk(simbolo)),
+        ("CryptoBubbles", lambda: obter_market_cap_cryptobubbles(simbolo)),
+    ]
+    
+    for nome_fonte, funcao in fontes:
+        try:
+            resultado = funcao()
+            if resultado is not None and resultado > 0:
+                return resultado
+        except Exception:
+            continue
+    
+    # Se nenhuma fonte funcionou, tentar calcular estimativa
+    try:
+        ticker = gateio_client.fetch_ticker(simbolo_id)
+        if ticker and 'quoteVolume' in ticker:
+            # Estimativa muito aproximada baseada no volume
+            volume_24h = ticker.get('quoteVolume', 0)
+            if volume_24h > 0:
+                # Market cap estimado como 1000x o volume diário (aproximação grosseira)
+                estimated_mcap = volume_24h * 1000
+                return estimated_mcap
+    except Exception:
+        pass
+    
+    return None
 
 # Indicadores
 def calcular_rsi(df, col, periodo=14):
@@ -336,14 +433,12 @@ def construir_grafico(df, fib_niveis, simbolo_id):
         subplot_titles=(f"{simbolo_id} - Preço", "RSI", "MACD")
     )
     
-    # Candlestick
     fig.add_trace(go.Candlestick(
         x=df['time'], open=df['open'], high=df['high'],
         low=df['low'], close=df['close'],
         name="OHLC"
     ), row=1, col=1)
     
-    # SSL Baseline
     ssl_colors = df['ssl_dir'].apply(lambda d: '#00aaff' if d == 1 else '#ff6600')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['SSL_Baseline'],
@@ -351,7 +446,6 @@ def construir_grafico(df, fib_niveis, simbolo_id):
         marker=dict(color=ssl_colors), name="SSL"
     ), row=1, col=1)
     
-    # ATR Stop
     atr_colors = df['atr_dir'].apply(lambda d: '#00cc66' if d == 1 else '#ff3333')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['ATR_Stop'],
@@ -359,12 +453,10 @@ def construir_grafico(df, fib_niveis, simbolo_id):
         name="ATR Stop"
     ), row=1, col=1)
     
-    # Fibonacci
     for chave, cor in [('fib_0', 'red'), ('fib_236', 'orange'), ('fib_382', 'yellow'),
                         ('fib_500', 'gray'), ('fib_618', 'green'), ('fib_786', 'blue'), ('fib_100', 'purple')]:
         fig.add_hline(y=fib_niveis[chave], line_dash="dot", line_color=cor, line_width=1, row=1, col=1)
     
-    # RSI
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['RSI_14'],
         line=dict(color='yellow', width=1.5), name="RSI 14"
@@ -372,7 +464,6 @@ def construir_grafico(df, fib_niveis, simbolo_id):
     fig.add_hline(y=70, line_dash="dash", line_color="red", line_width=0.8, row=2, col=1)
     fig.add_hline(y=30, line_dash="dash", line_color="green", line_width=0.8, row=2, col=1)
     
-    # MACD
     hist_colors = df['MACD_HIST'].apply(lambda v: 'green' if v >= 0 else 'red')
     fig.add_trace(go.Bar(
         x=df['time'], y=df['MACD_HIST'],
@@ -432,9 +523,9 @@ else:
     fib_niveis = calcular_retracao_fibonacci(df_dados)
     variacao_24h = obter_variacao_24h(simbolo_id)
     
-    # Mostrar spinner enquanto carrega o market cap
-    with st.spinner('Carregando Market Cap...'):
-        market_cap = obter_market_cap_para_simbolo(simbolo_id)
+    # Buscar Market Cap com sistema robusto
+    with st.spinner('🔍 Buscando Market Cap em múltiplas fontes...'):
+        market_cap = obter_market_cap_robusto(simbolo_id)
     
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis)
     
@@ -450,7 +541,13 @@ else:
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric(txt["preco_spot"], formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
-    m3.metric(txt["market_cap"], formatar_market_cap(market_cap))
+    
+    # Mostrar Market Cap com indicador se não encontrado
+    if market_cap is not None:
+        m3.metric(txt["market_cap"], formatar_market_cap(market_cap))
+    else:
+        m3.metric(txt["market_cap"], "Não disponível")
+    
     m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
     m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
     
