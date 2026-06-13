@@ -557,7 +557,8 @@ while True:
         status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
         
         with placeholder_dashboard.container():
-            c1, c2, c3, c4 = st.columns(4)
+            # Parâmetro atualizado: Adicionado width="stretch" para conformidade estrutural interna
+            c1, c2, c3, c4 = st.columns(4, width="stretch")
             c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
             c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%", delta_color="normal")
             c3.metric(txt["stop_atr"], formatar_preco(stop_atr))
@@ -575,10 +576,10 @@ while True:
             
             figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
             
-            # PARÂMETRO CORRIGIDO AQUI: use_container_width substituído por width="stretch"
             st.plotly_chart(figura_dinamica, width="stretch", key=f"chart_{par_selecionado}_{timeframe}")
             
-            col_esq, col_dir = st.columns([1, 1])
+            # Parâmetro atualizado: Adicionado width="stretch" para as colunas da tabela e da matriz
+            col_esq, col_dir = st.columns([1, 1], width="stretch")
             
             with col_esq:
                 st.markdown(f"### {txt['fib_niveis_titulo']}")
