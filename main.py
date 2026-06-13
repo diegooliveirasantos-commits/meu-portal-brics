@@ -178,9 +178,10 @@ def mapear_estrutura_smc(df):
     df['SMC_FVG'] = fvg_pendente
     return df
 
-# --- MOTOR DE DECISÃO INTEGRADA (SMC + OSCILADORES) ---
-def analisar_confluencia_smc_total(df):
+# --- MOTOR DE DECISÃO INTEGRADA (SMC + FIBONACCI + OSCILADORES) ---
+def analisar_confluencia_smc_total(df, fib_niveis):
     u = df.iloc[-1]
+    preco_atual = u['close']
     bos = u['SMC_BOS']
     choch = u['SMC_CHOCH']
     fvg = u['SMC_FVG']
@@ -195,27 +196,42 @@ def analisar_confluencia_smc_total(df):
     pontos_alta = 0
     pontos_baixa = 0
     
+    # 🌟 PESOS DA ESTRUTURA INSTITUCIONAL SMC
     if choch == 1 or bos == 1: pontos_alta += 3
     if choch == -1 or bos == -1: pontos_baixa += 3
     if fvg == 1: pontos_alta += 1
     if fvg == -1: pontos_baixa += 1
-    if cmf_positivo: pontos_alta += 2
-    else: pontos_baixa += 2
-    if wt_alta: pontos_alta += 1.5
+    
+    # 🌟 FILTRO CONCEITUAL DE RETRAÇÃO DE FIBONACCI (ZONAS DE DESCONTO INSTITUCIONAL)
+    # Se o preço está abaixo do nível de 61.8%, está em zona barata (Desconto) otimizando a compra.
+    # Se o preço está acima do nível de 38.2%, está em zona cara (Premium) otimizando a venda.
+    if preco_atual <= fib_niveis['fib_618']:
+        pontos_alta += 2.0
+        contexto_fib = "Ativo posicionado em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais)."
+    elif preco_atual >= fib_niveis['fib_382']:
+        pontos_baixa += 2.0
+        contexto_fib = "Ativo posicionado em Zona Premium de Fibonacci (Preço esticado, propício para realização)."
+    else:
+        contexto_fib = "Preço em faixa neutra de equilíbrio de Fibonacci (Fair Value Zone)."
+
+    # OUTROS INDICADORES
+    if cmf_positivo: pontos_alta += 1.5
     else: pontos_baixa += 1.5
+    if wt_alta: pontos_alta += 1
+    else: pontos_baixa += 1
     if macd_hist_positivo: pontos_alta += 1
     else: pontos_baixa += 1
     if rsi_normal < 45 and stoch_k > stoch_d: pontos_alta += 1
     if rsi_normal > 55 and stoch_k < stoch_d: pontos_baixa += 1
 
-    if pontos_alta >= 6.5:
-        justificativa = "Rastreador SMC confirma Quebra Estrutural (BOS/CHoCH) de Alta com entrada de fluxo institucional (CMF) e capitulação de fundos nos osciladores."
-        return "🟢 COMPRA FORTE (SMC ALINHADO)", "#00cc66", justificativa
-    elif pontos_baixa >= 6.5:
-        justificativa = "Rastreador SMC aponta Distribuição Institucional e quebra estrutural para baixo. Presença de Bearish FVG ativo e fluxo de capital em forte declínio."
-        return "🔴 VENDA FORTE (SMC ALINHADO)", "#ff3333", justificativa
+    if pontos_alta >= 7.5:
+        justificativa = f"Rastreador SMC confirma Quebra Estrutural (BOS/CHoCH). {contexto_fib} Alinhado com entrada de fluxo institucional (CMF)."
+        return "🟢 COMPRA FORTE (SMC + FIBONACCI ALINHADOS)", "#00cc66", justificativa
+    elif pontos_baixa >= 7.5:
+        justificativa = f"Rastreador SMC aponta Distribuição. {contexto_fib} Presença de Bearish FVG ativo e fluxo de capital em declínio."
+        return "🔴 VENDA FORTE (SMC + FIBONACCI ALINHADOS)", "#ff3333", justificativa
     else:
-        justificativa = f"Estrutura do Smart Money travada em faixa de liquidez (Pontos Alta: {pontos_alta} / Baixa: {pontos_baixa}). Osciladores operando em micro-compressão."
+        justificativa = f"Estrutura travada em faixa de liquidez (Alta: {pontos_alta} / Baixa: {pontos_baixa}). {contexto_fib}"
         return "🟡 NEUTRO (AGUARDAR SMC)", "#ffcc00", justificativa
 
 # --- CARREGAMENTO INTEGRADO DE DADOS ---
@@ -262,15 +278,32 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         st.error(f"Erro técnico na extração dos dados: {e}")
         return None
 
-# --- EXTRAÇÃO MATEMÁTICA PURA E INFALÍVEL DE 24 HORAS (SEM CACHE/FANTASIA) ---
+# --- ENGINE MATEMÁTICO DE RETRAÇÃO DE FIBONACCI ---
+def calcular_retracao_fibonacci(df):
+    """Calcula matematicamente os níveis de Fibonacci com base no ciclo macro visível"""
+    maxima_absoluta = df['high'].max()
+    minima_absoluta = df['low'].min()
+    diff = maxima_absoluta - minima_absoluta
+    
+    # Mapeamento padrão de níveis de retração de topo a fundo
+    niveis = {
+        'fib_0': maxima_absoluta,
+        'fib_236': maxima_absoluta - (0.236 * diff),
+        'fib_382': maxima_absoluta - (0.382 * diff),
+        'fib_500': maxima_absoluta - (0.500 * diff),
+        'fib_618': maxima_absoluta - (0.618 * diff),
+        'fib_786': maxima_absoluta - (0.786 * diff),
+        'fib_100': minima_absoluta
+    }
+    return niveis
+
+# --- EXTRAÇÃO MATEMÁTICA PURA E INFALÍVEL DE 24 HORAS ---
 def obter_variacao_24h_precisa(simbolo_id):
-    """Retorna a variação matemática real e precisa das últimas 24 horas usando candles de 1 dia diretamente da exchange"""
     try:
         dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
         if dados_24h and len(dados_24h) >= 2:
             preco_abertura_dia = dados_24h[-1][1] 
             preco_atual = dados_24h[-1][4]       
-            
             if preco_abertura_dia > 0:
                 variacao_real = ((preco_atual - preco_abertura_dia) / preco_abertura_dia) * 100
                 return variacao_real
@@ -307,12 +340,16 @@ if st.session_state["execucao_inicializada"]:
         ultimo_reg = df_dados.iloc[-1]
         preco_atual = ultimo_reg['close']
         
-        # Cálculo de Variação Real e Incontestável da Exchange
+        # Ativação do cálculo de Fibonacci
+        fib_niveis = calcular_retracao_fibonacci(df_dados)
+        
+        # Variação real direta de 24h
         variacao_real_exchange = obter_variacao_24h_precisa(simbolo_id)
         if variacao_real_exchange is None:
             variacao_real_exchange = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
 
-        recomendacao, cor_sinal, analise_justificada = analisar_confluencia_smc_total(df_dados)
+        # Análise integrada incluindo a Retração de Fibonacci
+        recomendacao, cor_sinal, analise_justificada = analisar_confluencia_smc_total(df_dados, fib_niveis)
 
         # 🚨 SEÇÃO 1: PAINEL DE TOMADA DE DECISÃO INSTITUCIONAL 🚨
         st.markdown(f"""
@@ -328,36 +365,19 @@ if st.session_state["execucao_inicializada"]:
         m_col2.metric("Variação 24 Horas (Exchange)", f"{variacao_real_exchange:+.2f}%")
         m_col3.metric("Preço Stop ATR", f"$ {ultimo_reg['ATR_Stop']:,.4f}")
 
-        # SEÇÃO 3: PAINEL DE TABELAS COMPACTAS
-        st.markdown("### 📊 Matriz Detalhada de Momentum e Exaustão")
-        t_col1, t_col2 = st.columns(2)
-        
-        with t_col1:
-            st.markdown("**Métricas de Força Relativa & Tendência**")
-            df_tabela_1 = pd.DataFrame({
-                "Indicador": ["RSI Tradicional (14)", "MACD Base", "Histograma MACD"],
-                "Valor Cru Real": [f"{ultimo_reg['RSI_14']:.2f}", f"{ultimo_reg['MACD']:.4f}", f"{ultimo_reg['MACD_HIST']:.4f}"],
-                "Estado Técnico": ["Zona Estável" if 30<=ultimo_reg['RSI_14']<=70 else ("Sobrecomprado" if ultimo_reg['RSI_14']>70 else "Sobrevendido"),
-                                   "Fluxo de Alta" if ultimo_reg['MACD']>0 else "Fluxo de Baixa",
-                                   "Velas Compradoras" if ultimo_reg['MACD_HIST']>0 else "Velas Vendedoras"]
-            })
-            st.table(df_tabela_1)
-            
-        with t_col2:
-            st.markdown("**Métricas de Ciclo & Osciladores de Gatilho**")
-            df_tabela_2 = pd.DataFrame({
-                "Indicador": ["StochRSI Linha K", "StochRSI Linha D", "WaveTrend WT1"],
-                "Valor Cru Real": [f"{ultimo_reg['StochRSI_K']:.2f}", f"{ultimo_reg['StochRSI_D']:.2f}", f"{ultimo_reg['WT1']:.2f}"],
-                "Leitura de Sinais": ["Cruzamento Altista" if ultimo_reg['StochRSI_K']>ultimo_reg['StochRSI_D'] else "Cruzamento Baixista",
-                                      "Espaço de Expansão" if ultimo_reg['StochRSI_D']<80 else "Exaustão Compradora Extrema",
-                                      "Gatilho Comprador" if ultimo_reg['WT1']>ultimo_reg['WT2'] else "Gatilho Vendedor"]
-            })
-            st.table(df_tabela_2)
+        # SEÇÃO 3: TABELA DE MATRIZ FIBONACCI
+        st.markdown("### 📐 Níveis Críticos de Retração de Fibonacci (Ciclo Atual)")
+        fib_df = pd.DataFrame({
+            "Nível Fibonacci": ["0.0% (MÁXIMA)", "23.6%", "38.2% (Fronteira Premium)", "50.0% (Equilíbrio)", "61.8% (Golden Ratio / Desconto)", "78.6%", "100.0% (MÍNIMA)"],
+            "Preço do Alvo": [f"$ {fib_niveis['fib_0']:,.4f}", f"$ {fib_niveis['fib_236']:,.4f}", f"$ {fib_niveis['fib_382']:,.4f}", f"$ {fib_niveis['fib_500']:,.4f}", f"$ {fib_niveis['fib_618']:,.4f}", f"$ {fib_niveis['fib_786']:,.4f}", f"$ {fib_niveis['fib_100']:,.4f}"],
+            "Posição Temporal": ["Topo do Ciclo", "Retração Rasa", "Zona Carga Vendedora", "Preço Justo", "Zona Institucional Compra", "Retração Profunda", "Fundo do Ciclo"]
+        })
+        st.table(fib_df)
 
-        # SEÇÃO 4: MULTI-SUBPLOTS GRÁFICOS AVANÇADOS (Correção dos parâmetros de largura efetuada)
+        # SEÇÃO 4: MULTI-SUBPLOTS GRÁFICOS AVANÇADOS com Fibonacci em Linha Tracejada Amarela
         fig = make_subplots(
             rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06, 
-            subplot_titles=(f'Candlesticks + Indicadores AlphaTrend/SSL/ATR - {simbolo_id}', 'RSI & Stochastic RSI', 'Fluxo de Dinheiro Permanente (Chaikin Money Flow)'),
+            subplot_titles=(f'Candlesticks + Fibonacci & Indicadores - {simbolo_id}', 'RSI & Stochastic RSI', 'Fluxo de Dinheiro Permanente (Chaikin Money Flow)'),
             row_width=[0.2, 0.2, 0.6]
         )
 
@@ -367,6 +387,17 @@ if st.session_state["execucao_inicializada"]:
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['ATR_Stop'], line=dict(color=cor_atr, width=2, dash='dot'), name="Stop ATR"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['AT_K1'], line=dict(color='#00ffcc', width=2), name="AlphaTrend K1"), row=1, col=1)
 
+        # Plotagem Visual das Linhas Otimizadas de Fibonacci
+        cores_fib = {'fib_0': '#aaaaaa', 'fib_236': '#ff4d4d', 'fib_382': '#ff9900', 'fib_500': '#ffffff', 'fib_618': '#00ffcc', 'fib_786': '#00ff55', 'fib_100': '#aaaaaa'}
+        for chave, nome_linha in [('fib_0', 'Fib 0%'), ('fib_236', 'Fib 23.6%'), ('fib_382', 'Fib 38.2%'), ('fib_500', 'Fib 50.0%'), ('fib_618', 'Fib 61.8%'), ('fib_786', 'Fib 78.6%'), ('fib_100', 'Fib 100%')]:
+            fig.add_trace(go.Scatter(
+                x=[df_dados['time'].iloc[0], df_dados['time'].iloc[-1]], 
+                y=[fib_niveis[chave], fib_niveis[chave]], 
+                mode="lines", 
+                line=dict(color=cores_fib[chave], width=1, dash='dash'), 
+                name=nome_linha
+            ), row=1, col=1)
+
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['RSI_14'], line=dict(color='purple', width=2), name="RSI 14"), row=2, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['StochRSI_K'], line=dict(color='#ffaa00', width=1, dash='dash'), name="Stoch K"), row=2, col=1)
         fig.add_hline(y=80, line_dash="dot", line_color="red", row=2, col=1)
@@ -375,10 +406,10 @@ if st.session_state["execucao_inicializada"]:
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['CMF'], line=dict(color='#00ff55', width=1.5), name="CMF (Fluxo Net)"), row=3, col=1)
         fig.add_hline(y=0, line_dash="solid", line_color="white", row=3, col=1)
 
-        fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
+        fig.update_layout(height=850, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
         st.plotly_chart(fig, width='stretch')
 
-        # --- SEÇÃO 5: LEGENDAS DINÂMICAS EXCLUSIVAS (SEM VOLUME HISTÓRICO) ---
+        # --- SEÇÃO 5: LEGENDAS DINÂMICAS EXCLUSIVAS ---
         st.markdown("---")
         st.markdown("### 📘 Legendas e Notas Conceituais de Mercado")
         
