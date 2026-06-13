@@ -42,7 +42,6 @@ def obter_variacao_coingecko_segura(simbolo_id):
     chave_cache_tempo = f"tempo_{simbolo_id}"
     chave_cache_valor = f"valor_{simbolo_id}"
     
-    # Se o dado foi buscado há menos de 5 minutos (300s), reutiliza o valor salvo com segurança
     if chave_cache_tempo in st.session_state and (agora - st.session_state[chave_cache_tempo] < 300):
         return st.session_state[chave_cache_valor], "Variação 24h (CoinGecko - Cached)"
         
@@ -52,7 +51,7 @@ def obter_variacao_coingecko_segura(simbolo_id):
         coin_id = mapeamento.get(moeda, moeda)
         
         url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd&include_24hr_change=true"
-        resposta = requests.get(url, timeout=3).json() # Timeout curto de segurança
+        resposta = requests.get(url, timeout=3).json()
         
         if coin_id in resposta and 'usd_24h_change' in resposta[coin_id]:
             valor = resposta[coin_id]['usd_24h_change']
@@ -62,7 +61,6 @@ def obter_variacao_coingecko_segura(simbolo_id):
     except Exception:
         pass
         
-    # Se falhar ou der Rate Limit, retorna o último valor em cache ou None para acionar o Fallback da Exchange
     if chave_cache_valor in st.session_state:
         return st.session_state[chave_cache_valor], "Variação 24h (CoinGecko - Fallback Cache)"
     return None, "Variação Histórica (Exchange)"
@@ -201,7 +199,8 @@ def calcular_alpha_trend(df, periodo=14, coeff=1.0):
             alpha_trend[i] = min(down_t.iloc[i], alpha_trend[i-1])
                 
     df['AT_K1'] = alpha_trend
-    df['AT_K2'] = df['AT_K1'].shift(2).fillna(method='bfill')
+    # Correção de segurança para compatibilidade estrita com Pandas 3.0+
+    df['AT_K2'] = df['AT_K1'].shift(2).bfill()
     return df
 
 # --- SISTEMA DE SINALIZAÇÃO CONFLUENTE BRICS ---
@@ -290,7 +289,6 @@ timeframe = intervalos[intervalo_escolhido]
 
 st.sidebar.markdown("---")
 modo_vivo = st.sidebar.toggle("Ativar Monitoramento em Tempo Real", value=True)
-# Slider travado em no mínimo 5 segundos por segurança estrutural do servidor
 intervalo_refresh = st.sidebar.slider("Intervalo de Atualização (Segundos):", min_value=5, max_value=30, value=10)
 
 if "execucao_inicializada" not in st.session_state:
@@ -303,10 +301,8 @@ if st.session_state["execucao_inicializada"]:
         ultimo_reg = df_dados.iloc[-1]
         preco_atual = ultimo_reg['close']
         
-        # Chamada do sistema com cache antibloqueio
         variacao_cg, fonte_rotulo = obter_variacao_coingecko_segura(simbolo_id)
         if variacao_cg is None:
-            # Fallback matemático em tempo real direto da exchange se o CoinGecko estiver inacessível
             variacao_cg = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
 
         recomendacao, cor_sinal, justificativa = calcular_sinal_BRICS(df_dados)
@@ -375,7 +371,7 @@ if st.session_state["execucao_inicializada"]:
         with col_leg1:
             st.info("""
             **🏦 PREÇO SPOT REAL**
-            Refere-se ao preço de liquidação imediata do ativo no mercado à vista (Spot) no exato milissegundo da última consulta. É o valor de troca corrente do par contra o dólar tether (USDT), livre de projeções de derivativos, ágios ou taxas futuras.
+            Refere-se ao preço de liquidação imediata do ativo no mercado à vista (Spot) no exato milissegundo da última consulta. É o valor de troca corrente do par contra o dólar tether (USDT), livre de prejuções de derivativos, ágios ou taxas futuras.
             """)
             
         with col_leg2:
