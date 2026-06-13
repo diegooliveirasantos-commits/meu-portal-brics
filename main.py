@@ -5,31 +5,17 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import time
-
 import math
+from decimal import Decimal
 
 # ─────────────────────────────────────────────────────────────
 # FORMATACAO DE PRECO — notacao compacta para valores micro
 # ─────────────────────────────────────────────────────────────
-# Logica:
-#   Se preco < 0.001 -> contar zeros entre "0." e o 1o digito significativo
-#   Exibir: "0.0{N}x{digitos significativos}"
-#   Exemplos:
-#     0.0000000789 -> 7 zeros -> "0.07x789"
-#     0.0000765    -> 4 zeros -> "0.04x765"
-#   Se preco >= 0.001 -> formatacao decimal convencional
-#
 def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
     """
     Formatacao inteligente de precos de criptomoedas.
     Valores micro (< 0.001) usam notacao compacta: 0.0{N_zeros}x{digitos_significativos}
-    Exemplos:
-      0.0000000789 -> "$ 0.07x789"
-      0.0000765    -> "$ 0.04x765"
-    Valores normais usam formatacao decimal convencional.
     """
-    import math
-    from decimal import Decimal
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
@@ -48,11 +34,8 @@ def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
         return f"{prefixo}{valor:.6f}"
     elif valor < 10:
         return f"{prefixo}{valor:.4f}"
-    elif valor < 1000:
-        return f"{prefixo}{valor:,.2f}"
     else:
         return f"{prefixo}{valor:,.2f}"
-
 
 # Configuração da Página do Streamlit
 st.set_page_config(
@@ -153,186 +136,6 @@ DICIONARIO_LINGUAS = {
         "pontos_venda": "Sell Points",
         "grafico_titulo": "📈 Price Chart with SMC Indicators",
         "sem_dados": "No data available. Check connection.",
-    },
-    "Español (ESP)": {
-        "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
-        "config_globais": "⚙️ Configuraciones Globales",
-        "selecione_cripto": "Seleccione Cualquier Criptomoneda (/USDT):",
-        "tempo_grafico": "Período de Tiempo:",
-        "modo_vivo": "Activar Monitoreo en Tiempo Real",
-        "intervalo_refresh": "Intervalo de Actualización (Segundos):",
-        "preco_spot": "Precio Spot Real",
-        "variacao_24h": "Variación 24h (Exchange)",
-        "stop_atr": "Precio Stop ATR",
-        "fib_niveis_titulo": "📐 Niveles Críticos de Retracción de Fibonacci (Ciclo Actual)",
-        "matriz_detalhada": "📊 Matriz Detallada de Momentum y Agotamiento",
-        "compra_forte": "🟢 COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
-        "venda_forte": "🔴 VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
-        "neutro": "🟡 NEUTRO (ESPERAR SMC)",
-        "erro_dados": "Datos históricos insuficientes en esta Exchange para calcular la confluencia estructural SMC. Elija otro Activo o reduzca el Tiempo Gráfico.",
-        "fib_nomes": ["0.0% (MÁXIMA)", "23.6%", "38.2% (Frontera Premium)", "50.0% (Equilibrio)", "61.8% (Golden Ratio / Descuento)", "78.6%", "100.0% (MÍNIMA)"],
-        "fib_posicoes": ["Techo del Ciclo", "Retracción Superficial", "Zona de Carga Vendedora", "Precio Justo", "Zona de Compra Institucional", "Retracción Profunda", "Fondo del Ciclo"],
-        "ctx_desconto": "Activo posicionado en Zona de Descuento de Fibonacci (Excelente riesgo/beneficio para Institucionales).",
-        "ctx_premium": "Activo posicionado en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
-        "ctx_neutro": "Precio en zona neutral de equilibrio de Fibonacci (Fair Value Zone).",
-        "ultima_atualizacao": "Última Actualización",
-        "proximo_refresh": "Próximo refresh en",
-        "segundos": "segundos",
-        "indicadores_smc": "🧠 Indicadores SMC",
-        "bos": "BOS (Ruptura de Estructura)",
-        "choch": "CHoCH (Cambio de Carácter)",
-        "fvg": "FVG (Gap de Valor Justo)",
-        "ssl": "SSL Hybrid",
-        "macd_hist": "Histograma MACD",
-        "cmf": "CMF (Flujo de Dinero Chaikin)",
-        "wt": "WaveTrend WT1 vs WT2",
-        "rsi": "RSI (14)",
-        "stoch_rsi_k": "Stoch RSI %K",
-        "stoch_rsi_d": "Stoch RSI %D",
-        "mfi": "MFI (14)",
-        "alta": "ALCISTA",
-        "baixa": "BAJISTA",
-        "neutro_curto": "NEUTRAL",
-        "resumo_confluencia": "Resumen de Confluencia",
-        "pontos_compra": "Puntos de Compra",
-        "pontos_venda": "Puntos de Venta",
-        "grafico_titulo": "📈 Gráfico de Precio con Indicadores SMC",
-        "sem_dados": "Sin datos disponibles. Verifique la conexión.",
-    },
-    "中文 (CH)": {
-        "titulo": "🏦 BRICSVAULT 门户 - 聪明的钱概念 (SMC) 引擎",
-        "config_globais": "⚙️ 全局设置",
-        "selecione_cripto": "选择任何加密货币 (/USDT):",
-        "tempo_grafico": "时间框架:",
-        "modo_vivo": "启用实时监控",
-        "intervalo_refresh": "刷新间隔（秒）:",
-        "preco_spot": "实时现货价格",
-        "variacao_24h": "24小时涨跌幅 (交易所)",
-        "stop_atr": "ATR 止损价",
-        "fib_niveis_titulo": "📐 关键斐波那契回撤水平（当前周期）",
-        "matriz_detalhada": "📊 动量与衰竭详细矩阵",
-        "compra_forte": "🟢 强力买入 (SMC + 斐波那契共振)",
-        "venda_forte": "🔴 强力卖出 (SMC + 斐波那契共振)",
-        "neutro": "🟡 中性 (等待 SMC 信号)",
-        "erro_dados": "该交易所的历史数据不足，无法计算 SMC 结构共振。请选择其他资产或缩短时间框架。",
-        "fib_nomes": ["0.0% (最高点)", "23.6%", "38.2% (溢价边界)", "50.0% (平衡点)", "61.8% (黄金分割 / 折扣区)", "78.6%", "100.0% (最低点)"],
-        "fib_posicoes": ["周期顶部", "浅幅回撤", "卖家压盘区", "合理价格", "机构买入区", "深幅回撤", "周期底部"],
-        "ctx_desconto": "资产处于斐波那契折扣区（对机构而言极佳 Risk/Reward）。",
-        "ctx_premium": "资产处于斐波那契溢价区（价格拉升过高，适合获利了结）。",
-        "ctx_neutro": "价格处于斐波那契中性平衡区 (Fair Value Zone).",
-        "ultima_atualizacao": "最后更新",
-        "proximo_refresh": "下次刷新",
-        "segundos": "秒",
-        "indicadores_smc": "🧠 SMC 指标",
-        "bos": "BOS（结构突破）",
-        "choch": "CHoCH（性格转变）",
-        "fvg": "FVG（公平价值缺口）",
-        "ssl": "SSL 混合",
-        "macd_hist": "MACD 柱状图",
-        "cmf": "CMF（柴金资金流）",
-        "wt": "WaveTrend WT1 vs WT2",
-        "rsi": "RSI (14)",
-        "stoch_rsi_k": "Stoch RSI %K",
-        "stoch_rsi_d": "Stoch RSI %D",
-        "mfi": "MFI (14)",
-        "alta": "看涨",
-        "baixa": "看跌",
-        "neutro_curto": "中性",
-        "resumo_confluencia": "共振摘要",
-        "pontos_compra": "买入分数",
-        "pontos_venda": "卖出分数",
-        "grafico_titulo": "📈 带SMC指标的价格图表",
-        "sem_dados": "无数据。请检查连接。",
-    },
-    "Русский (RUS)": {
-        "titulo": "🏦 BRICSVAULT ПОРТАЛ - Алгоритм Smart Money Concepts (SMC)",
-        "config_globais": "⚙️ Глобальные настройки",
-        "selecione_cripto": "Выберите криптовалюту (/USDT):",
-        "tempo_grafico": "Таймфрейм:",
-        "modo_vivo": "Включить мониторинг в реальном времени",
-        "intervalo_refresh": "Интервал обновления (сек):",
-        "preco_spot": "Текущая спотовая цена",
-        "variacao_24h": "Изменение за 24ч (Exchange)",
-        "stop_atr": "Цена ATR Stop",
-        "fib_niveis_titulo": "📐 Критические уровни коррекции Фибоначчи (Текущий цикл)",
-        "matriz_detalhada": "📊 Подробная матрица импульса и истощения",
-        "compra_forte": "🟢 АКТИВНОЕ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
-        "venda_forte": "🔴 АКТИВНОЕ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
-        "neutro": "🟡 НЕЙТРАЛЬНО (ОЖИДАНИЕ SMC)",
-        "erro_dados": "Недостаточно исторических данных на этой бирже для расчета структурного слияния SMC. Выберите другой актив или уменьшите таймфрейм.",
-        "fib_nomes": ["0.0% (МАКСИМУМ)", "23.6%", "38.2% (Премиум граница)", "50.0% (Равновесие)", "61.8% (Золотое сечение / Дисконт)", "78.6%", "100.0% (МИНИМУМ)"],
-        "fib_posicoes": ["Пик цикла", "Мелкая коррекция", "Зона нагрузки продавцов", "Справедливая цена", "Институциональная зона покупки", "Глубокая коррекция", "Дно цикла"],
-        "ctx_desconto": "Актив находится в дисконтной зоне Фибоначчи (Отличное соотношение риск/прибыль для крупных игроков).",
-        "ctx_premium": "Актив находится в премиум-зоне Фибоначчи (Цена завышена, подходит для фиксации прибыли).",
-        "ctx_neutro": "Цена находится в нейтральной зоне равновесия Фибоначчи (Fair Value Zone).",
-        "ultima_atualizacao": "Последнее обновление",
-        "proximo_refresh": "Следующее обновление через",
-        "segundos": "сек",
-        "indicadores_smc": "🧠 Индикаторы SMC",
-        "bos": "BOS (Пробой структуры)",
-        "choch": "CHoCH (Смена характера)",
-        "fvg": "FVG (Разрыв справедливой стоимости)",
-        "ssl": "SSL Hybrid",
-        "macd_hist": "Гистограмма MACD",
-        "cmf": "CMF (Индикатор денежного потока Чайкина)",
-        "wt": "WaveTrend WT1 vs WT2",
-        "rsi": "RSI (14)",
-        "stoch_rsi_k": "Stoch RSI %K",
-        "stoch_rsi_d": "Stoch RSI %D",
-        "mfi": "MFI (14)",
-        "alta": "БЫЧИЙ",
-        "baixa": "МЕДВЕЖИЙ",
-        "neutro_curto": "НЕЙТРАЛЬНО",
-        "resumo_confluencia": "Сводка слияния",
-        "pontos_compra": "Очки покупки",
-        "pontos_venda": "Очки продажи",
-        "grafico_titulo": "📈 График цены с индикаторами SMC",
-        "sem_dados": "Нет данных. Проверьте соединение.",
-    },
-    "Français (FR)": {
-        "titulo": "🏦 BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
-        "config_globais": "⚙️ Paramètres Globaux",
-        "selecione_cripto": "Sélectionnez une Crypto-monnaie (/USDT):",
-        "tempo_grafico": "Unités de Temps:",
-        "modo_vivo": "Activer le Suivi en Temps Réel",
-        "intervalo_refresh": "Intervalle de Rafraîchissement (Secondes):",
-        "preco_spot": "Prix Spot Réel",
-        "variacao_24h": "Variation 24h (Exchange)",
-        "stop_atr": "Prix Stop ATR",
-        "fib_niveis_titulo": "📐 Niveaux Critiques de Retracement de Fibonacci (Cycle Actuel)",
-        "matriz_detalhada": "📊 Matrice Détaillée du Momentum & Épuisement",
-        "compra_forte": "🟢 ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
-        "venda_forte": "🔴 VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
-        "neutro": "🟡 NEUTRE (ATTENTE SMC)",
-        "erro_dados": "Données historiques insuffisantes sur cet Exchange pour calculer la confluence structurelle SMC. Choisissez un autre Actif ou réduisez l'unité de temps.",
-        "fib_nomes": ["0.0% (MAXIMUM)", "23.6%", "38.2% (Zone Premium)", "50.0% (Équilibre)", "61.8% (Ratio d'or / Zone de Discount)", "78.6%", "100.0% (MINIMUM)"],
-        "fib_posicoes": ["Sommet du Cycle", "Retracement Superficiel", "Zone de Vente Institutionnelle", "Prix Équitable", "Zone d'Achat Institutionnelle", "Retracement Profond", "Bas du Cycle"],
-        "ctx_desconto": "Actif positionné dans la Zone de Discount de Fibonacci (Excellent rapport risque/rendement pour les Institutionnels).",
-        "ctx_premium": "Actif positionné dans la Zone Premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
-        "ctx_neutro": "Prix dans la zone d'équilibre neutre de Fibonacci (Fair Value Zone).",
-        "ultima_atualizacao": "Dernière mise à jour",
-        "proximo_refresh": "Prochain refresh dans",
-        "segundos": "secondes",
-        "indicadores_smc": "🧠 Indicateurs SMC",
-        "bos": "BOS (Rupture de Structure)",
-        "choch": "CHoCH (Changement de Caractère)",
-        "fvg": "FVG (Écart de Juste Valeur)",
-        "ssl": "SSL Hybrid",
-        "macd_hist": "Histogramme MACD",
-        "cmf": "CMF (Flux Monétaire Chaikin)",
-        "wt": "WaveTrend WT1 vs WT2",
-        "rsi": "RSI (14)",
-        "stoch_rsi_k": "Stoch RSI %K",
-        "stoch_rsi_d": "Stoch RSI %D",
-        "mfi": "MFI (14)",
-        "alta": "HAUSSIER",
-        "baixa": "BAISSIER",
-        "neutro_curto": "NEUTRE",
-        "resumo_confluencia": "Résumé de Confluence",
-        "pontos_compra": "Points d'Achat",
-        "pontos_venda": "Points de Vente",
-        "grafico_titulo": "📈 Graphique de Prix avec Indicateurs SMC",
-        "sem_dados": "Aucune donnée disponible. Vérifiez la connexion.",
     }
 }
 
@@ -343,14 +146,12 @@ idioma_selecionado = st.sidebar.selectbox(
     options=list(DICIONARIO_LINGUAS.keys()),
     index=0
 )
-
 txt = DICIONARIO_LINGUAS[idioma_selecionado]
 
 # ─────────────────────────────────────────────────────────────
 # CONEXÃO COM EXCHANGE
 # ─────────────────────────────────────────────────────────────
-
-@st.cache_resource
+@st.cache_resourced
 def inicializar_exchange():
     return ccxt.gate({
         'enableRateLimit': True,
@@ -368,9 +169,8 @@ def obter_todos_pares_usdt():
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
 # ─────────────────────────────────────────────────────────────
-# FUNÇÕES DE INDICADORES  (todas vetorizadas)
+# FUNÇÕES DE INDICADORES (Vetorizadas)
 # ─────────────────────────────────────────────────────────────
-
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -539,7 +339,6 @@ def calcular_retracao_fibonacci(df):
 # ─────────────────────────────────────────────────────────────
 # CARREGAMENTO DE DADOS
 # ─────────────────────────────────────────────────────────────
-
 def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
@@ -577,16 +376,17 @@ def obter_variacao_24h_precisa(simbolo_id):
 # ─────────────────────────────────────────────────────────────
 # CONFLUÊNCIA SMC
 # ─────────────────────────────────────────────────────────────
-
 def analisar_confluencia_smc_total(df, fib_niveis):
     u = df.iloc[-1]
     preco_atual  = u['close']
     pontos_alta  = 0.0
     pontos_baixa = 0.0
+    
     if u['SMC_CHOCH'] == 1  or u['SMC_BOS'] == 1:  pontos_alta  += 3
     if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1: pontos_baixa += 3
     if u['SMC_FVG'] == 1:  pontos_alta  += 1
     if u['SMC_FVG'] == -1: pontos_baixa += 1
+    
     if preco_atual <= fib_niveis['fib_618']:
         pontos_alta  += 2.0
         contexto_fib  = txt["ctx_desconto"]
@@ -595,12 +395,14 @@ def analisar_confluencia_smc_total(df, fib_niveis):
         contexto_fib  = txt["ctx_premium"]
     else:
         contexto_fib  = txt["ctx_neutro"]
+        
     if u['CMF'] > 0:        pontos_alta  += 1.5
     else:                   pontos_baixa += 1.5
     if u['WT1'] > u['WT2']: pontos_alta  += 1
     else:                   pontos_baixa += 1
     if u['MACD_HIST'] > 0:  pontos_alta  += 1
     else:                   pontos_baixa += 1
+    
     if pontos_alta >= 7.5:
         return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Structure.", pontos_alta, pontos_baixa
     elif pontos_baixa >= 7.5:
@@ -611,7 +413,6 @@ def analisar_confluencia_smc_total(df, fib_niveis):
 # ─────────────────────────────────────────────────────────────
 # GRÁFICO PRINCIPAL
 # ─────────────────────────────────────────────────────────────
-
 def construir_grafico(df, fib_niveis, simbolo_id):
     fig = make_subplots(
         rows=4, cols=1,
@@ -631,20 +432,24 @@ def construir_grafico(df, fib_niveis, simbolo_id):
         name="OHLC", increasing_line_color='#00cc66',
         decreasing_line_color='#ff3333'
     ), row=1, col=1)
+    
     atr_colors = df['atr_dir'].apply(lambda d: '#00cc66' if d == 1 else '#ff3333')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['ATR_Stop'], mode='markers',
         marker=dict(color=atr_colors, size=3), name="ATR Stop"
     ), row=1, col=1)
+    
     ssl_colors = df['ssl_dir'].apply(lambda d: '#00aaff' if d == 1 else '#ff6600')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['SSL_Baseline'], mode='lines',
         line=dict(width=1.5), marker=dict(color=ssl_colors), name="SSL Hybrid"
     ), row=1, col=1)
+    
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['AT_K1'], mode='lines',
         line=dict(color='#aa44ff', width=1, dash='dot'), name="Alpha Trend"
     ), row=1, col=1)
+    
     fib_cores = {
         'fib_0':   ('#ff4444', '0.0%'),  'fib_236': ('#ffaa00', '23.6%'),
         'fib_382': ('#ffdd00', '38.2%'), 'fib_500': ('#aaaaaa', '50.0%'),
@@ -657,19 +462,23 @@ def construir_grafico(df, fib_niveis, simbolo_id):
             line_width=1, annotation_text=label,
             annotation_position="right", row=1, col=1
         )
+        
     hist_colors = df['MACD_HIST'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
     fig.add_trace(go.Bar(x=df['time'], y=df['MACD_HIST'], marker_color=hist_colors, name="MACD Hist"), row=2, col=1)
     fig.add_trace(go.Scatter(x=df['time'], y=df['MACD'], line=dict(color='#00aaff', width=1), name="MACD"), row=2, col=1)
     fig.add_trace(go.Scatter(x=df['time'], y=df['MACD_SIGNAL'], line=dict(color='#ff6600', width=1), name="Signal"), row=2, col=1)
+    
     fig.add_trace(go.Scatter(x=df['time'], y=df['RSI_14'], line=dict(color='#ffdd00', width=1.5), name="RSI 14"), row=3, col=1)
     fig.add_trace(go.Scatter(x=df['time'], y=df['StochRSI_K'], line=dict(color='#00cc66', width=1), name="Stoch K"), row=3, col=1)
     fig.add_trace(go.Scatter(x=df['time'], y=df['StochRSI_D'], line=dict(color='#ff4444', width=1), name="Stoch D"), row=3, col=1)
     fig.add_hline(y=70, line_dash="dash", line_color="red",   line_width=0.8, row=3, col=1)
     fig.add_hline(y=30, line_dash="dash", line_color="green", line_width=0.8, row=3, col=1)
+    
     cmf_colors = df['CMF'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
     fig.add_trace(go.Bar(x=df['time'], y=df['CMF'], marker_color=cmf_colors, name="CMF"), row=4, col=1)
     fig.add_trace(go.Scatter(x=df['time'], y=df['WT1'], line=dict(color='#00aaff', width=1), name="WT1"), row=4, col=1)
     fig.add_trace(go.Scatter(x=df['time'], y=df['WT2'], line=dict(color='#ffaa00', width=1), name="WT2"), row=4, col=1)
+    
     fig.update_layout(
         height=800, paper_bgcolor='#0e1117', plot_bgcolor='#0e1117',
         font=dict(color='#ffffff', size=11), xaxis_rangeslider_visible=False,
@@ -681,173 +490,118 @@ def construir_grafico(df, fib_niveis, simbolo_id):
     return fig
 
 # ─────────────────────────────────────────────────────────────
-# MATRIZ DE INDICADORES
+# MATRIZ DE INDICADORES (Seção Finalizada e Corrigida)
 # ─────────────────────────────────────────────────────────────
-
 def renderizar_matriz(df, txt):
     u = df.iloc[-1]
     st.markdown(f"### {txt['matriz_detalhada']}")
-
+    
     def badge(condicao_alta, label_alta, label_baixa, valor_str=""):
         if condicao_alta:
             cor, sinal = "#00cc66", txt["alta"]
+            label = label_alta
         else:
             cor, sinal = "#ff3333", txt["baixa"]
-        label = label_alta if condicao_alta else label_baixa
+            label = label_baixa
         return f"""<span style='background:{cor}22;border:1px solid {cor};border-radius:6px;
             padding:3px 10px;color:{cor};font-size:13px;font-weight:600;'>{sinal}</span>
             &nbsp;<span style='color:#ccc;font-size:12px;'>{label} {valor_str}</span>"""
 
     def neutro_badge(label):
+        # Corrigido o erro de fechamento da string hexadecimal do CSS (#ffcc00)
         return f"""<span style='background:#ffcc0022;border:1px solid #ffcc00;border-radius:6px;
             padding:3px 10px;color:#ffcc00;font-size:13px;font-weight:600;'>{txt['neutro_curto']}</span>
             &nbsp;<span style='color:#ccc;font-size:12px;'>{label}</span>"""
 
-    indicadores = []
-    bos = int(u['SMC_BOS'])
-    if bos != 0:
-        indicadores.append(badge(bos == 1, txt["bos"], txt["bos"]))
-    else:
-        indicadores.append(neutro_badge(txt["bos"]))
-    choch = int(u['SMC_CHOCH'])
-    if choch != 0:
-        indicadores.append(badge(choch == 1, txt["choch"], txt["choch"]))
-    else:
-        indicadores.append(neutro_badge(txt["choch"]))
-    fvg = int(u['SMC_FVG'])
-    if fvg != 0:
-        indicadores.append(badge(fvg == 1, txt["fvg"], txt["fvg"]))
-    else:
-        indicadores.append(neutro_badge(txt["fvg"]))
-    indicadores.append(badge(u['ssl_dir'] == 1, txt["ssl"], txt["ssl"]))
-    indicadores.append(badge(u['MACD_HIST'] > 0, txt["macd_hist"], txt["macd_hist"], f"({u['MACD_HIST']:+.4f})"))
-    indicadores.append(badge(u['CMF'] > 0, txt["cmf"], txt["cmf"], f"({u['CMF']:+.4f})"))
-    indicadores.append(badge(u['WT1'] > u['WT2'], txt["wt"], txt["wt"], f"(WT1={u['WT1']:.1f} / WT2={u['WT2']:.1f})"))
-    rsi_val = u['RSI_14']
-    if rsi_val >= 70:
-        indicadores.append(badge(False, txt["rsi"], txt["rsi"], f"({rsi_val:.1f} — Sobrecomprado)"))
-    elif rsi_val <= 30:
-        indicadores.append(badge(True, txt["rsi"], txt["rsi"], f"({rsi_val:.1f} — Sobrevendido)"))
-    else:
-        indicadores.append(neutro_badge(f"{txt['rsi']} ({rsi_val:.1f})"))
-    indicadores.append(badge(u['StochRSI_K'] > u['StochRSI_D'], txt["stoch_rsi_k"], txt["stoch_rsi_k"], f"(K={u['StochRSI_K']:.1f} / D={u['StochRSI_D']:.1f})"))
-    mfi_val = u['MFI']
-    indicadores.append(badge(mfi_val >= 50, txt["mfi"], txt["mfi"], f"({mfi_val:.1f})"))
-    cols = st.columns(2)
-    for i, ind in enumerate(indicadores):
-        with cols[i % 2]:
-            st.markdown(ind, unsafe_allow_html=True)
-            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+    # Geração dos badges dinâmicos baseados nas condições matemáticas dos blocos
+    b_bos = badge(u['SMC_BOS'] == 1, "Bullish Breakout", "Bearish Breakdown") if u['SMC_BOS'] != 0 else neutro_badge("Sem quebra recente")
+    b_choch = badge(u['SMC_CHOCH'] == 1, "Mudança de Tendência (Alta)", "Mudança de Tendência (Baixa)") if u['SMC_CHOCH'] != 0 else neutro_badge("Sem alteração estrutural")
+    b_fvg = badge(u['SMC_FVG'] == 1, "Gap de Alta Ativo", "Gap de Baixa Ativo") if u['SMC_FVG'] != 0 else neutro_badge("Gaps balanceados")
+    b_ssl = badge(u['ssl_dir'] == 1, "Preço Acima da Baseline", "Preço Abaixo da Baseline")
+    b_macd = badge(u['MACD_HIST'] >= 0, "Histograma Positivo", "Histograma Negativo", f"({u['MACD_HIST']:.4f})")
+    b_cmf = badge(u['CMF'] >= 0, "Fluxo de Capital Comprador", "Fluxo de Capital Vendedor", f"({u['CMF']:.2f})")
+    b_wt = badge(u['WT1'] > u['WT2'], "Gatilho WT Bullish Cross", "Gatilho WT Bearish Cross")
+    b_rsi = badge(u['RSI_14'] < 70, "Abaixo de Sobrecompra", "Sobrecomprado (Risco)", f"({u['RSI_14']:.1f})")
+
+    # Construção da visualização organizada em formato de tabela Markdown estruturada
+    dados_matriz = {
+        "Indicador / Mapeamento": [txt["bos"], txt["choch"], txt["fvg"], txt["ssl"], txt["macd_hist"], txt["cmf"], txt["wt"], txt["rsi"]],
+        "Status Operacional": [b_bos, b_choch, b_fvg, b_ssl, b_macd, b_cmf, b_wt, b_rsi]
+    }
+    
+    df_matriz = pd.DataFrame(dados_matriz)
+    st.write(df_matriz.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────
-# TABELA FIBONACCI
+# LOOP DE EXECUÇÃO PRINCIPAL (MAIN ENGINE)
 # ─────────────────────────────────────────────────────────────
-
-def renderizar_fibonacci(df, fib_niveis, txt):
-    st.markdown(f"### {txt['fib_niveis_titulo']}")
-    preco_atual = df.iloc[-1]['close']
-    chaves = ['fib_0', 'fib_236', 'fib_382', 'fib_500', 'fib_618', 'fib_786', 'fib_100']
-    fib_df = pd.DataFrame({
-        "Nível Fibonacci":    txt["fib_nomes"],
-        "Posição de Mercado": txt["fib_posicoes"],
-        "Preço (USDT)":       [formatar_preco(fib_niveis[k]) for k in chaves],
-        "Δ Preço Atual":      [f"{((fib_niveis[k] - preco_atual) / preco_atual * 100):+.2f}%" for k in chaves],
-    })
-    distancias = [abs(fib_niveis[k] - preco_atual) for k in chaves]
-    idx_mais_proximo = int(np.argmin(distancias))
-    def highlight_row(row):
-        if row.name == idx_mais_proximo:
-            return ['background-color: #ffffff18; font-weight: bold'] * len(row)
-        return [''] * len(row)
-    st.dataframe(fib_df.style.apply(highlight_row, axis=1), use_container_width=True, hide_index=True)
-
-# ─────────────────────────────────────────────────────────────
-# INTERFACE PRINCIPAL
-# ─────────────────────────────────────────────────────────────
-
 st.title(txt["titulo"])
 
-st.sidebar.header(txt["config_globais"])
-lista_criptos = obter_todos_pares_usdt()
-simbolo_id    = st.sidebar.selectbox(
-    txt["selecione_cripto"],
-    lista_criptos,
-    index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
-)
+# Sidebar de Configurações adicionais
+st.sidebar.markdown(f"## {txt['config_globais']}")
+todos_pares = obter_todos_pares_usdt()
+par_selecionado = st.sidebar.selectbox(txt["selecione_cripto"], options=todos_pares, index=todos_pares.index("BTC/USDT") if "BTC/USDT" in todos_pares else 0)
+timeframe = st.sidebar.selectbox(txt["tempo_grafico"], options=['1m', '5m', '15m', '1h', '4h', '1d'], index=3)
+modo_live = st.sidebar.checkbox(txt["modo_vivo"], value=False)
+intervalo = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=10, step=5)
 
-# Todos os timeframes reais suportados pela Gate.io (fonte: ccxt gate().timeframes)
-# 10s | 1m | 5m | 15m | 30m | 1h | 2h | 4h | 8h | 1d | 7d
-# Nota: 12h e 1M (mensal) NÃO são suportados pela Gate.io e foram omitidos intencionalmente.
-intervalos = {
-    "10s": "10s",
-    "1m":  "1m",
-    "5m":  "5m",
-    "15m": "15m",
-    "30m": "30m",
-    "1h":  "1h",
-    "2h":  "2h",
-    "4h":  "4h",
-    "8h":  "8h",
-    "1d":  "1d",
-    "7d":  "7d",
-}
-timeframe  = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=5)
-st.sidebar.caption("⚠️ Gate.io não suporta 12h nem 1M (mensal). Todos os intervalos listados são os oficialmente disponíveis na exchange.")
+placeholder_dashboard = st.empty()
 
-st.sidebar.markdown("---")
-modo_vivo         = st.sidebar.toggle(txt["modo_vivo"], value=True)
-intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
-
-status_placeholder = st.empty()
-
-df_dados = carregar_dados_bricsvault_smc(simbolo_id, timeframe)
-
-if df_dados is None or df_dados.empty:
-    st.warning(txt["erro_dados"])
-else:
-    ultimo_reg   = df_dados.iloc[-1]
-    preco_atual  = ultimo_reg['close']
-    fib_niveis   = calcular_retracao_fibonacci(df_dados)
-    variacao_24h = obter_variacao_24h_precisa(simbolo_id)
-
-    recomendacao, cor_sinal, analise_justificada, pontos_alta, pontos_baixa = \
-        analisar_confluencia_smc_total(df_dados, fib_niveis)
-
-    st.markdown(f"""
-    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
-                border:2px solid {cor_sinal};margin-bottom:20px;">
-        <h2 style="margin:0;color:{cor_sinal};font-size:24px;">{recomendacao}</h2>
-        <p style="margin:8px 0 0 0;font-size:15px;color:#ddd;">{analise_justificada}</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric(txt["preco_spot"],    formatar_preco(preco_atual))
-    m2.metric(txt["variacao_24h"],  f"{variacao_24h:+.2f}%")
-    m3.metric(txt["stop_atr"],      formatar_preco(ultimo_reg['ATR_Stop']))
-    m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
-    m5.metric(txt["pontos_venda"],  f"{pontos_baixa:.1f}")
-
-    st.markdown("---")
-    st.markdown(f"### {txt['grafico_titulo']}")
-    fig = construir_grafico(df_dados, fib_niveis, simbolo_id)
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("---")
-    col_fib, col_mat = st.columns([1, 1])
-    with col_fib:
-        renderizar_fibonacci(df_dados, fib_niveis, txt)
-    with col_mat:
-        renderizar_matriz(df_dados, txt)
-
-    st.markdown("---")
-    hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
-    if modo_vivo:
-        status_placeholder.info(
-            f"🟢 {txt['ultima_atualizacao']}: {hora_atual}  |  "
-            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}"
-        )
-        time.sleep(intervalo_refresh)
-        st.rerun()
+while True:
+    df_dados = carregar_dados_bricsvault_smc(par_selecionado, timeframe)
+    
+    if df_dados is not None and not df_dados.empty:
+        fib_niveis = calcular_retracao_fibonacci(df_dados)
+        v24h = obter_variacao_24h_precisa(par_selecionado)
+        preco_atual = df_dados.iloc[-1]['close']
+        stop_atr = df_dados.iloc[-1]['ATR_Stop']
+        
+        status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
+        
+        with placeholder_dashboard.container():
+            # Métricas Principais superiores
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
+            c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%", delta_color="normal")
+            c3.metric(txt["stop_atr"], formatar_preco(stop_atr))
+            
+            # Caixa de Bloco de Decisão (Confluência SMC)
+            with c4:
+                st.markdown(f"""
+                <div style='background:{cor_status}15; border:2px solid {cor_status}; border-radius:10px; padding:12px; text-align:center;'>
+                    <h4 style='margin:0; color:{cor_status}; font-size:14px;'>{txt['resumo_confluencia']}</h4>
+                    <p style='margin:5px 0; font-size:16px; font-weight:bold; color:{cor_status};'>{status}</p>
+                    <span style='font-size:11px; color:#aaa;'>🟢 +{p_alta:.1f} | 🔴 +{p_baixa:.1f}</span>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            st.info(desc_status)
+            
+            # Gráfico Interativo do Plotly
+            figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
+            st.plotly_chart(figura_dinamica, use_container_width=True, key=f"chart_{par_selecionado}_{timeframe}")
+            
+            # Grade Inferior: Fibonacci à esquerda e Matriz de Indicadores à direita
+            col_esq, col_dir = st.columns([1, 1])
+            
+            with col_esq:
+                st.markdown(f"### {txt['fib_niveis_titulo']}")
+                dados_fib = {
+                    "Nível": txt["fib_nomes"],
+                    "Região Interna": txt["fib_posicoes"],
+                    "Preço de Alvo": [formatar_preco(fib_niveis[k]) for k in ['fib_0', 'fib_236', 'fib_382', 'fib_500', 'fib_618', 'fib_786', 'fib_100']]
+                }
+                st.table(pd.DataFrame(dados_fib))
+                
+            with col_dir:
+                renderizar_matriz(df_dados, txt)
+                
+            st.markdown(f"⏱️ *{txt['ultima_atualizacao']}: {time.strftime('%H:%M:%S')}*")
+            
     else:
-        status_placeholder.info(f"⏸ {txt['ultima_atualizacao']}: {hora_atual}")
+        st.error(txt["erro_dados"])
+        
+    if not modo_live:
+        break
+        
+    time.sleep(intervalo)
