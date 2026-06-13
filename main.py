@@ -255,16 +255,6 @@ if st.session_state["execucao_inicializada"]:
         fig.update_layout(height=720, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
         st.plotly_chart(fig, use_container_width=True)
 
-        # SEÇÃO 5: TABELA DE VARIACÕES TOTALMENTE REALTIME
-        st.markdown("### 📊 Tabela Dinâmica e Reativa de Transações Ativas")
-        
-        # Injeta uma variação randômica simulada nas últimas linhas para criar o efeito visual de fluxo de transações ao vivo
-        tabela_viva = df_dados.tail(15).copy()
-        tabela_viva['close'] = tabela_viva['close'].apply(lambda x: x * random.uniform(0.9998, 1.0002))
-        
-        tabela_render = tabela_viva[['time', 'open', 'high', 'low', 'close', 'volume', 'RSI_14']].sort_values(by='time', ascending=False)
-        st.dataframe(tabela_render, use_container_width=True)
-
         # Código do loop reativo para atualização automatizada sem intervenção do usuário
         if modo_vivo:
             time.sleep(intervalo_refresh)
