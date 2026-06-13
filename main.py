@@ -20,7 +20,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Sistema completo de tradução multilíngue
+# Sistema completo de tradução multilíngue com TODOS os idiomas BRICS
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -48,7 +48,7 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": "📈 Gráfico de Preço com Indicadores SMC",
         "buscando_marketcap": "🔍 Buscando Market Cap em múltiplas fontes...",
         "marketcap_nao_disponivel": "Não disponível",
-        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
         "idioma_selecao": "Selecione o idioma da interface:",
     },
     "English (EN)": {
@@ -77,7 +77,7 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": "📈 Price Chart with SMC Indicators",
         "buscando_marketcap": "🔍 Searching Market Cap from multiple sources...",
         "marketcap_nao_disponivel": "Not available",
-        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
         "idioma_selecao": "Select Interface Language:",
     },
     "Español (ESP)": {
@@ -106,7 +106,7 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": "📈 Gráfico de Precio con Indicadores SMC",
         "buscando_marketcap": "🔍 Buscando Market Cap en múltiples fuentes...",
         "marketcap_nao_disponivel": "No disponible",
-        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
         "idioma_selecao": "Seleccione el idioma de la interfaz:",
     },
     "Français (FR)": {
@@ -135,8 +135,124 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": "📈 Graphique de Prix avec Indicateurs SMC",
         "buscando_marketcap": "🔍 Recherche de la capitalisation boursière depuis plusieurs sources...",
         "marketcap_nao_disponivel": "Non disponible",
-        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
         "idioma_selecao": "Sélectionnez la langue de l'interface:",
+    },
+    "Русский (RUS) - Rússia": {
+        "titulo": "🏦 BRICSVAULT ПОРТАЛ - Алгоритм Smart Money Concepts (SMC)",
+        "config_globais": "⚙️ Глобальные настройки",
+        "selecione_cripto": "Выберите криптовалюту (/USDT):",
+        "tempo_grafico": "Таймфрейм:",
+        "modo_vivo": "Включить мониторинг в реальном времени",
+        "intervalo_refresh": "Интервал обновления (сек):",
+        "preco_spot": "Текущая спотовая цена",
+        "variacao_24h": "Изменение за 24ч (Биржа)",
+        "market_cap": "Рыночная капитализация",
+        "stop_atr": "Цена ATR Stop",
+        "compra_forte": "🟢 АКТИВНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
+        "venda_forte": "🔴 АКТИВНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
+        "neutro": "🟡 НЕЙТРАЛЬНО (ОЖИДАНИЕ SMC)",
+        "erro_dados": "Недостаточно исторических данных на этой бирже для расчета структурного слияния SMC. Выберите другой актив или уменьшите таймфрейм.",
+        "ctx_desconto": "Актив находится в дисконтной зоне Фибоначчи (Отличное соотношение риск/прибыль для институциональных инвесторов).",
+        "ctx_premium": "Актив находится в премиум-зоне Фибоначчи (Цена завышена, подходит для фиксации прибыли).",
+        "ctx_neutro": "Цена находится в нейтральной зоне равновесия Фибоначчи (Fair Value Zone).",
+        "ultima_atualizacao": "Последнее обновление",
+        "proximo_refresh": "Следующее обновление через",
+        "segundos": "сек",
+        "pontos_compra": "Очки покупки",
+        "pontos_venda": "Очки продажи",
+        "grafico_titulo": "📈 График цены с индикаторами SMC",
+        "buscando_marketcap": "🔍 Поиск рыночной капитализации из нескольких источников...",
+        "marketcap_nao_disponivel": "Недоступно",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
+        "idioma_selecao": "Выберите язык интерфейса:",
+    },
+    "中文 (ZH) - China": {
+        "titulo": "🏦 BRICSVAULT 门户 - 聪明的钱概念 (SMC) 引擎",
+        "config_globais": "⚙️ 全局设置",
+        "selecione_cripto": "选择任何加密货币 (/USDT):",
+        "tempo_grafico": "时间框架:",
+        "modo_vivo": "启用实时监控",
+        "intervalo_refresh": "刷新间隔（秒）:",
+        "preco_spot": "实时现货价格",
+        "variacao_24h": "24小时涨跌幅 (交易所)",
+        "market_cap": "市值",
+        "stop_atr": "ATR 止损价",
+        "compra_forte": "🟢 强力买入 (SMC + 斐波那契共振)",
+        "venda_forte": "🔴 强力卖出 (SMC + 斐波那契共振)",
+        "neutro": "🟡 中性 (等待 SMC 信号)",
+        "erro_dados": "该交易所的历史数据不足，无法计算 SMC 结构共振。请选择其他资产或缩短时间框架。",
+        "ctx_desconto": "资产处于斐波那契折扣区（对机构投资者而言极佳的风险回报比）。",
+        "ctx_premium": "资产处于斐波那契溢价区（价格拉升过高，适合获利了结）。",
+        "ctx_neutro": "价格处于斐波那契中性平衡区 (公允价值区域)。",
+        "ultima_atualizacao": "最后更新",
+        "proximo_refresh": "下次刷新",
+        "segundos": "秒",
+        "pontos_compra": "买入分数",
+        "pontos_venda": "卖出分数",
+        "grafico_titulo": "📈 带SMC指标的价格图表",
+        "buscando_marketcap": "🔍 正在从多个来源搜索市值...",
+        "marketcap_nao_disponivel": "不可用",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
+        "idioma_selecao": "选择界面语言:",
+    },
+    "हिन्दी (HI) - Índia": {
+        "titulo": "🏦 BRICSVAULT पोर्टल - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
+        "config_globais": "⚙️ वैश्विक सेटिंग्स",
+        "selecione_cripto": "कोई भी क्रिप्टोकरेंसी चुनें (/USDT):",
+        "tempo_grafico": "समय सीमा:",
+        "modo_vivo": "रीयल-टाइम मॉनिटरिंग सक्षम करें",
+        "intervalo_refresh": "रीफ्रेश अंतराल (सेकंड):",
+        "preco_spot": "वास्तविक स्पॉट मूल्य",
+        "variacao_24h": "24 घंटे का बदलाव (एक्सचेंज)",
+        "market_cap": "मार्केट कैप",
+        "stop_atr": "ATR स्टॉप मूल्य",
+        "compra_forte": "🟢 मजबूत खरीदारी (SMC + फिबोनाची संरेखित)",
+        "venda_forte": "🔴 मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
+        "neutro": "🟡 तटस्थ (SMC की प्रतीक्षा करें)",
+        "erro_dados": "इस एक्सचेंज पर SMC संरचनात्मक संगम की गणना करने के लिए अपर्याप्त ऐतिहासिक डेटा। कृपया कोई अन्य परिसंपत्ति चुनें या समय सीमा कम करें।",
+        "ctx_desconto": "परिसंपत्ति फिबोनाची डिस्काउंट ज़ोन में स्थित है (संस्थागत निवेशकों के लिए उत्कृष्ट जोखिम/रिटर्न)।",
+        "ctx_premium": "परिसंपत्ति फिबोनाची प्रीमियम ज़ोन में स्थित है (मूल्य बढ़ा हुआ है, लाभ लेने के लिए उपयुक्त)।",
+        "ctx_neutro": "मूल्य तटस्थ फिबोनाची संतुलन क्षेत्र में है (उचित मूल्य क्षेत्र)।",
+        "ultima_atualizacao": "अंतिम अपडेट",
+        "proximo_refresh": "अगला रीफ्रेश",
+        "segundos": "सेकंड में",
+        "pontos_compra": "खरीदारी के अंक",
+        "pontos_venda": "बिक्री के अंक",
+        "grafico_titulo": "📈 SMC संकेतकों के साथ मूल्य चार्ट",
+        "buscando_marketcap": "🔍 कई स्रोतों से मार्केट कैप खोजा जा रहा है...",
+        "marketcap_nao_disponivel": "उपलब्ध नहीं है",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
+        "idioma_selecao": "इंटरफ़ेस भाषा चुनें:",
+    },
+    "العربية (AR)": {
+        "titulo": "🏦 بوابة BRICSVAULT - محرك مفاهيم المال الذكي (SMC)",
+        "config_globais": "⚙️ الإعدادات العامة",
+        "selecione_cripto": "اختر أي عملة مشفرة (/USDT):",
+        "tempo_grafico": "الإطار الزمني:",
+        "modo_vivo": "تفعيل المراقبة في الوقت الفعلي",
+        "intervalo_refresh": "فترة التحديث (ثواني):",
+        "preco_spot": "السعر الفوري الحقيقي",
+        "variacao_24h": "التغير خلال 24 ساعة (البورصة)",
+        "market_cap": "القيمة السوقية",
+        "stop_atr": "سعر إيقاف ATR",
+        "compra_forte": "🟢 شراء قوي (SMC + فيبوناتشي متوافق)",
+        "venda_forte": "🔴 بيع قوي (SMC + فيبوناتشي متوافق)",
+        "neutro": "🟡 محايد (انتظار SMC)",
+        "erro_dados": "بيانات تاريخية غير كافية في هذه البورصة لحساب التقاء هيكل SMC. اختر أصلاً آخر أو قلل الإطار الزمني.",
+        "ctx_desconto": "الأصل موجود في منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز للمستثمرين المؤسسيين).",
+        "ctx_premium": "الأصل موجود في منطقة فيبوناتشي الممتازة (السعر مرتفع، مناسب لجني الأرباح).",
+        "ctx_neutro": "السعر في منطقة توازن فيبوناتشي المحايدة (منطقة القيمة العادلة).",
+        "ultima_atualizacao": "آخر تحديث",
+        "proximo_refresh": "التحديث التالي في",
+        "segundos": "ثواني",
+        "pontos_compra": "نقاط الشراء",
+        "pontos_venda": "نقاط البيع",
+        "grafico_titulo": "📈 مخطط السعر مع مؤشرات SMC",
+        "buscando_marketcap": "🔍 جاري البحث عن القيمة السوقية من مصادر متعددة...",
+        "marketcap_nao_disponivel": "غير متوفر",
+        "idioma_label": "🌐 Language / Idioma / Langue / Язык / 语言 / भाषा",
+        "idioma_selecao": "اختر لغة الواجهة:",
     }
 }
 
@@ -200,10 +316,8 @@ def obter_todos_pares_usdt():
 def extrair_numero_marketcap(texto):
     """Extrai valor numérico de uma string de market cap"""
     try:
-        # Remove símbolos de moeda e espaços
         texto = texto.replace('$', '').replace(' ', '').replace(',', '').strip()
         
-        # Converte sufixos
         if 'T' in texto or 't' in texto:
             return float(texto.replace('T', '').replace('t', '')) * 1_000_000_000_000
         elif 'B' in texto or 'b' in texto:
@@ -219,9 +333,8 @@ def extrair_numero_marketcap(texto):
 
 @st.cache_data(ttl=300)
 def obter_market_cap_coingecko(simbolo):
-    """Fonte 1: CoinGecko API - Método mais confiável"""
+    """Fonte 1: CoinGecko API"""
     try:
-        # Primeiro, busca a lista completa de moedas
         url_lista = "https://api.coingecko.com/api/v3/coins/list"
         response = requests.get(url_lista, timeout=15)
         
@@ -229,7 +342,6 @@ def obter_market_cap_coingecko(simbolo):
             moedas = response.json()
             simbolo_lower = simbolo.lower()
             
-            # Encontra o ID correto
             coin_id = None
             for moeda in moedas:
                 if moeda.get('symbol', '') == simbolo_lower:
@@ -237,7 +349,6 @@ def obter_market_cap_coingecko(simbolo):
                     break
             
             if coin_id:
-                # Busca dados detalhados
                 url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
                 response_dados = requests.get(url_dados, timeout=15)
                 
@@ -249,12 +360,12 @@ def obter_market_cap_coingecko(simbolo):
                         return market_cap
         
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 @st.cache_data(ttl=300)
 def obter_market_cap_coinmarketcap(simbolo):
-    """Fonte 2: CoinMarketCap - Scraping direto"""
+    """Fonte 2: CoinMarketCap"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -262,34 +373,12 @@ def obter_market_cap_coinmarketcap(simbolo):
             'Accept-Language': 'en-US,en;q=0.5',
         }
         
-        # URL da página da moeda
         url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
         response = requests.get(url, headers=headers, timeout=15)
         
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Procura por elementos com data-testid ou classes específicas
-            # Método 1: Procurar por dd tags com Market Cap
-            market_cap_element = soup.find('dd', {'data-testid': 'market-cap'})
-            if market_cap_element:
-                texto = market_cap_element.text.strip()
-                valor = extrair_numero_marketcap(texto)
-                if valor:
-                    return valor
-            
-            # Método 2: Procurar por texto "Market cap" no HTML
-            for element in soup.find_all(['dd', 'div', 'span']):
-                texto = element.get_text()
-                if 'market cap' in texto.lower():
-                    # Extrai o número do texto
-                    match = re.search(r'\$[\d,.]+[BMKT]?', texto)
-                    if match:
-                        valor = extrair_numero_marketcap(match.group())
-                        if valor:
-                            return valor
-            
-            # Método 3: Procurar no script JSON embutido
             scripts = soup.find_all('script')
             for script in scripts:
                 if script.string and 'marketCap' in script.string:
@@ -300,18 +389,17 @@ def obter_market_cap_coinmarketcap(simbolo):
                             return valor
         
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 @st.cache_data(ttl=300)
 def obter_market_cap_coinpaprika(simbolo):
-    """Fonte 3: CoinPaprika API - Alternativa gratuita e confiável"""
+    """Fonte 3: CoinPaprika API"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
         
-        # Busca a moeda pelo símbolo
         url_search = f"https://api.coinpaprika.com/v1/search?q={simbolo}&c=currencies&limit=10"
         response = requests.get(url_search, headers=headers, timeout=15)
         
@@ -319,7 +407,6 @@ def obter_market_cap_coinpaprika(simbolo):
             dados = response.json()
             currencies = dados.get('currencies', [])
             
-            # Encontra a moeda com o símbolo exato
             coin_id = None
             for currency in currencies:
                 if currency.get('symbol', '').upper() == simbolo.upper():
@@ -327,7 +414,6 @@ def obter_market_cap_coinpaprika(simbolo):
                     break
             
             if coin_id:
-                # Busca dados detalhados
                 url_coin = f"https://api.coinpaprika.com/v1/coins/{coin_id}"
                 response_coin = requests.get(url_coin, headers=headers, timeout=15)
                 
@@ -342,13 +428,9 @@ def obter_market_cap_coinpaprika(simbolo):
         return None
 
 def obter_market_cap_robusto(simbolo_id):
-    """
-    Sistema principal que tenta múltiplas fontes em sequência
-    até encontrar o Market Cap
-    """
+    """Sistema principal que tenta múltiplas fontes em sequência"""
     simbolo = simbolo_id.split('/')[0]
     
-    # Lista de fontes para tentar
     fontes = [
         ("CoinGecko", obter_market_cap_coingecko),
         ("CoinMarketCap", obter_market_cap_coinmarketcap),
@@ -363,14 +445,12 @@ def obter_market_cap_robusto(simbolo_id):
         except Exception:
             continue
     
-    # Último recurso: estimativa baseada no volume
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
         if ticker:
             preco = ticker.get('last', 0)
             volume = ticker.get('quoteVolume', 0)
             if preco > 0 and volume > 0:
-                # Estimativa conservadora: volume diário * 500
                 return volume * 500
     except Exception:
         pass
