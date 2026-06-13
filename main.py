@@ -9,6 +9,8 @@ import requests
 import math
 from decimal import Decimal
 import json
+import re
+from bs4 import BeautifulSoup
 
 # Configuração da Página do Streamlit
 st.set_page_config(
@@ -18,31 +20,124 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Dicionário de tradução simplificado
-txt = {
-    "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
-    "config_globais": "⚙️ Configurações Globais",
-    "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
-    "tempo_grafico": "Tempo Gráfico:",
-    "modo_vivo": "Ativar Monitoramento em Tempo Real",
-    "intervalo_refresh": "Intervalo de Atualização (Segundos):",
-    "preco_spot": "Preço Spot Real",
-    "variacao_24h": "Variação 24h (Exchange)",
-    "market_cap": "Market Cap",
-    "stop_atr": "Preço Stop ATR",
-    "compra_forte": "🟢 COMPRA FORTE",
-    "venda_forte": "🔴 VENDA FORTE",
-    "neutro": "🟡 NEUTRO",
-    "erro_dados": "Dados históricos insuficientes. Escolha outro Ativo ou reduza o Tempo Gráfico.",
-    "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci.",
-    "ctx_premium": "Ativo em Zona Premium de Fibonacci.",
-    "ctx_neutro": "Preço em zona neutra de equilíbrio.",
-    "ultima_atualizacao": "Última Atualização",
-    "proximo_refresh": "Próximo refresh em",
-    "segundos": "segundos",
-    "pontos_compra": "Pontos de Compra",
-    "pontos_venda": "Pontos de Venda",
-    "grafico_titulo": "📈 Gráfico de Preço com Indicadores SMC",
+# Sistema completo de tradução multilíngue
+DICIONARIO_LINGUAS = {
+    "Português (BR)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️ Configurações Globais",
+        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
+        "tempo_grafico": "Tempo Gráfico:",
+        "modo_vivo": "Ativar Monitoramento em Tempo Real",
+        "intervalo_refresh": "Intervalo de Atualização (Segundos):",
+        "preco_spot": "Preço Spot Real",
+        "variacao_24h": "Variação 24h (Exchange)",
+        "market_cap": "Market Cap",
+        "stop_atr": "Preço Stop ATR",
+        "compra_forte": "🟢 COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "venda_forte": "🔴 VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "neutro": "🟡 NEUTRO (AGUARDAR SMC)",
+        "erro_dados": "Dados históricos insuficientes nesta Exchange para calcular a confluência estrutural SMC. Escolha outro Ativo ou reduza o Tempo Gráfico.",
+        "ctx_desconto": "Ativo posicionado em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
+        "ctx_premium": "Ativo posicionado em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
+        "ctx_neutro": "Preço em zona neutra de equilíbrio de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Última Atualização",
+        "proximo_refresh": "Próximo refresh em",
+        "segundos": "segundos",
+        "pontos_compra": "Pontos de Compra",
+        "pontos_venda": "Pontos de Venda",
+        "grafico_titulo": "📈 Gráfico de Preço com Indicadores SMC",
+        "buscando_marketcap": "🔍 Buscando Market Cap em múltiplas fontes...",
+        "marketcap_nao_disponivel": "Não disponível",
+        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_selecao": "Selecione o idioma da interface:",
+    },
+    "English (EN)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
+        "config_globais": "⚙️ Global Settings",
+        "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
+        "tempo_grafico": "Timeframe:",
+        "modo_vivo": "Enable Real-Time Monitoring",
+        "intervalo_refresh": "Refresh Interval (Seconds):",
+        "preco_spot": "Real Spot Price",
+        "variacao_24h": "24h Variation (Exchange)",
+        "market_cap": "Market Cap",
+        "stop_atr": "ATR Stop Price",
+        "compra_forte": "🟢 STRONG BUY (SMC + FIBONACCI ALIGNED)",
+        "venda_forte": "🔴 STRONG SELL (SMC + FIBONACCI ALIGNED)",
+        "neutro": "🟡 NEUTRAL (AWAIT SMC)",
+        "erro_dados": "Insufficient historical data on this Exchange to calculate SMC structural confluence. Choose another Asset or reduce the Timeframe.",
+        "ctx_desconto": "Asset positioned in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
+        "ctx_premium": "Asset positioned in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
+        "ctx_neutro": "Price in neutral Fibonacci equilibrium zone (Fair Value Zone).",
+        "ultima_atualizacao": "Last Update",
+        "proximo_refresh": "Next refresh in",
+        "segundos": "seconds",
+        "pontos_compra": "Buy Points",
+        "pontos_venda": "Sell Points",
+        "grafico_titulo": "📈 Price Chart with SMC Indicators",
+        "buscando_marketcap": "🔍 Searching Market Cap from multiple sources...",
+        "marketcap_nao_disponivel": "Not available",
+        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_selecao": "Select Interface Language:",
+    },
+    "Español (ESP)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️ Configuraciones Globales",
+        "selecione_cripto": "Seleccione Cualquier Criptomoneda (/USDT):",
+        "tempo_grafico": "Período de Tiempo:",
+        "modo_vivo": "Activar Monitoreo en Tiempo Real",
+        "intervalo_refresh": "Intervalo de Actualización (Segundos):",
+        "preco_spot": "Precio Spot Real",
+        "variacao_24h": "Variación 24h (Exchange)",
+        "market_cap": "Cap. de Mercado",
+        "stop_atr": "Precio Stop ATR",
+        "compra_forte": "🟢 COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "venda_forte": "🔴 VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "neutro": "🟡 NEUTRO (ESPERAR SMC)",
+        "erro_dados": "Datos históricos insuficientes en esta Exchange para calcular la confluencia estructural SMC. Elija otro Activo o reduzca el Tiempo Gráfico.",
+        "ctx_desconto": "Activo posicionado en Zona de Descuento de Fibonacci (Excelente riesgo/beneficio para Institucionales).",
+        "ctx_premium": "Activo posicionado en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
+        "ctx_neutro": "Precio en zona neutral de equilibrio de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Última Actualización",
+        "proximo_refresh": "Próximo refresh en",
+        "segundos": "segundos",
+        "pontos_compra": "Puntos de Compra",
+        "pontos_venda": "Puntos de Venta",
+        "grafico_titulo": "📈 Gráfico de Precio con Indicadores SMC",
+        "buscando_marketcap": "🔍 Buscando Market Cap en múltiples fuentes...",
+        "marketcap_nao_disponivel": "No disponible",
+        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_selecao": "Seleccione el idioma de la interfaz:",
+    },
+    "Français (FR)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
+        "config_globais": "⚙️ Paramètres Globaux",
+        "selecione_cripto": "Sélectionnez une Crypto-monnaie (/USDT):",
+        "tempo_grafico": "Unité de Temps:",
+        "modo_vivo": "Activer le Suivi en Temps Réel",
+        "intervalo_refresh": "Intervalle de Rafraîchissement (Secondes):",
+        "preco_spot": "Prix Spot Réel",
+        "variacao_24h": "Variation 24h (Exchange)",
+        "market_cap": "Capitalisation Boursière",
+        "stop_atr": "Prix Stop ATR",
+        "compra_forte": "🟢 ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
+        "venda_forte": "🔴 VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
+        "neutro": "🟡 NEUTRE (ATTENTE SMC)",
+        "erro_dados": "Données historiques insuffisantes sur cet Exchange pour calculer la confluence structurelle SMC. Choisissez un autre Actif ou réduisez l'unité de temps.",
+        "ctx_desconto": "Actif positionné dans la Zone de Discount de Fibonacci (Excellent rapport risque/rendement pour les Institutionnels).",
+        "ctx_premium": "Actif positionné dans la Zone Premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
+        "ctx_neutro": "Prix dans la zone d'équilibre neutre de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Dernière mise à jour",
+        "proximo_refresh": "Prochain refresh dans",
+        "segundos": "secondes",
+        "pontos_compra": "Points d'Achat",
+        "pontos_venda": "Points de Vente",
+        "grafico_titulo": "📈 Graphique de Prix avec Indicateurs SMC",
+        "buscando_marketcap": "🔍 Recherche de la capitalisation boursière depuis plusieurs sources...",
+        "marketcap_nao_disponivel": "Non disponible",
+        "idioma_label": "🌐 Language / Idioma / Langue",
+        "idioma_selecao": "Sélectionnez la langue de l'interface:",
+    }
 }
 
 def formatar_preco(valor, prefixo="$ "):
@@ -71,7 +166,7 @@ def formatar_preco(valor, prefixo="$ "):
 
 def formatar_market_cap(valor):
     if valor is None:
-        return "Buscando..."
+        return "..."
     if valor >= 1_000_000_000_000:
         return f"$ {valor/1_000_000_000_000:.2f}T"
     elif valor >= 1_000_000_000:
@@ -98,119 +193,149 @@ def obter_todos_pares_usdt():
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-# Sistema robusto de obtenção de Market Cap com múltiplas fontes
-@st.cache_data(ttl=300)
-def obter_market_cap_coinmarketcap(simbolo):
-    """Fonte 1: CoinMarketCap via web scraping (grátis)"""
+# ============================================
+# SISTEMA ROBUSTO DE MARKET CAP
+# ============================================
+
+def extrair_numero_marketcap(texto):
+    """Extrai valor numérico de uma string de market cap"""
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
-        response = requests.get(url, headers=headers, timeout=10)
+        # Remove símbolos de moeda e espaços
+        texto = texto.replace('$', '').replace(' ', '').replace(',', '').strip()
         
-        if response.status_code == 200:
-            # Procurar por padrões de market cap no HTML
-            import re
-            # Padrão comum: $XX.XXB ou $XX.XXM ou $X,XXX,XXX
-            patterns = [
-                r'Market cap:\s*\$([\d,]+\.?\d*[BMK]?)',
-                r'marketCap:\s*"?([\d.]+)"?',
-                r'"marketCap":"?([\d.]+)"?',
-            ]
-            
-            for pattern in patterns:
-                match = re.search(pattern, response.text)
-                if match:
-                    value = match.group(1).replace(',', '')
-                    # Converter para número
-                    if 'B' in value:
-                        return float(value.replace('B', '')) * 1_000_000_000
-                    elif 'M' in value:
-                        return float(value.replace('M', '')) * 1_000_000
-                    elif 'K' in value:
-                        return float(value.replace('K', '')) * 1_000
-                    else:
-                        return float(value)
-        
-        return None
-    except Exception:
+        # Converte sufixos
+        if 'T' in texto or 't' in texto:
+            return float(texto.replace('T', '').replace('t', '')) * 1_000_000_000_000
+        elif 'B' in texto or 'b' in texto:
+            return float(texto.replace('B', '').replace('b', '')) * 1_000_000_000
+        elif 'M' in texto or 'm' in texto:
+            return float(texto.replace('M', '').replace('m', '')) * 1_000_000
+        elif 'K' in texto or 'k' in texto:
+            return float(texto.replace('K', '').replace('k', '')) * 1_000
+        else:
+            return float(texto)
+    except:
         return None
 
 @st.cache_data(ttl=300)
 def obter_market_cap_coingecko(simbolo):
-    """Fonte 2: CoinGecko API"""
+    """Fonte 1: CoinGecko API - Método mais confiável"""
     try:
-        # Primeiro, buscar o ID da moeda
-        url_search = f"https://api.coingecko.com/api/v3/search?query={simbolo.lower()}"
-        response_search = requests.get(url_search, timeout=10)
+        # Primeiro, busca a lista completa de moedas
+        url_lista = "https://api.coingecko.com/api/v3/coins/list"
+        response = requests.get(url_lista, timeout=15)
         
-        if response_search.status_code == 200:
-            data_search = response_search.json()
-            coins = data_search.get('coins', [])
+        if response.status_code == 200:
+            moedas = response.json()
+            simbolo_lower = simbolo.lower()
             
-            # Encontrar a moeda com o símbolo exato
+            # Encontra o ID correto
             coin_id = None
-            for coin in coins:
-                if coin.get('symbol', '').lower() == simbolo.lower():
-                    coin_id = coin['id']
+            for moeda in moedas:
+                if moeda.get('symbol', '') == simbolo_lower:
+                    coin_id = moeda['id']
                     break
             
             if coin_id:
-                # Buscar dados detalhados
-                url_coin = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-                response_coin = requests.get(url_coin, timeout=10)
+                # Busca dados detalhados
+                url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+                response_dados = requests.get(url_dados, timeout=15)
                 
-                if response_coin.status_code == 200:
-                    data_coin = response_coin.json()
-                    market_cap = data_coin.get('market_data', {}).get('market_cap', {}).get('usd')
-                    if market_cap:
+                if response_dados.status_code == 200:
+                    dados = response_dados.json()
+                    market_data = dados.get('market_data', {})
+                    market_cap = market_data.get('market_cap', {}).get('usd')
+                    if market_cap and market_cap > 0:
                         return market_cap
         
         return None
-    except Exception:
+    except Exception as e:
         return None
 
 @st.cache_data(ttl=300)
-def obter_market_cap_coindesk(simbolo):
-    """Fonte 3: CoinDesk API"""
+def obter_market_cap_coinmarketcap(simbolo):
+    """Fonte 2: CoinMarketCap - Scraping direto"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+        }
+        
+        # URL da página da moeda
+        url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
+        response = requests.get(url, headers=headers, timeout=15)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Procura por elementos com data-testid ou classes específicas
+            # Método 1: Procurar por dd tags com Market Cap
+            market_cap_element = soup.find('dd', {'data-testid': 'market-cap'})
+            if market_cap_element:
+                texto = market_cap_element.text.strip()
+                valor = extrair_numero_marketcap(texto)
+                if valor:
+                    return valor
+            
+            # Método 2: Procurar por texto "Market cap" no HTML
+            for element in soup.find_all(['dd', 'div', 'span']):
+                texto = element.get_text()
+                if 'market cap' in texto.lower():
+                    # Extrai o número do texto
+                    match = re.search(r'\$[\d,.]+[BMKT]?', texto)
+                    if match:
+                        valor = extrair_numero_marketcap(match.group())
+                        if valor:
+                            return valor
+            
+            # Método 3: Procurar no script JSON embutido
+            scripts = soup.find_all('script')
+            for script in scripts:
+                if script.string and 'marketCap' in script.string:
+                    match = re.search(r'"marketCap":(\d+\.?\d*)', script.string)
+                    if match:
+                        valor = float(match.group(1))
+                        if valor > 0:
+                            return valor
+        
+        return None
+    except Exception as e:
+        return None
+
+@st.cache_data(ttl=300)
+def obter_market_cap_coinpaprika(simbolo):
+    """Fonte 3: CoinPaprika API - Alternativa gratuita e confiável"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        # CoinDesk tem uma API de preços que podemos tentar
-        url = f"https://production.api.coindesk.com/v2/tb/price/ticker?assets={simbolo.upper()}"
-        response = requests.get(url, headers=headers, timeout=10)
+        
+        # Busca a moeda pelo símbolo
+        url_search = f"https://api.coinpaprika.com/v1/search?q={simbolo}&c=currencies&limit=10"
+        response = requests.get(url_search, headers=headers, timeout=15)
         
         if response.status_code == 200:
-            data = response.json()
-            # A API do CoinDesk pode não ter market cap diretamente, mas podemos tentar
-            if 'data' in data and simbolo.upper() in data['data']:
-                coin_data = data['data'][simbolo.upper()]
-                # Algumas APIs incluem market cap nos dados
-                if 'marketCap' in coin_data:
-                    return float(coin_data['marketCap'])
-        
-        return None
-    except Exception:
-        return None
-
-@st.cache_data(ttl=300)
-def obter_market_cap_cryptobubbles(simbolo):
-    """Fonte 4: CryptoBubbles"""
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-        url = f"https://cryptobubbles.net/backend/data/coins/{simbolo.lower()}"
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if 'marketcap' in data:
-                return float(data['marketcap'])
-            elif 'market_cap' in data:
-                return float(data['market_cap'])
+            dados = response.json()
+            currencies = dados.get('currencies', [])
+            
+            # Encontra a moeda com o símbolo exato
+            coin_id = None
+            for currency in currencies:
+                if currency.get('symbol', '').upper() == simbolo.upper():
+                    coin_id = currency['id']
+                    break
+            
+            if coin_id:
+                # Busca dados detalhados
+                url_coin = f"https://api.coinpaprika.com/v1/coins/{coin_id}"
+                response_coin = requests.get(url_coin, headers=headers, timeout=15)
+                
+                if response_coin.status_code == 200:
+                    dados_coin = response_coin.json()
+                    market_cap = dados_coin.get('market_cap')
+                    if market_cap and market_cap > 0:
+                        return market_cap
         
         return None
     except Exception:
@@ -223,38 +348,36 @@ def obter_market_cap_robusto(simbolo_id):
     """
     simbolo = simbolo_id.split('/')[0]
     
-    # Lista de funções para tentar em ordem
+    # Lista de fontes para tentar
     fontes = [
-        ("CoinGecko", lambda: obter_market_cap_coingecko(simbolo)),
-        ("CoinMarketCap", lambda: obter_market_cap_coinmarketcap(simbolo)),
-        ("CoinDesk", lambda: obter_market_cap_coindesk(simbolo)),
-        ("CryptoBubbles", lambda: obter_market_cap_cryptobubbles(simbolo)),
+        ("CoinGecko", obter_market_cap_coingecko),
+        ("CoinMarketCap", obter_market_cap_coinmarketcap),
+        ("CoinPaprika", obter_market_cap_coinpaprika),
     ]
     
     for nome_fonte, funcao in fontes:
         try:
-            resultado = funcao()
+            resultado = funcao(simbolo)
             if resultado is not None and resultado > 0:
                 return resultado
         except Exception:
             continue
     
-    # Se nenhuma fonte funcionou, tentar calcular estimativa
+    # Último recurso: estimativa baseada no volume
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
-        if ticker and 'quoteVolume' in ticker:
-            # Estimativa muito aproximada baseada no volume
-            volume_24h = ticker.get('quoteVolume', 0)
-            if volume_24h > 0:
-                # Market cap estimado como 1000x o volume diário (aproximação grosseira)
-                estimated_mcap = volume_24h * 1000
-                return estimated_mcap
+        if ticker:
+            preco = ticker.get('last', 0)
+            volume = ticker.get('quoteVolume', 0)
+            if preco > 0 and volume > 0:
+                # Estimativa conservadora: volume diário * 500
+                return volume * 500
     except Exception:
         pass
     
     return None
 
-# Indicadores
+# Indicadores técnicos
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -377,7 +500,7 @@ def obter_variacao_24h(simbolo_id):
         pass
     return 0.0
 
-def analisar_confluencia(df, fib_niveis):
+def analisar_confluencia(df, fib_niveis, txt):
     u = df.iloc[-1]
     preco_atual = u['close']
     pontos_alta = 0.0
@@ -418,9 +541,9 @@ def analisar_confluencia(df, fib_niveis):
         contexto_fib = txt["ctx_neutro"]
     
     if pontos_alta >= 7.5:
-        return txt["compra_forte"], "#00cc66", f"{contexto_fib} Estrutura Bullish.", pontos_alta, pontos_baixa
+        return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Structure.", pontos_alta, pontos_baixa
     elif pontos_baixa >= 7.5:
-        return txt["venda_forte"], "#ff3333", f"{contexto_fib} Estrutura Bearish.", pontos_alta, pontos_baixa
+        return txt["venda_forte"], "#ff3333", f"{contexto_fib} SMC Order Flow Bearish Structure.", pontos_alta, pontos_baixa
     else:
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
 
@@ -488,9 +611,18 @@ def construir_grafico(df, fib_niveis, simbolo_id):
     return fig
 
 # ========== INTERFACE PRINCIPAL ==========
+
+# Seletor de idioma na sidebar
+st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
+idioma_selecionado = st.sidebar.selectbox(
+    DICIONARIO_LINGUAS['Português (BR)']['idioma_selecao'],
+    options=list(DICIONARIO_LINGUAS.keys()),
+    index=0
+)
+txt = DICIONARIO_LINGUAS[idioma_selecionado]
+
 st.title(txt["titulo"])
 
-# Sidebar
 st.sidebar.header(txt["config_globais"])
 lista_criptos = obter_todos_pares_usdt()
 simbolo_id = st.sidebar.selectbox(
@@ -524,10 +656,10 @@ else:
     variacao_24h = obter_variacao_24h(simbolo_id)
     
     # Buscar Market Cap com sistema robusto
-    with st.spinner('🔍 Buscando Market Cap em múltiplas fontes...'):
+    with st.spinner(txt["buscando_marketcap"]):
         market_cap = obter_market_cap_robusto(simbolo_id)
     
-    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis)
+    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis, txt)
     
     # Painel de recomendação
     st.markdown(f"""
@@ -542,11 +674,11 @@ else:
     m1.metric(txt["preco_spot"], formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
     
-    # Mostrar Market Cap com indicador se não encontrado
+    # Mostrar Market Cap
     if market_cap is not None:
         m3.metric(txt["market_cap"], formatar_market_cap(market_cap))
     else:
-        m3.metric(txt["market_cap"], "Não disponível")
+        m3.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
     
     m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
     m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
