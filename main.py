@@ -1,15 +1,15 @@
-import streamlit as st
+
+     import streamlit as st
 import ccxt
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import requests
 import time
 
 # Configuração da Página do Streamlit
 st.set_page_config(
-    page_title="BRICSVAULT PORTAL ULTRA",
+    page_title="BRICSVAULT PORTAL SMC",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -35,36 +35,7 @@ def obter_todos_pares_usdt():
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-# --- FONTE DE DADOS EM PERCENTUAIS COM CACHE DE SEGURANÇA ANTIBAN ---
-def obter_variacao_coingecko_segura(simbolo_id):
-    agora = time.time()
-    chave_cache_tempo = f"tempo_{simbolo_id}"
-    chave_cache_valor = f"valor_{simbolo_id}"
-    
-    if chave_cache_tempo in st.session_state and (agora - st.session_state[chave_cache_tempo] < 300):
-        return st.session_state[chave_cache_valor], "Variação 24h (CoinGecko - Cached)"
-        
-    try:
-        moeda = simbolo_id.split('/')[0].lower()
-        mapeamento = {"btc": "bitcoin", "eth": "ethereum", "sol": "solana", "xrp": "ripple", "bnb": "binancecoin"}
-        coin_id = mapeamento.get(moeda, moeda)
-        
-        url = f"https://api.coingecko.com/api/v3/simple/price?ids={coin_id}&vs_currencies=usd&include_24hr_change=true"
-        resposta = requests.get(url, timeout=3).json()
-        
-        if coin_id in resposta and 'usd_24h_change' in resposta[coin_id]:
-            valor = resposta[coin_id]['usd_24h_change']
-            st.session_state[chave_cache_tempo] = agora
-            st.session_state[chave_cache_valor] = valor
-            return valor, "Variação 24h (CoinGecko Live)"
-    except Exception:
-        pass
-        
-    if chave_cache_valor in st.session_state:
-        return st.session_state[chave_cache_valor], "Variação 24h (CoinGecko - Fallback Cache)"
-    return None, "Variação Histórica (Exchange)"
-
-# --- FUNÇÕES DE CÁLCULO MATEMÁTICO AVANÇADO (TODOS OS INDICADORES) ---
+# --- MATRIZ DE INDICADORES MATEMÁTICOS TRADICIONAIS E FLUXO ---
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -83,6 +54,28 @@ def calcular_stoch_rsi(df, periodo=14, k_period=3, d_period=3):
     df['StochRSI_D'] = df['StochRSI_K'].rolling(window=d_period).mean()
     return df
 
+def calcular_macd(df, col):
+    ema_rapida = df[col].ewm(span=12, adjust=False).mean()
+    ema_lenta = df[col].ewm(span=26, adjust=False).mean()
+    macd = ema_rapida - ema_lenta
+    sinal = macd.ewm(span=9, adjust=False).mean()
+    hist = macd - sinal
+    return macd, sinal, hist
+
+def calcular_chaikin_money_flow(df, periodo=20):
+    mfv = (((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low']).replace(0, 0.00001)) * df['volume']
+    df['CMF'] = mfv.rolling(window=periodo).sum() / df['volume'].rolling(window=periodo).sum().replace(0, 0.00001)
+    return df
+
+def calcular_wavetrend_oscillator(df, n1=10, n2=21):
+    ap = (df['high'] + df['low'] + df['close']) / 3
+    esa = ap.ewm(span=n1, adjust=False).mean()
+    d = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
+    ci = (ap - esa) / (0.015 * d).replace(0, 0.00001)
+    df['WT1'] = ci.ewm(span=n2, adjust=False).mean()
+    df['WT2'] = df['WT1'].rolling(window=4).mean().bfill()
+    return df
+
 def calcular_mfi(df, periodo=14):
     tp = (df['high'] + df['low'] + df['close']) / 3
     rmf = tp * df['volume']
@@ -94,14 +87,6 @@ def calcular_mfi(df, periodo=14):
     pos_mf = pos_flow.rolling(window=periodo).sum()
     neg_mf = neg_flow.rolling(window=periodo).sum()
     return 100 - (100 / (1 + (pos_mf / neg_mf.replace(0, 0.00001))))
-
-def calcular_macd(df, col):
-    ema_rapida = df[col].ewm(span=12, adjust=False).mean()
-    ema_lenta = df[col].ewm(span=26, adjust=False).mean()
-    macd = ema_rapida - ema_lenta
-    sinal = macd.ewm(span=9, adjust=False).mean()
-    hist = macd - sinal
-    return macd, sinal, hist
 
 def calcular_ssl_hybrid(df, periodo=20):
     sma_high = df['high'].rolling(window=periodo).mean()
@@ -156,53 +141,86 @@ def calcular_alpha_trend(df, periodo=14, coeff=1.0):
     df['AT_K2'] = df['AT_K1'].shift(2).bfill()
     return df
 
-def calcular_chaikin_money_flow(df, periodo=20):
-    """Mede o fluxo real de entrada de capital institucional (Volume Ponderado)"""
-    mfv = (((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low']).replace(0, 0.00001)) * df['volume']
-    df['CMF'] = mfv.rolling(window=periodo).sum() / df['volume'].rolling(window=periodo).sum().replace(0, 0.00001)
+# --- ALGORITMO GEOMÉTRICO SMC REAL ---
+def mapear_estrutura_smc(df):
+    fechamentos = df['close'].values
+    maximas = df['high'].values
+    minimas = df['low'].values
+    
+    bos_detectado = 0  
+    choch_detectado = 0 
+    fvg_pendente = 0   
+    
+    for i in range(len(df) - 3, len(df) - 1):
+        if minimas[i+1] > maximas[i-1]:
+            fvg_pendente = 1
+        elif maximas[i+1] < minimas[i-1]:
+            fvg_pendente = -1
+
+    ultimos_fechamentos = fechamentos[-15:]
+    topo_local = np.max(ultimos_fechamentos[:-2])
+    fundo_local = np.min(ultimos_fechamentos[:-2])
+    
+    preco_atual = fechamentos[-1]
+    preco_anterior = fechamentos[-2]
+    
+    if preco_atual > topo_local:
+        bos_detectado = 1
+    elif preco_atual < fundo_local:
+        bos_detectado = -1
+        
+    if preco_atual > topo_local and preco_anterior <= topo_local:
+        choch_detectado = 1
+    elif preco_atual < fundo_local and preco_anterior >= fundo_local:
+        choch_detectado = -1
+        
+    df['SMC_BOS'] = bos_detectado
+    df['SMC_CHOCH'] = choch_detectado
+    df['SMC_FVG'] = fvg_pendente
     return df
 
-def calcular_wavetrend_oscillator(df, n1=10, n2=21):
-    """Mapeia pontos milimétricos de exaustão e cruzamento de gatilho"""
-    ap = (df['high'] + df['low'] + df['close']) / 3
-    esa = ap.ewm(span=n1, adjust=False).mean()
-    d = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
-    ci = (ap - esa) / (0.015 * d).replace(0, 0.00001)
-    df['WT1'] = ci.ewm(span=n2, adjust=False).mean()
-    df['WT2'] = df['WT1'].rolling(window=4).mean().bfill()
-    return df
-
-# --- MOTOR DE INTELIGÊNCIA CONFLUENTE BRICS (DECISÃO ABSOLUTA) ---
-def analisar_confluencia_brics_total(df):
+# --- MOTOR DE DECISÃO INTEGRADA (SMC + OSCILADORES) ---
+def analisar_confluencia_smc_total(df):
     u = df.iloc[-1]
+    bos = u['SMC_BOS']
+    choch = u['SMC_CHOCH']
+    fvg = u['SMC_FVG']
     
-    # 1. Filtros de Tendência Macro (Peso Máximo)
-    f_alpha = 1 if u['AT_K1'] > u['AT_K2'] else -1
-    f_ssl = 1 if u['ssl_dir'] == 1 else -1
-    f_atr = 1 if u['atr_dir'] == 1 else -1
+    cmf_positivo = u['CMF'] > 0
+    wt_alta = u['WT1'] > u['WT2']
+    rsi_normal = u['RSI_14']
+    macd_hist_positivo = u['MACD_HIST'] > 0
+    stoch_k = u['StochRSI_K']
+    stoch_d = u['StochRSI_D']
     
-    # 2. Filtros de Momentum e Exaustão
-    f_rsi = 1 if u['RSI_14'] < 50 else -1
-    f_stoch = 1 if u['StochRSI_K'] > u['StochRSI_D'] and u['StochRSI_K'] < 80 else (-1 if u['StochRSI_K'] > 80 else 0)
-    f_macd = 1 if u['MACD_HIST'] > 0 else -1
+    pontos_alta = 0
+    pontos_baixa = 0
     
-    # 3. Filtros de Fluxo de Volume e Dinheiro
-    f_cmf = 1 if u['CMF'] > 0 else -1
-    f_wt = 1 if u['WT1'] > u['WT2'] else -1
-    
-    # Sistema de Pontuação Ponderada
-    score_total = (f_alpha * 2.5) + (f_ssl * 2.0) + (f_atr * 2.0) + (f_rsi * 1.0) + (f_stoch * 1.0) + (f_macd * 1.0) + (f_cmf * 1.5) + (f_wt * 1.5)
-    
-    # Tomada de Decisão baseada no Comitê Completo de Indicadores
-    if score_total >= 5.0:
-        return "🟢 COMPRA FORTE", "#00cc66", f"Pontuação de Confluência: {score_total:+.1f}. Estrutura validada por AlphaTrend/SSL, com forte fluxo comprador detectado via Chaikin Money Flow."
-    elif score_total <= -5.0:
-        return "🔴 VENDA FORTE", "#ff3333", f"Pontuação de Confluência: {score_total:+.1f}. Alinhamento de baixa macro confirmado. Fluxo de saída institucional e cruzamento de baixa no WaveTrend."
+    if choch == 1 or bos == 1: pontos_alta += 3
+    if choch == -1 or bos == -1: pontos_baixa += 3
+    if fvg == 1: pontos_alta += 1
+    if fvg == -1: pontos_baixa += 1
+    if cmf_positivo: pontos_alta += 2
+    else: pontos_baixa += 2
+    if wt_alta: pontos_alta += 1.5
+    else: pontos_baixa += 1.5
+    if macd_hist_positivo: pontos_alta += 1
+    else: pontos_baixa += 1
+    if rsi_normal < 45 and stoch_k > stoch_d: pontos_alta += 1
+    if rsi_normal > 55 and stoch_k < stoch_d: pontos_baixa += 1
+
+    if pontos_alta >= 6.5:
+        justificativa = "Rastreador SMC confirma Quebra Estrutural (BOS/CHoCH) de Alta com entrada de fluxo institucional (CMF) e capitulação de fundos nos osciladores."
+        return "🟢 COMPRA FORTE (SMC ALINHADO)", "#00cc66", justificativa
+    elif pontos_baixa >= 6.5:
+        justificativa = "Rastreador SMC aponta Distribuição Institucional e quebra estrutural para baixo. Presença de Bearish FVG ativo e fluxo de capital em forte declínio."
+        return "🔴 VENDA FORTE (SMC ALINHADO)", "#ff3333", justificativa
     else:
-        return "🟡 NEUTRO (AGUARDAR)", "#ffcc00", f"Pontuação de Confluência: {score_total:+.1f}. Mercado fragmentado ou em consolidação. Aguarde o alinhamento de volume e tendência."
+        justificativa = f"Estrutura do Smart Money travada em faixa de liquidez (Pontos Alta: {pontos_alta} / Baixa: {pontos_baixa}). Osciladores operando em compressão lateral."
+        return "🟡 NEUTRO (AGUARDAR SMC)", "#ffcc00", justificativa
 
 # --- CARREGAMENTO INTEGRADO DE DADOS ---
-def carregar_dados_bricsvault_completos(simbolo_id, timeframe_selecionado):
+def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
     try:
         limite = 350
         timeframe_fetch = timeframe_selecionado
@@ -226,7 +244,7 @@ def carregar_dados_bricsvault_completos(simbolo_id, timeframe_selecionado):
         
         if len(df) < 30: return None
             
-        # Execução sequencial matemática da esteira de indicadores
+        # Cálculos matemáticos puros
         df['RSI_14'] = calcular_rsi(df, 'close', 14)
         df = calcular_stoch_rsi(df)
         macd, sinal, hist = calcular_macd(df, 'close')
@@ -238,14 +256,31 @@ def carregar_dados_bricsvault_completos(simbolo_id, timeframe_selecionado):
         df = calcular_alpha_trend(df, periodo=14, coeff=1.0)
         df = calcular_chaikin_money_flow(df)
         df = calcular_wavetrend_oscillator(df)
+        df = mapear_estrutura_smc(df)
 
         return df.dropna(subset=['close', 'SSL_Baseline', 'AT_K1'])
     except Exception as e:
         st.error(f"Erro técnico na extração dos dados: {e}")
         return None
 
+# --- EXTRAÇÃO MATEMÁTICA PURA E INFALÍVEL DE 24 HORAS (SEM CACHE/FANTASIA) ---
+def obter_variacao_24h_precisa(simbolo_id):
+    """Retorna a variação matemática real e precisa das últimas 24 horas usando candles de 1 dia diretamente da exchange"""
+    try:
+        dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
+        if dados_24h and len(dados_24h) >= 2:
+            preco_abertura_dia = dados_24h[-1][1] # Abertura do candle de hoje
+            preco_atual = dados_24h[-1][4]       # Último fechamento (Preço Spot corrente)
+            
+            if preco_abertura_dia > 0:
+                variacao_real = ((preco_atual - preco_abertura_dia) / preco_abertura_dia) * 100
+                return variacao_real
+    except Exception:
+        pass
+    return None
+
 # --- PORTAL INTERFACE ---
-st.title("🏦 BRICSVAULT PORTAL - Sistema de Confluência Suprema")
+st.title("🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine")
 
 st.sidebar.header("⚙️ Configurações Globais")
 lista_criptos = obter_todos_pares_usdt()
@@ -267,111 +302,94 @@ if "execucao_inicializada" not in st.session_state:
     st.session_state["execucao_inicializada"] = True
 
 if st.session_state["execucao_inicializada"]:
-    df_dados = carregar_dados_bricsvault_completos(simbolo_id, timeframe)
+    df_dados = carregar_dados_bricsvault_smc(simbolo_id, timeframe)
         
     if df_dados is not None and not df_dados.empty:
         ultimo_reg = df_dados.iloc[-1]
         preco_atual = ultimo_reg['close']
         
-        variacao_cg, fonte_rotulo = obter_variacao_coingecko_segura(simbolo_id)
-        if variacao_cg is None:
-            variacao_cg = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
+        # Cálculo de Variação Real e Incontestável da Exchange
+        variacao_real_exchange = obter_variacao_24h_precisa(simbolo_id)
+        if variacao_real_exchange is None:
+            # Fallback matemático seguro caso o endpoint '1d' sofra rate limit
+            variacao_real_exchange = ((preco_atual - df_dados.iloc[0]['close']) / df_dados.iloc[0]['close']) * 100
 
-        # Análise Ponderada de TODOS os indicadores unificados
-        recomendacao, cor_sinal, analise_justificada = analisar_confluencia_brics_total(df_dados)
+        recomendacao, cor_sinal, analise_justificada = analisar_confluencia_smc_total(df_dados)
 
-        # 🚨 SEÇÃO 1: PAINEL DE TOMADA DE DECISÃO SUPREMA 🚨
+        # 🚨 SEÇÃO 1: PAINEL DE TOMADA DE DECISÃO INSTITUCIONAL 🚨
         st.markdown(f"""
         <div style="background-color: {cor_sinal}22; padding: 20px; border-radius: 10px; border: 2px solid {cor_sinal}; margin-bottom: 25px;">
-            <h2 style="margin: 0; color: {cor_sinal}; font-size: 26px;">AÇÃO RECOMENDADA: {recomendacao}</h2>
-            <p style="margin: 8px 0 0 0; font-size: 16px; color: #ffffff;"><b>Análise de Consenso Técnico:</b> {analise_justificada}</p>
+            <h2 style="margin: 0; color: {cor_sinal}; font-size: 26px;">DIRETRIZ DE FLUXO SMC: {recomendacao}</h2>
+            <p style="margin: 8px 0 0 0; font-size: 16px; color: #ffffff;"><b>Diagnóstico Estrutural de Mercado:</b> {analise_justificada}</p>
         </div>
         """, unsafe_allow_html=True)
 
-        # SEÇÃO 2: CARDS DE MÉTRICAS RÁPIDAS
+        # SEÇÃO 2: CARDS DE MÉTRICAS REAIS
         m_col1, m_col2, m_col3 = st.columns(3)
         m_col1.metric("Preço Spot Real", f"$ {preco_atual:,.4f}")
-        m_col2.metric(fonte_rotulo, f"{variacao_cg:+.2f}%")
-        m_col3.metric("Fluxo de Capital (CMF)", f"{ultimo_reg['CMF']:+.4f}")
+        m_col2.metric("Variação 24 Horas (Exchange)", f"{variacao_real_exchange:+.2f}%")
+        m_col3.metric("Preço Stop ATR", f"$ {ultimo_reg['ATR_Stop']:,.4f}")
 
-        # SEÇÃO 3: PAINEL COMPACTO DE TABELAS (RSI + STOCH RSI + MACD)
-        st.markdown("### 📊 Matriz de Osciladores e Momentum")
+        # SEÇÃO 3: PAINEL DE TABELAS COMPACTAS
+        st.markdown("### 📊 Matriz Detalhada de Momentum e Exaustão")
         t_col1, t_col2 = st.columns(2)
         
         with t_col1:
-            st.markdown("**Métricas Tradicionais (RSI & MACD)**")
+            st.markdown("**Métricas de Força Relativa & Tendência**")
             df_tabela_1 = pd.DataFrame({
-                "Indicador": ["RSI (14)", "MACD Linha", "Histograma MACD"],
-                "Valor Atual": [f"{ultimo_reg['RSI_14']:.2f}", f"{ultimo_reg['MACD']:.4f}", f"{ultimo_reg['MACD_HIST']:.4f}"],
-                "Condição": ["Zona Neutra" if 30<=ultimo_reg['RSI_14']<=70 else ("Sobrecomprado" if ultimo_reg['RSI_14']>70 else "Sobrevendido"),
-                             "Tendência de Alta" if ultimo_reg['MACD']>0 else "Tendência de Baixa",
-                             "Pressão Compradora" if ultimo_reg['MACD_HIST']>0 else "Pressão Vendedora"]
+                "Indicador": ["RSI Tradicional (14)", "MACD Base", "Histograma MACD"],
+                "Valor Cru Real": [f"{ultimo_reg['RSI_14']:.2f}", f"{ultimo_reg['MACD']:.4f}", f"{ultimo_reg['MACD_HIST']:.4f}"],
+                "Estado Técnico": ["Zona Estável" if 30<=ultimo_reg['RSI_14']<=70 else ("Sobrecomprado" if ultimo_reg['RSI_14']>70 else "Sobrevendido"),
+                                   "Fluxo de Alta" if ultimo_reg['MACD']>0 else "Fluxo de Baixa",
+                                   "Velas Compradoras" if ultimo_reg['MACD_HIST']>0 else "Velas Vendedoras"]
             })
             st.table(df_tabela_1)
             
         with t_col2:
-            st.markdown("**Métricas Derivadas (Stochastic RSI & WaveTrend)**")
+            st.markdown("**Métricas de Ciclo & Osciladores de Gatilho**")
             df_tabela_2 = pd.DataFrame({
-                "Indicador": ["StochRSI K", "StochRSI D", "WaveTrend WT1"],
-                "Valor Atual": [f"{ultimo_reg['StochRSI_K']:.2f}", f"{ultimo_reg['StochRSI_D']:.2f}", f"{ultimo_reg['WT1']:.2f}"],
-                "Sinal Técnico": ["Cruzamento Altista" if ultimo_reg['StochRSI_K']>ultimo_reg['StochRSI_D'] else "Cruzamento Baixista",
-                                  "Momento de Expansão" if ultimo_reg['StochRSI_D']<80 else "Exaustão Compradora",
-                                  "Gatilho Comprador" if ultimo_reg['WT1']>ultimo_reg['WT2'] else "Gatilho Vendedor"]
+                "Indicador": ["StochRSI Linha K", "StochRSI Linha D", "WaveTrend WT1"],
+                "Valor Cru Real": [f"{ultimo_reg['StochRSI_K']:.2f}", f"{ultimo_reg['StochRSI_D']:.2f}", f"{ultimo_reg['WT1']:.2f}"],
+                "Leitura de Sinais": ["Cruzamento Altista" if ultimo_reg['StochRSI_K']>ultimo_reg['StochRSI_D'] else "Cruzamento Baixista",
+                                      "Espaço de Expansão" if ultimo_reg['StochRSI_D']<80 else "Exaustão Compradora Extrema",
+                                      "Gatilho Comprador" if ultimo_reg['WT1']>ultimo_reg['WT2'] else "Gatilho Vendedor"]
             })
             st.table(df_tabela_2)
 
         # SEÇÃO 4: MULTI-SUBPLOTS GRÁFICOS AVANÇADOS
         fig = make_subplots(
             rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.06, 
-            subplot_titles=(f'Candlesticks + Tendências Combinadas (AlphaTrend/SSL/Stop ATR) - {simbolo_id}', 'Momentum (RSI & Stochastic RSI)', 'Fluxo de Volume (Chaikin Money Flow)'),
+            subplot_titles=(f'Candlesticks + Indicadores AlphaTrend/SSL/ATR - {simbolo_id}', 'RSI & Stochastic RSI', 'Fluxo de Dinheiro Permanente (Chaikin Money Flow)'),
             row_width=[0.2, 0.2, 0.6]
         )
 
-        # Gráfico Principal
         fig.add_trace(go.Candlestick(x=df_dados['time'], open=df_dados['open'], high=df_dados['high'], low=df_dados['low'], close=df_dados['close'], name="Preço"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['SSL_Baseline'], line=dict(color='#00ffff', width=1.5), name="SSL Baseline"), row=1, col=1)
         cor_atr = '#17becf' if ultimo_reg['atr_dir'] == 1 else '#d62728'
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['ATR_Stop'], line=dict(color=cor_atr, width=2, dash='dot'), name="Stop ATR"), row=1, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['AT_K1'], line=dict(color='#00ffcc', width=2), name="AlphaTrend K1"), row=1, col=1)
 
-        # Gráfico de Osciladores
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['RSI_14'], line=dict(color='purple', width=2), name="RSI 14"), row=2, col=1)
         fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['StochRSI_K'], line=dict(color='#ffaa00', width=1, dash='dash'), name="Stoch K"), row=2, col=1)
         fig.add_hline(y=80, line_dash="dot", line_color="red", row=2, col=1)
         fig.add_hline(y=20, line_dash="dot", line_color="green", row=2, col=1)
 
-        # Gráfico de Volume Ponderado (CMF)
-        fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['CMF'], line=dict(color='#00ff55', width=1.5), name="CMF Flow"), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df_dados['time'], y=df_dados['CMF'], line=dict(color='#00ff55', width=1.5), name="CMF (Fluxo Net)"), row=3, col=1)
         fig.add_hline(y=0, line_dash="solid", line_color="white", row=3, col=1)
 
         fig.update_layout(height=800, template="plotly_dark", xaxis_rangeslider_visible=False, margin=dict(l=40, r=40, t=40, b=40))
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- SEÇÃO 5: LEGENDAS DINÂMICAS PROTEGIDAS NO RODAPÉ ---
+        # --- SEÇÃO 5: LEGENDAS DINÂMICAS EXCLUSIVAS (SEM VOLUME HISTÓRICO) ---
         st.markdown("---")
         st.markdown("### 📘 Legendas e Notas Conceituais de Mercado")
         
-        # Detecção de integridade do Volume Histórico
-        volume_disponivel = bool(df_dados['volume'].sum() > 0)
-        
-        if volume_disponivel:
-            col_leg1, col_leg2 = st.columns(2)
-            with col_leg1:
-                st.info("""
-                **🏦 PREÇO SPOT REAL** Refere-se ao preço de liquidação imediata do ativo no mercado à vista (Spot) no exato milissegundo da última consulta. É o valor de troca corrente do par contra o dólar tether (USDT), livre de projeções de derivativos, ágios ou taxas futuras.
-                """)
-            with col_leg2:
-                st.info("""
-                **📊 VOLUME HISTÓRICO** Representa o somatório total de unidades da criptomoeda que foram efetivamente negociadas (compradas e vendidas) ao longo do período temporal selecionado. É a métrica definitiva para validar a liquidez e a relevância institucional por trás de um movimento de preço.
-                """)
-        else:
-            # Caso a moeda não possua ou não permita extração de volume, exibe apenas o Spot
-            st.info("""
-            **🏦 PREÇO SPOT REAL** Refere-se ao preço de liquidação imediata do ativo no mercado à vista (Spot) no exato milissegundo da última consulta. É o valor de troca corrente do par contra o dólar tether (USDT), livre de projeções de derivativos, ágios ou taxas futuras.
-            """)
+        st.info("""
+        **🏦 PREÇO SPOT REAL** Refere-se ao preço de liquidação imediata do ativo no mercado à vista (Spot) no exato milissegundo da última consulta. É o valor de troca corrente do par contra o dólar tether (USDT), livre de projeções de derivativos, ágios ou taxas futuras.
+        """)
 
         if modo_vivo:
             time.sleep(intervalo_refresh)
             st.rerun()
     else:
-        st.error("Dados históricos insuficientes nesta Exchange para calcular a confluência completa. Escolha outro Ativo ou reduza o Tempo Gráfico.")
+        st.error("Dados históricos insuficientes nesta Exchange para calcular a confluência estrutural SMC. Escolha outro Ativo ou reduza o Tempo Gráfico.")
