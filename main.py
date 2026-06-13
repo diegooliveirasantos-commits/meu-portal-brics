@@ -10,7 +10,7 @@ import math
 from decimal import Decimal
 
 # ─────────────────────────────────────────────────────────────
-# FORMATACAO DE PRECO — notacao compacta para valores micro
+# FORMATACAO DE PRECO
 # ─────────────────────────────────────────────────────────────
 def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
@@ -50,7 +50,9 @@ def formatar_market_cap(valor):
     else:
         return f"$ {valor:.2f}"
 
-# Configuração da Página do Streamlit
+# ─────────────────────────────────────────────────────────────
+# CONFIGURACAO DA PAGINA
+# ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
     page_icon="🏦",
@@ -58,7 +60,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- REPOSITÓRIO INTERNO DE TRADUÇÃO (i18n) ---
+# ─────────────────────────────────────────────────────────────
+# DICIONARIO DE TRADUCAO
+# ─────────────────────────────────────────────────────────────
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -200,20 +204,20 @@ DICIONARIO_LINGUAS = {
     }
 }
 
-# SELETOR DE IDIOMA CONFIGURADO NO MENU LATERAL
+# ─────────────────────────────────────────────────────────────
+# SELETOR DE IDIOMA
+# ─────────────────────────────────────────────────────────────
 st.sidebar.markdown("### 🌐 Language / Idioma / Langue")
 idioma_selecionado = st.sidebar.selectbox(
     "Select Interface Language:",
     options=list(DICIONARIO_LINGUAS.keys()),
     index=0
 )
-
 txt = DICIONARIO_LINGUAS[idioma_selecionado]
 
 # ─────────────────────────────────────────────────────────────
-# CONEXÃO COM EXCHANGE
+# CONEXAO COM EXCHANGE
 # ─────────────────────────────────────────────────────────────
-
 @st.cache_resource
 def inicializar_exchange():
     return ccxt.gate({
@@ -232,75 +236,25 @@ def obter_todos_pares_usdt():
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
 # ─────────────────────────────────────────────────────────────
-# FUNÇÃO PARA OBTER MARKET CAP (CoinGecko)
+# FUNCAO PARA OBTER MARKET CAP (CoinGecko)
 # ─────────────────────────────────────────────────────────────
 MAPEAMENTO_COINGECKO = {
-    'BTC': 'bitcoin',
-    'ETH': 'ethereum',
-    'SOL': 'solana',
-    'XRP': 'ripple',
-    'BNB': 'binancecoin',
-    'ADA': 'cardano',
-    'DOGE': 'dogecoin',
-    'DOT': 'polkadot',
-    'MATIC': 'matic-network',
-    'AVAX': 'avalanche-2',
-    'LINK': 'chainlink',
-    'UNI': 'uniswap',
-    'LTC': 'litecoin',
-    'ATOM': 'cosmos',
-    'ETC': 'ethereum-classic',
-    'XLM': 'stellar',
-    'VET': 'vechain',
-    'FIL': 'filecoin',
-    'TRX': 'tron',
-    'NEAR': 'near',
-    'APT': 'aptos',
-    'ARB': 'arbitrum',
-    'OP': 'optimism',
-    'SUI': 'sui',
-    'PEPE': 'pepe',
-    'SHIB': 'shiba-inu',
-    'BONK': 'bonk',
-    'WIF': 'dogwifcoin',
-    'JUP': 'jupiter-exchange-solana',
-    'PYTH': 'pyth-network',
-    'TIA': 'celestia',
-    'SEI': 'sei-network',
-    'INJ': 'injective-protocol',
-    'RUNE': 'thorchain',
-    'AAVE': 'aave',
-    'GRT': 'the-graph',
-    'FTM': 'fantom',
-    'ALGO': 'algorand',
-    'SAND': 'the-sandbox',
-    'MANA': 'decentraland',
-    'AXS': 'axie-infinity',
-    'EGLD': 'elrond-erd-2',
-    'EOS': 'eos',
-    'FLOW': 'flow',
-    'CHZ': 'chiliz',
-    'KLAY': 'klay-token',
-    'CRV': 'curve-dao-token',
-    'COMP': 'compound-ether',
-    'SNX': 'havven',
-    'SUSHI': 'sushi',
-    'YFI': 'yearn-finance',
-    '1INCH': '1inch',
-    'BAT': 'basic-attention-token',
-    'ZRX': '0x',
-    'ENJ': 'enjincoin',
-    'KSM': 'kusama',
-    'ICP': 'internet-computer',
-    'XTZ': 'tezos',
-    'DASH': 'dash',
-    'ZEC': 'zcash',
-    'XMR': 'monero',
-    'CAKE': 'pancakeswap-token',
-    'RAY': 'raydium',
-    'ORCA': 'orca',
-    'MNGO': 'mango-markets',
-    'SRM': 'serum',
+    'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple',
+    'BNB': 'binancecoin', 'ADA': 'cardano', 'DOGE': 'dogecoin', 'DOT': 'polkadot',
+    'MATIC': 'matic-network', 'AVAX': 'avalanche-2', 'LINK': 'chainlink',
+    'UNI': 'uniswap', 'LTC': 'litecoin', 'ATOM': 'cosmos', 'ETC': 'ethereum-classic',
+    'XLM': 'stellar', 'VET': 'vechain', 'FIL': 'filecoin', 'TRX': 'tron',
+    'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'OP': 'optimism',
+    'SUI': 'sui', 'PEPE': 'pepe', 'SHIB': 'shiba-inu', 'BONK': 'bonk',
+    'WIF': 'dogwifcoin', 'JUP': 'jupiter-exchange-solana', 'PYTH': 'pyth-network',
+    'TIA': 'celestia', 'SEI': 'sei-network', 'INJ': 'injective-protocol',
+    'RUNE': 'thorchain', 'AAVE': 'aave', 'GRT': 'the-graph', 'FTM': 'fantom',
+    'ALGO': 'algorand', 'SAND': 'the-sandbox', 'MANA': 'decentraland',
+    'AXS': 'axie-infinity', 'EGLD': 'elrond-erd-2', 'EOS': 'eos', 'FLOW': 'flow',
+    'CHZ': 'chiliz', 'CRV': 'curve-dao-token', 'SNX': 'havven', 'SUSHI': 'sushi',
+    '1INCH': '1inch', 'ZRX': '0x', 'ENJ': 'enjincoin', 'ICP': 'internet-computer',
+    'XTZ': 'tezos', 'XMR': 'monero', 'CAKE': 'pancakeswap-token', 'RAY': 'raydium',
+    'ORCA': 'orca', 'EGLD': 'elrond-erd-2', 'KLAY': 'klay-token'
 }
 
 @st.cache_data(ttl=300)
@@ -312,8 +266,7 @@ def obter_market_cap(coin_id):
             data = response.json()
             market_cap = data['market_data']['market_cap']['usd']
             return market_cap
-        else:
-            return None
+        return None
     except Exception:
         return None
 
@@ -328,9 +281,8 @@ def obter_market_cap_para_simbolo(simbolo_usdt):
     return None
 
 # ─────────────────────────────────────────────────────────────
-# FUNÇÕES DE INDICADORES (todas vetorizadas)
+# FUNCOES DE INDICADORES
 # ─────────────────────────────────────────────────────────────
-
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -350,9 +302,9 @@ def calcular_stoch_rsi(df, periodo=14, k_period=3, d_period=3):
 
 def calcular_macd(df, col):
     ema_rapida = df[col].ewm(span=12, adjust=False).mean()
-    ema_lenta  = df[col].ewm(span=26, adjust=False).mean()
-    macd       = ema_rapida - ema_lenta
-    sinal      = macd.ewm(span=9, adjust=False).mean()
+    ema_lenta = df[col].ewm(span=26, adjust=False).mean()
+    macd = ema_rapida - ema_lenta
+    sinal = macd.ewm(span=9, adjust=False).mean()
     return macd, sinal, macd - sinal
 
 def calcular_chaikin_money_flow(df, periodo=20):
@@ -364,89 +316,91 @@ def calcular_chaikin_money_flow(df, periodo=20):
     return df
 
 def calcular_wavetrend_oscillator(df, n1=10, n2=21):
-    ap  = (df['high'] + df['low'] + df['close']) / 3
+    ap = (df['high'] + df['low'] + df['close']) / 3
     esa = ap.ewm(span=n1, adjust=False).mean()
-    d   = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
-    ci  = (ap - esa) / (0.015 * d.replace(0, 1e-10))
+    d = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
+    ci = (ap - esa) / (0.015 * d.replace(0, 1e-10))
     df['WT1'] = ci.ewm(span=n2, adjust=False).mean()
     df['WT2'] = df['WT1'].rolling(window=4).mean().bfill()
     return df
 
 def calcular_mfi(df, periodo=14):
-    tp  = (df['high'] + df['low'] + df['close']) / 3
+    tp = (df['high'] + df['low'] + df['close']) / 3
     rmf = tp * df['volume']
     tp_shift = tp.shift(1)
     pos_flow = rmf.where(tp > tp_shift, 0.0)
     neg_flow = rmf.where(tp < tp_shift, 0.0)
-    pos_sum  = pos_flow.rolling(window=periodo).sum()
-    neg_sum  = neg_flow.rolling(window=periodo).sum().replace(0, 1e-10)
+    pos_sum = pos_flow.rolling(window=periodo).sum()
+    neg_sum = neg_flow.rolling(window=periodo).sum().replace(0, 1e-10)
     return 100 - (100 / (1 + pos_sum / neg_sum))
 
 def calcular_ssl_hybrid(df, periodo=20):
     sma_high = df['high'].rolling(window=periodo).mean()
-    sma_low  = df['low'].rolling(window=periodo).mean()
-    close_arr  = df['close'].values
-    sma_h_arr  = sma_high.values
-    sma_l_arr  = sma_low.values
-    ssl_dir    = np.ones(len(df), dtype=int)
-    current    = 1
+    sma_low = df['low'].rolling(window=periodo).mean()
+    close_arr = df['close'].values
+    sma_h_arr = sma_high.values
+    sma_l_arr = sma_low.values
+    ssl_dir = np.ones(len(df), dtype=int)
+    current = 1
     for i in range(len(df)):
         if np.isnan(sma_h_arr[i]) or np.isnan(sma_l_arr[i]):
             ssl_dir[i] = current
             continue
-        if   close_arr[i] > sma_h_arr[i]: current = 1
-        elif close_arr[i] < sma_l_arr[i]: current = -1
+        if close_arr[i] > sma_h_arr[i]:
+            current = 1
+        elif close_arr[i] < sma_l_arr[i]:
+            current = -1
         ssl_dir[i] = current
-    df['ssl_dir']      = ssl_dir
+    df['ssl_dir'] = ssl_dir
     df['SSL_Baseline'] = np.where(df['ssl_dir'] == 1, sma_high, sma_low)
     return df
 
 def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     high, low, close = df['high'], df['low'], df['close']
-    tr  = pd.concat([
+    tr = pd.concat([
         high - low,
         (high - close.shift(1)).abs(),
-        (low  - close.shift(1)).abs()
+        (low - close.shift(1)).abs()
     ], axis=1).max(axis=1)
     atr = tr.ewm(span=periodo, adjust=False).mean()
-    atr_stop  = np.zeros(len(df))
+    atr_stop = np.zeros(len(df))
     tendencia = np.zeros(len(df), dtype=int)
     close_arr = close.values
-    atr_arr   = atr.values
+    atr_arr = atr.values
     for i in range(1, len(df)):
         if i == 1:
-            atr_stop[i]  = close_arr[i] - (atr_arr[i] * multiplicador)
+            atr_stop[i] = close_arr[i] - (atr_arr[i] * multiplicador)
             tendencia[i] = 1
             continue
         if tendencia[i-1] == 1:
             if close_arr[i] < atr_stop[i-1]:
                 tendencia[i] = -1
-                atr_stop[i]  = close_arr[i] + (atr_arr[i] * multiplicador)
+                atr_stop[i] = close_arr[i] + (atr_arr[i] * multiplicador)
             else:
                 tendencia[i] = 1
-                atr_stop[i]  = max(atr_stop[i-1], close_arr[i] - (atr_arr[i] * multiplicador))
+                atr_stop[i] = max(atr_stop[i-1], close_arr[i] - (atr_arr[i] * multiplicador))
         else:
             if close_arr[i] > atr_stop[i-1]:
                 tendencia[i] = 1
-                atr_stop[i]  = close_arr[i] - (atr_arr[i] * multiplicador)
+                atr_stop[i] = close_arr[i] - (atr_arr[i] * multiplicador)
             else:
                 tendencia[i] = -1
-                atr_stop[i]  = min(atr_stop[i-1], close_arr[i] + (atr_arr[i] * multiplicador))
+                atr_stop[i] = min(atr_stop[i-1], close_arr[i] + (atr_arr[i] * multiplicador))
     df['ATR_Stop'] = atr_stop
-    df['atr_dir']  = tendencia
+    df['atr_dir'] = tendencia
     return df
 
 def calcular_alpha_trend(df, periodo=14, coeff=1.0):
     high, low, close = df['high'], df['low'], df['close']
-    tr  = pd.concat([
+    tr = pd.concat([
         high - low,
         (high - close.shift(1)).abs(),
-        (low  - close.shift(1)).abs()
+        (low - close.shift(1)).abs()
     ], axis=1).max(axis=1)
-    atr    = tr.rolling(window=periodo).mean()
-    up_t   = low  - coeff * atr
+    atr = tr.rolling(window=periodo).mean()
+    up_t = low - coeff * atr
     down_t = high + coeff * atr
-    mfi    = df['MFI'].values
+    mfi = df['MFI'].values
     alpha_trend = np.zeros(len(df))
     for i in range(len(df)):
         if i < periodo:
@@ -461,33 +415,37 @@ def calcular_alpha_trend(df, periodo=14, coeff=1.0):
 
 def mapear_estrutura_smc(df):
     fechamentos = df['close'].values
-    maximas     = df['high'].values
-    minimas     = df['low'].values
-    bos_detectado   = 0
+    maximas = df['high'].values
+    minimas = df['low'].values
+    bos_detectado = 0
     choch_detectado = 0
-    fvg_pendente    = 0
+    fvg_pendente = 0
     for i in range(len(df) - 3, len(df) - 1):
         if minimas[i+1] > maximas[i-1]:
             fvg_pendente = 1
         elif maximas[i+1] < minimas[i-1]:
             fvg_pendente = -1
-    topo_local  = np.max(fechamentos[-15:-2])
+    topo_local = np.max(fechamentos[-15:-2])
     fundo_local = np.min(fechamentos[-15:-2])
-    if   fechamentos[-1] > topo_local:  bos_detectado  = 1
-    elif fechamentos[-1] < fundo_local: bos_detectado  = -1
-    if   fechamentos[-1] > topo_local  and fechamentos[-2] <= topo_local:  choch_detectado = 1
-    elif fechamentos[-1] < fundo_local and fechamentos[-2] >= fundo_local: choch_detectado = -1
-    df['SMC_BOS']   = bos_detectado
+    if fechamentos[-1] > topo_local:
+        bos_detectado = 1
+    elif fechamentos[-1] < fundo_local:
+        bos_detectado = -1
+    if fechamentos[-1] > topo_local and fechamentos[-2] <= topo_local:
+        choch_detectado = 1
+    elif fechamentos[-1] < fundo_local and fechamentos[-2] >= fundo_local:
+        choch_detectado = -1
+    df['SMC_BOS'] = bos_detectado
     df['SMC_CHOCH'] = choch_detectado
-    df['SMC_FVG']   = fvg_pendente
+    df['SMC_FVG'] = fvg_pendente
     return df
 
 def calcular_retracao_fibonacci(df):
     maxima = df['high'].max()
     minima = df['low'].min()
-    diff   = maxima - minima
+    diff = maxima - minima
     return {
-        'fib_0':   maxima,
+        'fib_0': maxima,
         'fib_236': maxima - 0.236 * diff,
         'fib_382': maxima - 0.382 * diff,
         'fib_500': maxima - 0.500 * diff,
@@ -499,7 +457,6 @@ def calcular_retracao_fibonacci(df):
 # ─────────────────────────────────────────────────────────────
 # CARREGAMENTO DE DADOS
 # ─────────────────────────────────────────────────────────────
-
 def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
@@ -527,7 +484,7 @@ def obter_variacao_24h_precisa(simbolo_id):
     try:
         dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
         if dados_24h and len(dados_24h) >= 2:
-            close_hoje  = dados_24h[-1][4]
+            close_hoje = dados_24h[-1][4]
             close_ontem = dados_24h[-2][4]
             return ((close_hoje - close_ontem) / close_ontem) * 100
     except Exception:
@@ -535,32 +492,45 @@ def obter_variacao_24h_precisa(simbolo_id):
     return 0.0
 
 # ─────────────────────────────────────────────────────────────
-# CONFLUÊNCIA SMC
+# CONFLUENCIA SMC
 # ─────────────────────────────────────────────────────────────
-
 def analisar_confluencia_smc_total(df, fib_niveis):
     u = df.iloc[-1]
-    preco_atual  = u['close']
-    pontos_alta  = 0.0
+    preco_atual = u['close']
+    pontos_alta = 0.0
     pontos_baixa = 0.0
-    if u['SMC_CHOCH'] == 1  or u['SMC_BOS'] == 1:  pontos_alta  += 3
-    if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1: pontos_baixa += 3
-    if u['SMC_FVG'] == 1:  pontos_alta  += 1
-    if u['SMC_FVG'] == -1: pontos_baixa += 1
+    
+    if u['SMC_CHOCH'] == 1 or u['SMC_BOS'] == 1:
+        pontos_alta += 3
+    if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1:
+        pontos_baixa += 3
+    if u['SMC_FVG'] == 1:
+        pontos_alta += 1
+    if u['SMC_FVG'] == -1:
+        pontos_baixa += 1
+    
     if preco_atual <= fib_niveis['fib_618']:
-        pontos_alta  += 2.0
-        contexto_fib  = txt["ctx_desconto"]
+        pontos_alta += 2.0
+        contexto_fib = txt["ctx_desconto"]
     elif preco_atual >= fib_niveis['fib_382']:
         pontos_baixa += 2.0
-        contexto_fib  = txt["ctx_premium"]
+        contexto_fib = txt["ctx_premium"]
     else:
-        contexto_fib  = txt["ctx_neutro"]
-    if u['CMF'] > 0:        pontos_alta  += 1.5
-    else:                   pontos_baixa += 1.5
-    if u['WT1'] > u['WT2']: pontos_alta  += 1
-    else:                   pontos_baixa += 1
-    if u['MACD_HIST'] > 0:  pontos_alta  += 1
-    else:                   pontos_baixa += 1
+        contexto_fib = txt["ctx_neutro"]
+    
+    if u['CMF'] > 0:
+        pontos_alta += 1.5
+    else:
+        pontos_baixa += 1.5
+    if u['WT1'] > u['WT2']:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
+    if u['MACD_HIST'] > 0:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
+    
     if pontos_alta >= 7.5:
         return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Structure.", pontos_alta, pontos_baixa
     elif pontos_baixa >= 7.5:
@@ -569,9 +539,8 @@ def analisar_confluencia_smc_total(df, fib_niveis):
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
 
 # ─────────────────────────────────────────────────────────────
-# GRÁFICO PRINCIPAL
+# GRAFICO PRINCIPAL
 # ─────────────────────────────────────────────────────────────
-
 def construir_grafico(df, fib_niveis, simbolo_id):
     fig = make_subplots(
         rows=4, cols=1,
@@ -585,22 +554,37 @@ def construir_grafico(df, fib_niveis, simbolo_id):
             "CMF / WaveTrend"
         )
     )
+    
+    # Candlestick
     fig.add_trace(go.Candlestick(
         x=df['time'], open=df['open'], high=df['high'],
         low=df['low'], close=df['close'],
         name="OHLC", increasing_line_color='#00cc66',
         decreasing_line_color='#ff3333'
     ), row=1, col=1)
+    
+    # ATR Stop
     atr_colors = df['atr_dir'].apply(lambda d: '#00cc66' if d == 1 else '#ff3333')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['ATR_Stop'], mode='markers',
         marker=dict(color=atr_colors, size=3), name="ATR Stop"
     ), row=1, col=1)
+    
+    # SSL Hybrid
     ssl_colors = df['ssl_dir'].apply(lambda d: '#00aaff' if d == 1 else '#ff6600')
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['SSL_Baseline'], mode='lines',
         line=dict(width=1.5), marker=dict(color=ssl_colors), name="SSL Hybrid"
     ), row=1, col=1)
+    
+    # Alpha Trend
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['AT_K1'], mode='lines',
         line=dict(color='#aa44ff', width=1, dash='dot'), name="Alpha Trend"
+    ), row=1, col=1)
+    
+    # Fibonacci levels
+    fib_cores = {
+        'fib_0': ('#ff4444', '0.0%'), 'fib_236': ('#ffaa00', '23.6%'),
+        'fib_382': ('#ffdd00', '38.2%'), 'fib_500': ('#aaaaaa', '50.0%'),
+        'fib_618': ('#00cc66', '61.8%'), 'fib_786': ('#00
