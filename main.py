@@ -9,10 +9,42 @@ import requests
 import math
 from decimal import Decimal
 
-# ─────────────────────────────────────────────────────────────
-# FORMATACAO DE PRECO
-# ─────────────────────────────────────────────────────────────
-def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
+# Configuração da Página do Streamlit
+st.set_page_config(
+    page_title="BRICSVAULT PORTAL SMC",
+    page_icon="🏦",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Dicionário de tradução simplificado
+txt = {
+    "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+    "config_globais": "⚙️ Configurações Globais",
+    "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
+    "tempo_grafico": "Tempo Gráfico:",
+    "modo_vivo": "Ativar Monitoramento em Tempo Real",
+    "intervalo_refresh": "Intervalo de Atualização (Segundos):",
+    "preco_spot": "Preço Spot Real",
+    "variacao_24h": "Variação 24h (Exchange)",
+    "market_cap": "Market Cap",
+    "stop_atr": "Preço Stop ATR",
+    "compra_forte": "🟢 COMPRA FORTE",
+    "venda_forte": "🔴 VENDA FORTE",
+    "neutro": "🟡 NEUTRO",
+    "erro_dados": "Dados históricos insuficientes. Escolha outro Ativo ou reduza o Tempo Gráfico.",
+    "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci.",
+    "ctx_premium": "Ativo em Zona Premium de Fibonacci.",
+    "ctx_neutro": "Preço em zona neutra de equilíbrio.",
+    "ultima_atualizacao": "Última Atualização",
+    "proximo_refresh": "Próximo refresh em",
+    "segundos": "segundos",
+    "pontos_compra": "Pontos de Compra",
+    "pontos_venda": "Pontos de Venda",
+    "grafico_titulo": "📈 Gráfico de Preço com Indicadores SMC",
+}
+
+def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
@@ -50,88 +82,10 @@ def formatar_market_cap(valor):
     else:
         return f"$ {valor:.2f}"
 
-# ─────────────────────────────────────────────────────────────
-# CONFIGURACAO DA PAGINA
-# ─────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="BRICSVAULT PORTAL SMC",
-    page_icon="🏦",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# ─────────────────────────────────────────────────────────────
-# DICIONARIO DE TRADUCAO (apenas PT-BR para simplificar)
-# ─────────────────────────────────────────────────────────────
-DICIONARIO_LINGUAS = {
-    "Português (BR)": {
-        "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
-        "config_globais": "⚙️ Configurações Globais",
-        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
-        "tempo_grafico": "Tempo Gráfico:",
-        "modo_vivo": "Ativar Monitoramento em Tempo Real",
-        "intervalo_refresh": "Intervalo de Atualização (Segundos):",
-        "preco_spot": "Preço Spot Real",
-        "variacao_24h": "Variação 24h (Exchange)",
-        "market_cap": "Market Cap",
-        "stop_atr": "Preço Stop ATR",
-        "fib_niveis_titulo": "📐 Níveis Críticos de Retração de Fibonacci (Ciclo Atual)",
-        "matriz_detalhada": "📊 Matriz Detalhada de Momentum e Exaustão",
-        "compra_forte": "🟢 COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "venda_forte": "🔴 VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "neutro": "🟡 NEUTRO (AGUARDAR SMC)",
-        "erro_dados": "Dados históricos insuficientes nesta Exchange para calcular a confluência estrutural SMC. Escolha outro Ativo ou reduza o Tempo Gráfico.",
-        "fib_nomes": ["0.0% (MÁXIMA)", "23.6%", "38.2% (Fronteira Premium)", "50.0% (Equilíbrio)", "61.8% (Golden Ratio / Desconto)", "78.6%", "100.0% (MÍNIMA)"],
-        "fib_posicoes": ["Topo do Ciclo", "Retração Rasa", "Zona de Carga Vendedora", "Preço Justo", "Zona de Compra Institucional", "Retração Profunda", "Fundo do Ciclo"],
-        "ctx_desconto": "Ativo posicionado em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
-        "ctx_premium": "Ativo posicionado em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
-        "ctx_neutro": "Preço em zona neutra de equilíbrio de Fibonacci (Fair Value Zone).",
-        "ultima_atualizacao": "Última Atualização",
-        "proximo_refresh": "Próximo refresh em",
-        "segundos": "segundos",
-        "indicadores_smc": "🧠 Indicadores SMC",
-        "bos": "BOS (Break of Structure)",
-        "choch": "CHoCH (Change of Character)",
-        "fvg": "FVG (Fair Value Gap)",
-        "ssl": "SSL Hybrid",
-        "macd_hist": "MACD Histograma",
-        "cmf": "CMF (Chaikin Money Flow)",
-        "wt": "WaveTrend WT1 vs WT2",
-        "rsi": "RSI (14)",
-        "stoch_rsi_k": "Stoch RSI %K",
-        "stoch_rsi_d": "Stoch RSI %D",
-        "mfi": "MFI (14)",
-        "alta": "ALTA",
-        "baixa": "BAIXA",
-        "neutro_curto": "NEUTRO",
-        "resumo_confluencia": "Resumo de Confluência",
-        "pontos_compra": "Pontos de Compra",
-        "pontos_venda": "Pontos de Venda",
-        "grafico_titulo": "📈 Gráfico de Preço com Indicadores SMC",
-        "sem_dados": "Nenhum dado disponível. Verifique a conexão.",
-    }
-}
-
-# ─────────────────────────────────────────────────────────────
-# SELETOR DE IDIOMA
-# ─────────────────────────────────────────────────────────────
-st.sidebar.markdown("### 🌐 Language / Idioma / Langue")
-idioma_selecionado = st.sidebar.selectbox(
-    "Select Interface Language:",
-    options=list(DICIONARIO_LINGUAS.keys()),
-    index=0
-)
-txt = DICIONARIO_LINGUAS[idioma_selecionado]
-
-# ─────────────────────────────────────────────────────────────
-# CONEXAO COM EXCHANGE
-# ─────────────────────────────────────────────────────────────
+# Conexão com Exchange
 @st.cache_resource
 def inicializar_exchange():
-    return ccxt.gate({
-        'enableRateLimit': True,
-        'options': {'defaultType': 'spot'}
-    })
+    return ccxt.gate({'enableRateLimit': True, 'options': {'defaultType': 'spot'}})
 
 gateio_client = inicializar_exchange()
 
@@ -143,54 +97,33 @@ def obter_todos_pares_usdt():
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-# ─────────────────────────────────────────────────────────────
-# FUNCAO PARA OBTER MARKET CAP (CoinGecko)
-# ─────────────────────────────────────────────────────────────
+# Mapeamento CoinGecko para Market Cap
 MAPEAMENTO_COINGECKO = {
     'BTC': 'bitcoin', 'ETH': 'ethereum', 'SOL': 'solana', 'XRP': 'ripple',
     'BNB': 'binancecoin', 'ADA': 'cardano', 'DOGE': 'dogecoin', 'DOT': 'polkadot',
     'MATIC': 'matic-network', 'AVAX': 'avalanche-2', 'LINK': 'chainlink',
-    'UNI': 'uniswap', 'LTC': 'litecoin', 'ATOM': 'cosmos', 'ETC': 'ethereum-classic',
-    'XLM': 'stellar', 'VET': 'vechain', 'FIL': 'filecoin', 'TRX': 'tron',
+    'UNI': 'uniswap', 'LTC': 'litecoin', 'ATOM': 'cosmos', 'TRX': 'tron',
     'NEAR': 'near', 'APT': 'aptos', 'ARB': 'arbitrum', 'OP': 'optimism',
     'SUI': 'sui', 'PEPE': 'pepe', 'SHIB': 'shiba-inu', 'BONK': 'bonk',
-    'WIF': 'dogwifcoin', 'JUP': 'jupiter-exchange-solana', 'PYTH': 'pyth-network',
-    'TIA': 'celestia', 'SEI': 'sei-network', 'INJ': 'injective-protocol',
-    'RUNE': 'thorchain', 'AAVE': 'aave', 'GRT': 'the-graph', 'FTM': 'fantom',
-    'ALGO': 'algorand', 'SAND': 'the-sandbox', 'MANA': 'decentraland',
-    'AXS': 'axie-infinity', 'EOS': 'eos', 'FLOW': 'flow',
-    'CHZ': 'chiliz', 'CRV': 'curve-dao-token', 'SNX': 'havven', 'SUSHI': 'sushi',
-    '1INCH': '1inch', 'ZRX': '0x', 'ENJ': 'enjincoin', 'ICP': 'internet-computer',
-    'XTZ': 'tezos', 'XMR': 'monero', 'CAKE': 'pancakeswap-token', 'RAY': 'raydium',
-    'ORCA': 'orca'
+    'WIF': 'dogwifcoin', 'JUP': 'jupiter-exchange-solana',
 }
 
 @st.cache_data(ttl=300)
-def obter_market_cap(coin_id):
+def obter_market_cap_para_simbolo(simbolo_usdt):
     try:
-        url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            market_cap = data['market_data']['market_cap']['usd']
-            return market_cap
+        moeda_base = simbolo_usdt.split('/')[0]
+        coin_id = MAPEAMENTO_COINGECKO.get(moeda_base)
+        if coin_id:
+            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                return data['market_data']['market_cap']['usd']
         return None
     except Exception:
         return None
 
-@st.cache_data(ttl=300)
-def obter_market_cap_para_simbolo(simbolo_usdt):
-    moeda_base = simbolo_usdt.split('/')[0]
-    coin_id = MAPEAMENTO_COINGECKO.get(moeda_base)
-    if coin_id:
-        market_cap = obter_market_cap(coin_id)
-        if market_cap:
-            return market_cap
-    return None
-
-# ─────────────────────────────────────────────────────────────
-# FUNCOES DE INDICADORES
-# ─────────────────────────────────────────────────────────────
+# Indicadores
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -199,38 +132,12 @@ def calcular_rsi(df, col, periodo=14):
     ma_perda = perda.ewm(span=periodo, adjust=False).mean()
     return 100 - (100 / (1 + (ma_ganho / ma_perda.replace(0, 1e-10))))
 
-def calcular_stoch_rsi(df, periodo=14, k_period=3, d_period=3):
-    rsi = df['RSI_14']
-    min_rsi = rsi.rolling(window=periodo).min()
-    max_rsi = rsi.rolling(window=periodo).max()
-    stoch_raw = (rsi - min_rsi) / (max_rsi - min_rsi).replace(0, 1e-10)
-    df['StochRSI_K'] = stoch_raw.rolling(window=k_period).mean() * 100
-    df['StochRSI_D'] = df['StochRSI_K'].rolling(window=d_period).mean()
-    return df
-
 def calcular_macd(df, col):
     ema_rapida = df[col].ewm(span=12, adjust=False).mean()
     ema_lenta = df[col].ewm(span=26, adjust=False).mean()
     macd = ema_rapida - ema_lenta
     sinal = macd.ewm(span=9, adjust=False).mean()
     return macd, sinal, macd - sinal
-
-def calcular_chaikin_money_flow(df, periodo=20):
-    rng = (df['high'] - df['low']).replace(0, 1e-10)
-    mfm = ((df['close'] - df['low']) - (df['high'] - df['close'])) / rng
-    mfv = mfm * df['volume']
-    vol_sum = df['volume'].rolling(window=periodo).sum().replace(0, 1e-10)
-    df['CMF'] = mfv.rolling(window=periodo).sum() / vol_sum
-    return df
-
-def calcular_wavetrend_oscillator(df, n1=10, n2=21):
-    ap = (df['high'] + df['low'] + df['close']) / 3
-    esa = ap.ewm(span=n1, adjust=False).mean()
-    d = (ap - esa).abs().ewm(span=n1, adjust=False).mean()
-    ci = (ap - esa) / (0.015 * d.replace(0, 1e-10))
-    df['WT1'] = ci.ewm(span=n2, adjust=False).mean()
-    df['WT2'] = df['WT1'].rolling(window=4).mean().bfill()
-    return df
 
 def calcular_mfi(df, periodo=14):
     tp = (df['high'] + df['low'] + df['close']) / 3
@@ -265,11 +172,7 @@ def calcular_ssl_hybrid(df, periodo=20):
 
 def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
-    ], axis=1).max(axis=1)
+    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
     atr = tr.ewm(span=periodo, adjust=False).mean()
     atr_stop = np.zeros(len(df))
     tendencia = np.zeros(len(df), dtype=int)
@@ -298,56 +201,6 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     df['atr_dir'] = tendencia
     return df
 
-def calcular_alpha_trend(df, periodo=14, coeff=1.0):
-    high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([
-        high - low,
-        (high - close.shift(1)).abs(),
-        (low - close.shift(1)).abs()
-    ], axis=1).max(axis=1)
-    atr = tr.rolling(window=periodo).mean()
-    up_t = low - coeff * atr
-    down_t = high + coeff * atr
-    mfi = df['MFI'].values
-    alpha_trend = np.zeros(len(df))
-    for i in range(len(df)):
-        if i < periodo:
-            alpha_trend[i] = close.iloc[i]
-            continue
-        if mfi[i] >= 50:
-            alpha_trend[i] = max(up_t.iloc[i], alpha_trend[i-1])
-        else:
-            alpha_trend[i] = min(down_t.iloc[i], alpha_trend[i-1])
-    df['AT_K1'] = alpha_trend
-    return df
-
-def mapear_estrutura_smc(df):
-    fechamentos = df['close'].values
-    maximas = df['high'].values
-    minimas = df['low'].values
-    bos_detectado = 0
-    choch_detectado = 0
-    fvg_pendente = 0
-    for i in range(len(df) - 3, len(df) - 1):
-        if minimas[i+1] > maximas[i-1]:
-            fvg_pendente = 1
-        elif maximas[i+1] < minimas[i-1]:
-            fvg_pendente = -1
-    topo_local = np.max(fechamentos[-15:-2])
-    fundo_local = np.min(fechamentos[-15:-2])
-    if fechamentos[-1] > topo_local:
-        bos_detectado = 1
-    elif fechamentos[-1] < fundo_local:
-        bos_detectado = -1
-    if fechamentos[-1] > topo_local and fechamentos[-2] <= topo_local:
-        choch_detectado = 1
-    elif fechamentos[-1] < fundo_local and fechamentos[-2] >= fundo_local:
-        choch_detectado = -1
-    df['SMC_BOS'] = bos_detectado
-    df['SMC_CHOCH'] = choch_detectado
-    df['SMC_FVG'] = fvg_pendente
-    return df
-
 def calcular_retracao_fibonacci(df):
     maxima = df['high'].max()
     minima = df['low'].min()
@@ -362,10 +215,7 @@ def calcular_retracao_fibonacci(df):
         'fib_100': minima
     }
 
-# ─────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS
-# ─────────────────────────────────────────────────────────────
-def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
+def carregar_dados(simbolo_id, timeframe_selecionado):
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
         if not velas:
@@ -373,7 +223,6 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
         df['RSI_14'] = calcular_rsi(df, 'close', 14)
-        df = calcular_stoch_rsi(df)
         macd, sinal, hist = calcular_macd(df, 'close')
         df['MACD'] = macd
         df['MACD_SIGNAL'] = sinal
@@ -381,16 +230,12 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         df['MFI'] = calcular_mfi(df)
         df = calcular_ssl_hybrid(df)
         df = calcular_atr_stop(df)
-        df = calcular_alpha_trend(df)
-        df = calcular_chaikin_money_flow(df)
-        df = calcular_wavetrend_oscillator(df)
-        df = mapear_estrutura_smc(df)
         return df.dropna(subset=['close', 'SSL_Baseline'])
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         return None
 
-def obter_variacao_24h_precisa(simbolo_id):
+def obter_variacao_24h(simbolo_id):
     try:
         dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
         if dados_24h and len(dados_24h) >= 2:
@@ -401,22 +246,35 @@ def obter_variacao_24h_precisa(simbolo_id):
         pass
     return 0.0
 
-# ─────────────────────────────────────────────────────────────
-# CONFLUENCIA SMC
-# ─────────────────────────────────────────────────────────────
-def analisar_confluencia_smc_total(df, fib_niveis):
+def analisar_confluencia(df, fib_niveis):
     u = df.iloc[-1]
     preco_atual = u['close']
     pontos_alta = 0.0
     pontos_baixa = 0.0
     
-    if u['SMC_CHOCH'] == 1 or u['SMC_BOS'] == 1:
-        pontos_alta += 3
-    if u['SMC_CHOCH'] == -1 or u['SMC_BOS'] == -1:
-        pontos_baixa += 3
-    if u['SMC_FVG'] == 1:
+    if u['RSI_14'] < 40:
+        pontos_alta += 2
+    elif u['RSI_14'] > 60:
+        pontos_baixa += 2
+    
+    if u['MACD_HIST'] > 0:
+        pontos_alta += 2
+    else:
+        pontos_baixa += 2
+    
+    if u['MFI'] > 50:
         pontos_alta += 1
-    if u['SMC_FVG'] == -1:
+    else:
+        pontos_baixa += 1
+    
+    if u['ssl_dir'] == 1:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
+    
+    if u['atr_dir'] == 1:
+        pontos_alta += 1
+    else:
         pontos_baixa += 1
     
     if preco_atual <= fib_niveis['fib_618']:
@@ -428,219 +286,147 @@ def analisar_confluencia_smc_total(df, fib_niveis):
     else:
         contexto_fib = txt["ctx_neutro"]
     
-    if u['CMF'] > 0:
-        pontos_alta += 1.5
-    else:
-        pontos_baixa += 1.5
-    if u['WT1'] > u['WT2']:
-        pontos_alta += 1
-    else:
-        pontos_baixa += 1
-    if u['MACD_HIST'] > 0:
-        pontos_alta += 1
-    else:
-        pontos_baixa += 1
-    
     if pontos_alta >= 7.5:
-        return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC Order Flow Bullish Structure.", pontos_alta, pontos_baixa
+        return txt["compra_forte"], "#00cc66", f"{contexto_fib} Estrutura Bullish.", pontos_alta, pontos_baixa
     elif pontos_baixa >= 7.5:
-        return txt["venda_forte"], "#ff3333", f"{contexto_fib} SMC Order Flow Bearish Structure.", pontos_alta, pontos_baixa
+        return txt["venda_forte"], "#ff3333", f"{contexto_fib} Estrutura Bearish.", pontos_alta, pontos_baixa
     else:
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
 
-# ─────────────────────────────────────────────────────────────
-# GRAFICO PRINCIPAL
-# ─────────────────────────────────────────────────────────────
 def construir_grafico(df, fib_niveis, simbolo_id):
     fig = make_subplots(
-        rows=4, cols=1,
+        rows=3, cols=1,
         shared_xaxes=True,
-        row_heights=[0.50, 0.17, 0.17, 0.16],
-        vertical_spacing=0.03,
-        subplot_titles=(
-            f"{simbolo_id} — Candlestick + ATR Stop + SSL Hybrid",
-            "MACD",
-            "RSI / Stoch RSI",
-            "CMF / WaveTrend"
-        )
+        row_heights=[0.5, 0.25, 0.25],
+        vertical_spacing=0.05,
+        subplot_titles=(f"{simbolo_id} - Preço", "RSI", "MACD")
     )
     
     # Candlestick
     fig.add_trace(go.Candlestick(
         x=df['time'], open=df['open'], high=df['high'],
         low=df['low'], close=df['close'],
-        name="OHLC", increasing_line_color='#00cc66',
-        decreasing_line_color='#ff3333'
+        name="OHLC"
+    ), row=1, col=1)
+    
+    # SSL Baseline
+    ssl_colors = df['ssl_dir'].apply(lambda d: '#00aaff' if d == 1 else '#ff6600')
+    fig.add_trace(go.Scatter(
+        x=df['time'], y=df['SSL_Baseline'],
+        mode='lines', line=dict(width=1.5),
+        marker=dict(color=ssl_colors), name="SSL"
     ), row=1, col=1)
     
     # ATR Stop
     atr_colors = df['atr_dir'].apply(lambda d: '#00cc66' if d == 1 else '#ff3333')
     fig.add_trace(go.Scatter(
-        x=df['time'], y=df['ATR_Stop'], mode='markers',
-        marker=dict(color=atr_colors, size=3), name="ATR Stop"
+        x=df['time'], y=df['ATR_Stop'],
+        mode='markers', marker=dict(color=atr_colors, size=3),
+        name="ATR Stop"
     ), row=1, col=1)
     
-    # SSL Hybrid
-    ssl_colors = df['ssl_dir'].apply(lambda d: '#00aaff' if d == 1 else '#ff6600')
+    # Fibonacci
+    for chave, cor in [('fib_0', 'red'), ('fib_236', 'orange'), ('fib_382', 'yellow'),
+                        ('fib_500', 'gray'), ('fib_618', 'green'), ('fib_786', 'blue'), ('fib_100', 'purple')]:
+        fig.add_hline(y=fib_niveis[chave], line_dash="dot", line_color=cor, line_width=1, row=1, col=1)
+    
+    # RSI
     fig.add_trace(go.Scatter(
-        x=df['time'], y=df['SSL_Baseline'], mode='lines',
-        line=dict(width=1.5), marker=dict(color=ssl_colors), name="SSL Hybrid"
-    ), row=1, col=1)
-    
-    # Alpha Trend
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['AT_K1'], mode='lines',
-        line=dict(color='#aa44ff', width=1, dash='dot'), name="Alpha Trend"
-    ), row=1, col=1)
-    
-    # Fibonacci levels
-    fib_cores = {
-        'fib_0': '#ff4444',
-        'fib_236': '#ffaa00',
-        'fib_382': '#ffdd00',
-        'fib_500': '#aaaaaa',
-        'fib_618': '#00cc66',
-        'fib_786': '#00aaff',
-        'fib_100': '#4444ff'
-    }
-    
-    fib_labels = {
-        'fib_0': '0.0%',
-        'fib_236': '23.6%',
-        'fib_382': '38.2%',
-        'fib_500': '50.0%',
-        'fib_618': '61.8%',
-        'fib_786': '78.6%',
-        'fib_100': '100%'
-    }
-    
-    for chave, cor in fib_cores.items():
-        fig.add_hline(
-            y=fib_niveis[chave],
-            line_dash="dot",
-            line_color=cor,
-            line_width=1,
-            annotation_text=fib_labels[chave],
-            annotation_position="right",
-            row=1, col=1
-        )
+        x=df['time'], y=df['RSI_14'],
+        line=dict(color='yellow', width=1.5), name="RSI 14"
+    ), row=2, col=1)
+    fig.add_hline(y=70, line_dash="dash", line_color="red", line_width=0.8, row=2, col=1)
+    fig.add_hline(y=30, line_dash="dash", line_color="green", line_width=0.8, row=2, col=1)
     
     # MACD
-    hist_colors = df['MACD_HIST'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
+    hist_colors = df['MACD_HIST'].apply(lambda v: 'green' if v >= 0 else 'red')
     fig.add_trace(go.Bar(
         x=df['time'], y=df['MACD_HIST'],
         marker_color=hist_colors, name="MACD Hist"
-    ), row=2, col=1)
+    ), row=3, col=1)
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['MACD'],
-        line=dict(color='#00aaff', width=1), name="MACD"
-    ), row=2, col=1)
+        line=dict(color='blue', width=1), name="MACD"
+    ), row=3, col=1)
     fig.add_trace(go.Scatter(
         x=df['time'], y=df['MACD_SIGNAL'],
-        line=dict(color='#ff6600', width=1), name="Signal"
-    ), row=2, col=1)
-    
-    # RSI / Stoch RSI
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['RSI_14'],
-        line=dict(color='#ffdd00', width=1.5), name="RSI 14"
+        line=dict(color='orange', width=1), name="Signal"
     ), row=3, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['StochRSI_K'],
-        line=dict(color='#00cc66', width=1), name="Stoch K"
-    ), row=3, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['StochRSI_D'],
-        line=dict(color='#ff4444', width=1), name="Stoch D"
-    ), row=3, col=1)
-    fig.add_hline(y=70, line_dash="dash", line_color="red", line_width=0.8, row=3, col=1)
-    fig.add_hline(y=30, line_dash="dash", line_color="green", line_width=0.8, row=3, col=1)
     
-    # CMF / WaveTrend
-    cmf_colors = df['CMF'].apply(lambda v: '#00cc66' if v >= 0 else '#ff3333')
-    fig.add_trace(go.Bar(
-        x=df['time'], y=df['CMF'],
-        marker_color=cmf_colors, name="CMF"
-    ), row=4, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['WT1'],
-        line=dict(color='#00aaff', width=1), name="WT1"
-    ), row=4, col=1)
-    fig.add_trace(go.Scatter(
-        x=df['time'], y=df['WT2'],
-        line=dict(color='#ffaa00', width=1), name="WT2"
-    ), row=4, col=1)
-    
-    # Layout
     fig.update_layout(
         height=800,
-        paper_bgcolor='#0e1117',
-        plot_bgcolor='#0e1117',
-        font=dict(color='#ffffff', size=11),
+        template="plotly_dark",
         xaxis_rangeslider_visible=False,
-        legend=dict(orientation='h', y=1.02, bgcolor='rgba(0,0,0,0)'),
-        margin=dict(l=60, r=80, t=40, b=20)
+        margin=dict(l=60, r=60, t=40, b=20)
     )
-    fig.update_xaxes(gridcolor='#222', showgrid=True)
-    fig.update_yaxes(gridcolor='#222', showgrid=True)
     
     return fig
 
-# ─────────────────────────────────────────────────────────────
-# MATRIZ DE INDICADORES
-# ─────────────────────────────────────────────────────────────
-def renderizar_matriz(df, txt):
-    u = df.iloc[-1]
-    st.markdown(f"### {txt['matriz_detalhada']}")
+# ========== INTERFACE PRINCIPAL ==========
+st.title(txt["titulo"])
 
-    def badge(condicao_alta, label_alta, label_baixa, valor_str=""):
-        if condicao_alta:
-            cor = "#00cc66"
-            sinal = txt["alta"]
-        else:
-            cor = "#ff3333"
-            sinal = txt["baixa"]
-        label = label_alta if condicao_alta else label_baixa
-        return f"""<span style='background:{cor}22;border:1px solid {cor};border-radius:6px;padding:3px 10px;color:{cor};font-size:13px;font-weight:600;'>{sinal}</span>&nbsp;<span style='color:#ccc;font-size:12px;'>{label} {valor_str}</span>"""
+# Sidebar
+st.sidebar.header(txt["config_globais"])
+lista_criptos = obter_todos_pares_usdt()
+simbolo_id = st.sidebar.selectbox(
+    txt["selecione_cripto"],
+    lista_criptos,
+    index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
+)
 
-    def neutro_badge(label):
-        return f"""<span style='background:#ffcc0022;border:1px solid #ffcc00;border-radius:6px;padding:3px 10px;color:#ffcc00;font-size:13px;font-weight:600;'>{txt['neutro_curto']}</span>&nbsp;<span style='color:#ccc;font-size:12px;'>{label}</span>"""
+intervalos = {
+    "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
+    "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
+    "1 Dia": "1d", "1 Semana": "1w"
+}
+intervalo_escolhido = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=5)
+timeframe = intervalos[intervalo_escolhido]
 
-    indicadores = []
+st.sidebar.markdown("---")
+modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
+intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
+
+# Carregar dados
+status_placeholder = st.empty()
+df_dados = carregar_dados(simbolo_id, timeframe)
+
+if df_dados is None or df_dados.empty:
+    st.warning(txt["erro_dados"])
+else:
+    ultimo_reg = df_dados.iloc[-1]
+    preco_atual = ultimo_reg['close']
+    fib_niveis = calcular_retracao_fibonacci(df_dados)
+    variacao_24h = obter_variacao_24h(simbolo_id)
+    market_cap = obter_market_cap_para_simbolo(simbolo_id)
     
-    # BOS
-    bos = int(u['SMC_BOS'])
-    if bos != 0:
-        indicadores.append(badge(bos == 1, txt["bos"], txt["bos"]))
+    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis)
+    
+    # Painel de recomendação
+    st.markdown(f"""
+    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;border:2px solid {cor_sinal};margin-bottom:20px;">
+        <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
+        <p style="margin:8px 0 0 0;color:#ddd;">{analise}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Métricas
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric(txt["preco_spot"], formatar_preco(preco_atual))
+    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
+    m3.metric(txt["market_cap"], formatar_market_cap(market_cap))
+    m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
+    m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
+    
+    # Gráfico
+    st.markdown(f"### {txt['grafico_titulo']}")
+    fig = construir_grafico(df_dados, fib_niveis, simbolo_id)
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Status
+    hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
+    if modo_vivo:
+        status_placeholder.info(f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}")
+        time.sleep(intervalo_refresh)
+        st.rerun()
     else:
-        indicadores.append(neutro_badge(txt["bos"]))
-    
-    # CHoCH
-    choch = int(u['SMC_CHOCH'])
-    if choch != 0:
-        indicadores.append(badge(choch == 1, txt["choch"], txt["choch"]))
-    else:
-        indicadores.append(neutro_badge(txt["choch"]))
-    
-    # FVG
-    fvg = int(u['SMC_FVG'])
-    if fvg != 0:
-        indicadores.append(badge(fvg == 1, txt["fvg"], txt["fvg"]))
-    else:
-        indicadores.append(neutro_badge(txt["fvg"]))
-    
-    # SSL
-    indicadores.append(badge(u['ssl_dir'] == 1, txt["ssl"], txt["ssl"]))
-    
-    # MACD Hist
-    indicadores.append(badge(u['MACD_HIST'] > 0, txt["macd_hist"], txt["macd_hist"], f"({u['MACD_HIST']:+.4f})"))
-    
-    # CMF
-    indicadores.append(badge(u['CMF'] > 0, txt["cmf"], txt["cmf"], f"({u['CMF']:+.4f})"))
-    
-    # WaveTrend
-    indicadores.append(badge(u['WT1'] > u['WT2'], txt["wt"], txt["wt"], f"(WT1={u['WT1']:.1f} / WT2={u['WT2']:.1f})"))
-    
-    # RSI
-    rsi_val = u['RSI_14']
-   
+        status_placeholder.info(f"⏸ {txt['ultima_atualizacao']}: {hora_atual}")
