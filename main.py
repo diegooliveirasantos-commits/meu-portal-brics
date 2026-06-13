@@ -6,16 +6,13 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import time
 import math
+import requests
 from decimal import Decimal
 
 # ─────────────────────────────────────────────────────────────
-# FORMATACAO DE PRECO — notacao compacta para valores micro
+# FORMATAÇÃO DE PREÇO E MARKETCAP
 # ─────────────────────────────────────────────────────────────
 def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
-    """
-    Formatacao inteligente de precos de criptomoedas.
-    Valores micro (< 0.001) usam notacao compacta: 0.0{N_zeros}x{digitos_significativos}
-    """
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
@@ -38,8 +35,7 @@ def formatar_preco(valor: float, prefixo: str = "$ ") -> str:
         return f"{prefixo}{valor:,.2f}"
 
 def formatar_marketcap(valor: float) -> str:
-    """Formatador para bilhoes (B), milhoes (M) ou milhares (K)"""
-    if valor is None or math.isnan(valor) or valor == 0:
+    if valor is None or math.isnan(valor) or valor <= 0:
         return "$ —"
     if valor >= 1_000_000_000_000:
         return f"$ {valor / 1_000_000_000_000:.2f} T"
@@ -69,7 +65,7 @@ DICIONARIO_LINGUAS = {
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
         "preco_spot": "Preço Spot Real",
         "variacao_24h": "Variação 24h (Exchange)",
-        "market_cap": "Market Cap",
+        "market_cap": "Market Cap (CoinMarketCap)",
         "stop_atr": "Preço Stop ATR",
         "fib_niveis_titulo": "📐 Níveis Críticos de Retração de Fibonacci (Ciclo Atual)",
         "matriz_detalhada": "📊 Matriz Detalhada de Momentum e Exaustão",
@@ -115,7 +111,7 @@ DICIONARIO_LINGUAS = {
         "intervalo_refresh": "Refresh Interval (Seconds):",
         "preco_spot": "Real Spot Price",
         "variacao_24h": "24h Variation (Exchange)",
-        "market_cap": "Market Cap",
+        "market_cap": "Market Cap (CoinMarketCap)",
         "stop_atr": "ATR Stop Price",
         "fib_niveis_titulo": "📐 Critical Fibonacci Retraction Levels (Current Cycle)",
         "matriz_detalhada": "📊 Detailed Momentum & Exhaustion Matrix",
@@ -352,7 +348,7 @@ def calcular_retracao_fibonacci(df):
     }
 
 # ─────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS
+# CARREGAMENTO DE DADOS E BACKUP VIA COINMARKETCAP API
 # ─────────────────────────────────────────────────────────────
 def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
     try:
@@ -377,18 +373,33 @@ def carregar_dados_bricsvault_smc(simbolo_id, timeframe_selecionado):
         st.error(f"Erro ao carregar dados: {e}")
         return None
 
+def buscar_marketcap_coinmarketcap(ticker_symbol):
+    """Busca dados de capitalização em tempo real na API pública de Tickers do CoinMarketCap"""
+    try:
+        url = f"https://3rdparty-apis.coinmarketcap.com/v1/cryptocurrency/tickers?symbol={ticker_symbol}"
+        resposta = requests.get(url, timeout=5)
+        if resposta.status_code == 200:
+            dados = resposta.json()
+            if "data" in dados and ticker_symbol in dados["data"]:
+                mcap = dados["data"][ticker_symbol]["quote"]["USD"].get("market_cap", 0.0)
+                return float(mcap)
+    except Exception:
+        pass
+    return 0.0
+
 def obter_marketcap_e_variacao(simbolo_id):
-    """Busca dados atualizados do Ticker para extrair Variação e MarketCap"""
     var_24h = 0.0
     mcap = 0.0
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
         if ticker:
             var_24h = ticker.get('percentage', 0.0)
-            info_raw = ticker.get('info', {})
-            # Gate.io retorna a capitalização como 'market_cap' ou 'marketCap' na estrutura interna 'info'
-            mcap_bruto = info_raw.get('market_cap' if 'market_cap' in info_raw else 'marketCap', 0.0)
-            mcap = float(mcap_bruto) if mcap_bruto else 0.0
+            
+        # Isola o símbolo puro da moeda (ex: "BTC/USDT" vira "BTC")
+        token_puro = simbolo_id.split('/')[0]
+        
+        # Puxa o dado estruturado real diretamente do CoinMarketCap
+        mcap = buscar_marketcap_coinmarketcap(token_puro)
     except Exception:
         pass
     return var_24h, mcap
@@ -561,7 +572,6 @@ timeframe = st.sidebar.selectbox(txt["tempo_grafico"], options=['1m', '5m', '15m
 modo_live = st.sidebar.checkbox(txt["modo_vivo"], value=False)
 intervalo = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=10, step=5)
 
-# Container fixo para renderizar dados sem acumular chaves ou clonar elementos na tela
 placeholder_dashboard = st.container()
 
 while True:
@@ -569,17 +579,17 @@ while True:
     
     if df_dados is not None and not df_dados.empty:
         fib_niveis = calcular_retracao_fibonacci(df_dados)
+        preco_atual = float(df_dados.iloc[-1]['close'])
+        
+        # Coleta de variação (Gate.io) e Market Cap (puxado do CoinMarketCap de forma limpa)
         v24h, market_cap = obter_marketcap_e_variacao(par_selecionado)
-        preco_atual = df_dados.iloc[-1]['close']
         stop_atr = df_dados.iloc[-1]['ATR_Stop']
         
         status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
         
-        # .empty() limpa o bloco inteiro antes de cada redesenho em tempo real
         with placeholder_dashboard:
             placeholder_dashboard.empty()
             
-            # Métricas em 5 colunas estruturadas
             c1, c2, c3, c4, c5 = st.columns(5)
             c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
             c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%")
@@ -598,8 +608,6 @@ while True:
             st.info(desc_status)
             
             figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
-            
-            # Adicionado timestamp int(time.time()) para forçar chaves únicas em cada ciclo do loop
             st.plotly_chart(figura_dinamica, key=f"chart_{par_selecionado}_{timeframe}_{int(time.time())}")
             
             col_esq, col_dir = st.columns([1, 1])
