@@ -151,7 +151,7 @@ txt = DICIONARIO_LINGUAS[idioma_selecionado]
 # ─────────────────────────────────────────────────────────────
 # CONEXÃO COM EXCHANGE
 # ─────────────────────────────────────────────────────────────
-@st.cache_resourced
+@st.cache_resource
 def inicializar_exchange():
     return ccxt.gate({
         'enableRateLimit': True,
@@ -160,7 +160,7 @@ def inicializar_exchange():
 
 gateio_client = inicializar_exchange()
 
-@st.cache_data(ttl=3600)
+@st.cache_data(ttl="1h")
 def obter_todos_pares_usdt():
     try:
         mercados = gateio_client.load_markets()
@@ -557,8 +557,7 @@ while True:
         status, cor_status, desc_status, p_alta, p_baixa = analisar_confluencia_smc_total(df_dados, fib_niveis)
         
         with placeholder_dashboard.container():
-            # Parâmetro atualizado: Adicionado width="stretch" para conformidade estrutural interna
-            c1, c2, c3, c4 = st.columns(4, width="stretch")
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric(txt["preco_spot"], formatar_preco(preco_atual))
             c2.metric(txt["variacao_24h"], f"{v24h:+.2f}%", delta_color="normal")
             c3.metric(txt["stop_atr"], formatar_preco(stop_atr))
@@ -576,10 +575,9 @@ while True:
             
             figura_dinamica = construir_grafico(df_dados, fib_niveis, par_selecionado)
             
-            st.plotly_chart(figura_dinamica, width="stretch", key=f"chart_{par_selecionado}_{timeframe}")
+            st.plotly_chart(figura_dinamica, key=f"chart_{par_selecionado}_{timeframe}")
             
-            # Parâmetro atualizado: Adicionado width="stretch" para as colunas da tabela e da matriz
-            col_esq, col_dir = st.columns([1, 1], width="stretch")
+            col_esq, col_dir = st.columns([1, 1])
             
             with col_esq:
                 st.markdown(f"### {txt['fib_niveis_titulo']}")
