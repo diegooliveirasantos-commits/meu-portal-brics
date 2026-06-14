@@ -9,8 +9,8 @@ from decimal import Decimal
 import re
 from bs4 import BeautifulSoup
 from streamlit_lightweight_charts import renderLightweightCharts
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Configuração da Página do Streamlit
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
     page_icon=" 🏦 ",
@@ -18,7 +18,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# DICIONÁRIO MULTILÍNGUE - Correção 1 Aplicada e Padronizada
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": " 🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -100,9 +99,7 @@ DICIONARIO_LINGUAS = {
     }
 }
 
-# ─────────────────────────────────────────────
-# FORMATADORES DE INTERFACE
-# ─────────────────────────────────────────────
+
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -127,7 +124,14 @@ def formatar_preco(valor, prefixo="$ "):
 
 
 def formatar_market_cap(valor):
-    if valor is None or valor <= 0:
+    if valor is None:
+        return "$ —"
+    if isinstance(valor, str):
+        try:
+            valor = float(valor.replace('$', '').replace(',', '').replace(' ', '').strip())
+        except:
+            return "$ —"
+    if valor <= 0:
         return "$ —"
     if valor >= 1_000_000_000_000:
         return f"$ {valor / 1_000_000_000_000:.2f}T"
@@ -140,16 +144,15 @@ def formatar_market_cap(valor):
     else:
         return f"$ {valor:,.2f}"
 
-# ─────────────────────────────────────────────
-# GERENCIAMENTO DA INSTÂNCIA DA EXCHANGE (API CCXT)
-# ─────────────────────────────────────────────
+
 @st.cache_resource
 def inicializar_exchange():
     return ccxt.gate({'enableRateLimit': True, 'options': {'defaultType': 'spot'}})
 
+
 gateio_client = inicializar_exchange()
 
-# CORREÇÃO 2: Cache de dados estáticos pesados (Mercados da Exchange)
+
 @st.cache_data(ttl=3600)
 def obter_todos_pares_usdt():
     try:
@@ -164,7 +167,7 @@ def obter_nome_extenso_cripto(simbolo_id):
     try:
         base_currency = simbolo_id.split('/')[0]
         url = "https://api.gateio.ws/api/v4/spot/currencies"
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, timeout=10)
         if response.status_code == 200:
             dados = response.json()
             for moeda in dados:
@@ -174,21 +177,22 @@ def obter_nome_extenso_cripto(simbolo_id):
     except Exception:
         return simbolo_id.split('/')[0]
 
-# ─────────────────────────────────────────────
-# MOTORES DE CAPTURA DE MARKET CAP (USD)
-# ─────────────────────────────────────────────
-@st.cache_data(ttl=600)
+
+@st.cache_data(ttl=300)
 def obter_market_cap_coingecko(simbolo):
     try:
         url_lista = "https://api.coingecko.com/api/v3/coins/list"
-        response = requests.get(url_lista, timeout=5)
+        response = requests.get(url_lista, timeout=10)
         if response.status_code == 200:
             moedas = response.json()
             simbolo_lower = simbolo.lower()
             coin_id = next((m['id'] for m in moedas if m.get('symbol', '') == simbolo_lower), None)
             if coin_id:
-                url_dados = f"https://api.coingecko.com/api/v3/coins/{coin_id}?localization=false&tickers=false&community_data=false&developer_data=false"
-                res = requests.get(url_dados, timeout=5)
+                url_dados = (
+                    f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+                    f"?localization=false&tickers=false&community_data=false&developer_data=false"
+                )
+                res = requests.get(url_dados, timeout=10)
                 if res.status_code == 200:
                     return float(res.json().get('market_data', {}).get('market_cap', {}).get('usd', 0))
         return None
@@ -196,14 +200,19 @@ def obter_market_cap_coingecko(simbolo):
         return None
 
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=300)
 def obter_market_cap_coinmarketcap(simbolo):
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/120.0.0.0 Safari/537.36'
+            ),
+            'Accept-Language': 'en-US,en;q=0.9',
         }
         url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
-        response = requests.get(url, headers=headers, timeout=5)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             for script in soup.find_all('script'):
@@ -216,25 +225,30 @@ def obter_market_cap_coinmarketcap(simbolo):
         return None
 
 
+# CORREÇÃO 2: Requisições paralelas com ThreadPoolExecutor — tempo de espera
+# reduzido ao da chamada mais rápida, sem congelar o dashboard.
 def obter_market_cap_robusto(simbolo_id):
     simbolo = simbolo_id.split('/')[0]
-    # Tenta fontes externas primeiro
-    for funcao in [obter_market_cap_coingecko, obter_market_cap_coinmarketcap]:
-        res = funcao(simbolo)
-        if res and res > 0:
-            return float(res)
-    # Fallback matemático interno da própria exchange para evitar ficar vazio
+    funcoes = [obter_market_cap_coingecko, obter_market_cap_coinmarketcap]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futuros = {executor.submit(f, simbolo): f for f in funcoes}
+        for futuro in as_completed(futuros):
+            try:
+                res = futuro.result()
+                if res and res > 0:
+                    return float(res)
+            except:
+                continue
+    # Fallback leve via ticker da exchange
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
         if ticker and ticker.get('quoteVolume', 0) > 0:
-            return float(ticker.get('quoteVolume') * 450) # Estimativa por volume ponderado
+            return float(ticker.get('quoteVolume') * 500)
     except:
         pass
     return None
 
-# ─────────────────────────────────────────────
-# MATEMÁTICA QUANT E INDICADORES TÉCNICOS
-# ─────────────────────────────────────────────
+
 def calcular_rsi(df, col, periodo=14):
     delta = df[col].diff()
     ganho = delta.clip(lower=0)
@@ -289,7 +303,10 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     high = df['high']
     low = df['low']
     close = df['close']
-    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
+    tr = pd.concat(
+        [high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()],
+        axis=1
+    ).max(axis=1)
     atr = tr.ewm(span=periodo, adjust=False).mean()
     atr_stop = np.zeros(len(df))
     tendencia = np.zeros(len(df), dtype=int)
@@ -347,9 +364,7 @@ def calcular_retracao_fibonacci(df):
         'fib_100': minima
     }
 
-# ─────────────────────────────────────────────
-# ENGINE DE INFRAESTRUTURA DE DADOS
-# ─────────────────────────────────────────────
+
 def carregar_dados(simbolo_id, timeframe_selecionado):
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
@@ -357,8 +372,6 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
             return None
         df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-        
-        # Pipelines de análise matemática
         df['RSI_14'] = calcular_rsi(df, 'close', 14)
         macd, sinal, hist = calcular_macd(df, 'close')
         df['MACD'] = macd
@@ -368,13 +381,11 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
         df = calcular_ssl_hybrid(df)
         df = calcular_atr_stop(df)
         df = calcular_ppo(df)
-        
-        # Tratamento de ruídos e dados vazios
         df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
         df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
         return df.dropna(subset=['close'])
     except Exception as e:
-        st.error(f"Erro ao carregar dados do mercado: {e}")
+        st.error(f"Erro ao carregar dados: {e}")
         return None
 
 
@@ -393,33 +404,43 @@ def obter_variacao_24h(simbolo_id):
         pass
     return 0.0
 
-# CORREÇÃO 3 (Definitiva): Lógica Matemática de Fibonacci Alinhada
+
 def analisar_confluencia(df, fib_niveis, txt):
     u = df.iloc[-1]
     preco_atual = u['close']
     pontos_alta = 0.0
     pontos_baixa = 0.0
 
-    # Condicionais do Algoritmo Quant
-    if u['RSI_14'] < 40: pontos_alta += 2
-    elif u['RSI_14'] > 60: pontos_baixa += 2
+    if u['RSI_14'] < 40:
+        pontos_alta += 2
+    elif u['RSI_14'] > 60:
+        pontos_baixa += 2
 
-    if u['MACD_HIST'] > 0: pontos_alta += 2
-    else: pontos_baixa += 2
+    if u['MACD_HIST'] > 0:
+        pontos_alta += 2
+    else:
+        pontos_baixa += 2
 
-    if u['MFI'] > 50: pontos_alta += 1
-    else: pontos_baixa += 1
+    if u['MFI'] > 50:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
 
-    if u['ssl_dir'] == 1: pontos_alta += 1
-    else: pontos_baixa += 1
+    if u['ssl_dir'] == 1:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
 
-    if u['atr_dir'] == 1: pontos_alta += 1
-    else: pontos_baixa += 1
+    if u['atr_dir'] == 1:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
 
-    if u['PPO'] > u['PPO_Signal']: pontos_alta += 1.5
-    else: pontos_baixa += 1.5
+    if u['PPO'] > u['PPO_Signal']:
+        pontos_alta += 1.5
+    else:
+        pontos_baixa += 1.5
 
-    # Lógica Fibonacci Corrigida matematicamente
     if preco_atual >= fib_niveis['fib_382']:
         pontos_baixa += 2.0
         contexto_fib = txt["ctx_premium"]
@@ -429,7 +450,6 @@ def analisar_confluencia(df, fib_niveis, txt):
     else:
         contexto_fib = txt["ctx_neutro"]
 
-    # Classificação de Força dos Sinais
     if pontos_alta >= 8.5:
         return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC + PPO Order Flow Bullish.", pontos_alta, pontos_baixa
     elif pontos_baixa >= 8.5:
@@ -439,7 +459,7 @@ def analisar_confluencia(df, fib_niveis, txt):
 
 
 # ─────────────────────────────────────────────
-# INTERFACE GRÁFICA DO USUÁRIO (STREAMLIT)
+# SIDEBAR — widgets de controle (fora do fragment)
 # ─────────────────────────────────────────────
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
 idioma_selecionado = st.sidebar.selectbox(
@@ -448,7 +468,6 @@ idioma_selecionado = st.sidebar.selectbox(
     index=0
 )
 txt = DICIONARIO_LINGUAS[idioma_selecionado]
-
 st.title(txt["titulo"])
 st.sidebar.header(txt["config_globais"])
 
@@ -459,7 +478,6 @@ simbolo_id = st.sidebar.selectbox(
     index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
 )
 
-# Carregamento Dinâmico dos Menus baseados na Correção 1
 intervalos = txt["intervalos"]
 intervalo_escolhido = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=5)
 timeframe = intervalos[intervalo_escolhido]
@@ -468,34 +486,36 @@ st.sidebar.markdown("---")
 modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
 intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
 
-status_placeholder = st.empty()
-df_dados = carregar_dados(simbolo_id, timeframe)
 
-if df_dados is None or df_dados.empty:
-    st.warning(txt["erro_dados"])
-else:
+# CORREÇÃO 1: Painel encapsulado em @st.fragment com run_every dinâmico.
+# O fragment atualiza de forma isolada sem bloquear os widgets do sidebar.
+# run_every=None desativa o refresh automático quando modo_vivo está desligado.
+@st.fragment(run_every=intervalo_refresh if modo_vivo else None)
+def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
+    df_dados = carregar_dados(simbolo_id, timeframe)
+
+    if df_dados is None or df_dados.empty:
+        st.warning(txt["erro_dados"])
+        return
+
     ultimo_reg = df_dados.iloc[-1]
     preco_atual = ultimo_reg['close']
     fib_niveis = calcular_retracao_fibonacci(df_dados)
     variacao_24h = obter_variacao_24h(simbolo_id)
-
-    with st.spinner(txt["buscando_marketcap"]):
-        market_cap = obter_market_cap_robusto(simbolo_id)
+    market_cap = obter_market_cap_robusto(simbolo_id)
 
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis, txt)
 
-    # Painel de Recomendação Estrutural (SMC)
     st.markdown(f"""
     <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;border:2px solid {cor_sinal};margin-bottom:20px;">
-        <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
-        <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>PPO Check:</b> Line {ultimo_reg['PPO']:.3f} / Signal {ultimo_reg['PPO_Signal']:.3f}</p>
+    <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
+    <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>PPO Check:</b> Line {ultimo_reg['PPO']:.3f} / Signal {ultimo_reg['PPO_Signal']:.3f}</p>
     </div>
     """, unsafe_allow_html=True)
 
     nome_completo_ativo = obter_nome_extenso_cripto(simbolo_id)
     label_customizado_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
 
-    # Renderização de Métricas em Tempo Real
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric(label_customizado_preco, formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
@@ -510,16 +530,21 @@ else:
 
     st.markdown(f"**{txt['stop_atr']}:** {formatar_preco(ultimo_reg['ATR_Stop'])}")
 
-    # ENGINE GRÁFICA AVANÇADA (Lightweight Charts)
     st.markdown(f"### {txt['grafico_titulo']}")
     df_tv = df_dados.reset_index(drop=True)
-
-    # CORREÇÃO 4: Divisão Inteira para segurança contra estouro de float
     df_tv['time_unix'] = (df_tv['timestamp'] // 1000).astype(int)
 
-    velas_tv = df_tv[['time_unix', 'open', 'high', 'low', 'close']].rename(columns={'time_unix': 'time'}).to_dict(orient='records')
-    ssl_tv = df_tv[['time_unix', 'SSL_Baseline']].rename(columns={'time_unix': 'time', 'SSL_Baseline': 'value'}).dropna().to_dict(orient='records')
-    atr_tv = df_tv[['time_unix', 'ATR_Stop']].rename(columns={'time_unix': 'time', 'ATR_Stop': 'value'}).dropna().to_dict(orient='records')
+    velas_tv = df_tv[['time_unix', 'open', 'high', 'low', 'close']].rename(
+        columns={'time_unix': 'time'}
+    ).to_dict(orient='records')
+
+    ssl_tv = df_tv[['time_unix', 'SSL_Baseline']].rename(
+        columns={'time_unix': 'time', 'SSL_Baseline': 'value'}
+    ).dropna().to_dict(orient='records')
+
+    atr_tv = df_tv[['time_unix', 'ATR_Stop']].rename(
+        columns={'time_unix': 'time', 'ATR_Stop': 'value'}
+    ).dropna().to_dict(orient='records')
 
     config_visual_grafico = {
         "layout": {"textColor": '#e2e8f0', "background": {"type": 'solid', "color": '#0b0f19'}},
@@ -534,8 +559,11 @@ else:
             "type": "Candlestick",
             "data": velas_tv,
             "options": {
-                "upColor": '#10b981', "downColor": '#ef4444', "borderVisible": False,
-                "wickUpColor": '#10b981', "wickDownColor": '#ef4444'
+                "upColor": '#10b981',
+                "downColor": '#ef4444',
+                "borderVisible": False,
+                "wickUpColor": '#10b981',
+                "wickDownColor": '#ef4444'
             }
         },
         {
@@ -550,13 +578,20 @@ else:
         }
     ]
 
-    renderLightweightCharts([{"chart": config_visual_grafico, "series": camadas_do_grafico}], 'bricsvault_tv_chart')
+    renderLightweightCharts(
+        [{"chart": config_visual_grafico, "series": camadas_do_grafico}],
+        'bricsvault_tv_chart'
+    )
 
-    # Monitoramento em tempo real reativo e sem travamento de interface
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     if modo_vivo:
-        status_placeholder.info(f" 🟢  {txt['ultima_atualizacao']}: {hora_atual} | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}")
-        time.sleep(intervalo_refresh)
-        st.rerun()
+        st.info(
+            f" 🟢  {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}"
+        )
     else:
-        status_placeholder.info(f" ⏸  {txt['ultima_atualizacao']}: {hora_atual}")
+        st.info(f" ⏸  {txt['ultima_atualizacao']}: {hora_atual}")
+
+
+# Chamada do fragment — recebe os parâmetros do sidebar como argumentos
+painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
