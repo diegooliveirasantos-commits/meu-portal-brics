@@ -1,7 +1,7 @@
-streamlit
-ccxt
-pandas
-numpy
-plotly
-requests
-beautifulsoup4
+streamlit>=1.37.0
+ccxt>=4.5.0
+pandas>=2.0.0
+numpy>=1.26.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+plotly>=5.18.0
