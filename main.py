@@ -6,12 +6,11 @@ import time
 import requests
 import math
 from decimal import Decimal
-import json
 import re
 from bs4 import BeautifulSoup
 from streamlit_lightweight_charts import renderLightweightCharts
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Configuração da Página do Streamlit
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
     page_icon=" 🏦 ",
@@ -19,7 +18,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Sistema completo de tradução multilíngue
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": " 🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -47,8 +45,18 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": " 📈  Gráfico de Preço Interativo (TradingView Engine)",
         "buscando_marketcap": " 🔍  Buscando Market Cap em USD...",
         "marketcap_nao_disponivel": "Não disponível",
-        "idioma_label": " 🌐  Language / Idioma / Langue / Sprache / Lingua / Язык /  语言  /  भाषा ",
+        "idioma_label": " 🌐  Idioma / Language",
         "idioma_selecao": "Selecione o idioma da interface:",
+        "intervalos": {
+            "1 Minuto": "1m",
+            "5 Minutos": "5m",
+            "15 Minutos": "15m",
+            "30 Minutos": "30m",
+            "1 Hora": "1h",
+            "4 Horas": "4h",
+            "1 Dia": "1d",
+            "1 Semana": "1w"
+        }
     },
     "English (EN)": {
         "titulo": " 🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
@@ -76,8 +84,18 @@ DICIONARIO_LINGUAS = {
         "grafico_titulo": " 📈  Interactive Price Chart (TradingView Engine)",
         "buscando_marketcap": " 🔍  Searching Market Cap in USD...",
         "marketcap_nao_disponivel": "Not available",
-        "idioma_label": " 🌐  Language / Idioma / Langue / Sprache / Lingua / Язык /  语言  /  भाषा ",
+        "idioma_label": " 🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
+        "intervalos": {
+            "1 Minute": "1m",
+            "5 Minutes": "5m",
+            "15 Minutes": "15m",
+            "30 Minutes": "30m",
+            "1 Hour": "1h",
+            "4 Hours": "4h",
+            "1 Day": "1d",
+            "1 Week": "1w"
+        }
     }
 }
 
@@ -135,7 +153,7 @@ def inicializar_exchange():
 gateio_client = inicializar_exchange()
 
 
-# CORREÇÃO: Removido @st.cache_data para evitar UnhashableParamError com ccxt
+@st.cache_data(ttl=3600)
 def obter_todos_pares_usdt():
     try:
         mercados = gateio_client.load_markets()
@@ -146,7 +164,6 @@ def obter_todos_pares_usdt():
 
 @st.cache_data(ttl=3600)
 def obter_nome_extenso_cripto(simbolo_id):
-    """Busca o nome real por extenso da moeda através da API do Gate.io"""
     try:
         base_currency = simbolo_id.split('/')[0]
         url = "https://api.gateio.ws/api/v4/spot/currencies"
@@ -165,7 +182,7 @@ def obter_nome_extenso_cripto(simbolo_id):
 def obter_market_cap_coingecko(simbolo):
     try:
         url_lista = "https://api.coingecko.com/api/v3/coins/list"
-        response = requests.get(url_lista, timeout=15)
+        response = requests.get(url_lista, timeout=10)
         if response.status_code == 200:
             moedas = response.json()
             simbolo_lower = simbolo.lower()
@@ -175,7 +192,7 @@ def obter_market_cap_coingecko(simbolo):
                     f"https://api.coingecko.com/api/v3/coins/{coin_id}"
                     f"?localization=false&tickers=false&community_data=false&developer_data=false"
                 )
-                res = requests.get(url_dados, timeout=15)
+                res = requests.get(url_dados, timeout=10)
                 if res.status_code == 200:
                     return float(res.json().get('market_data', {}).get('market_cap', {}).get('usd', 0))
         return None
@@ -185,7 +202,6 @@ def obter_market_cap_coingecko(simbolo):
 
 @st.cache_data(ttl=300)
 def obter_market_cap_coinmarketcap(simbolo):
-    # CORREÇÃO: Headers mais robustos para evitar bloqueio 403
     try:
         headers = {
             'User-Agent': (
@@ -196,7 +212,7 @@ def obter_market_cap_coinmarketcap(simbolo):
             'Accept-Language': 'en-US,en;q=0.9',
         }
         url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             for script in soup.find_all('script'):
@@ -209,13 +225,21 @@ def obter_market_cap_coinmarketcap(simbolo):
         return None
 
 
+# CORREÇÃO 2: Requisições paralelas com ThreadPoolExecutor — tempo de espera
+# reduzido ao da chamada mais rápida, sem congelar o dashboard.
 def obter_market_cap_robusto(simbolo_id):
     simbolo = simbolo_id.split('/')[0]
-    for funcao in [obter_market_cap_coingecko, obter_market_cap_coinmarketcap]:
-        res = funcao(simbolo)
-        if res and res > 0:
-            return float(res)
-    # Fallback: usar ticker 24h da exchange
+    funcoes = [obter_market_cap_coingecko, obter_market_cap_coinmarketcap]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futuros = {executor.submit(f, simbolo): f for f in funcoes}
+        for futuro in as_completed(futuros):
+            try:
+                res = futuro.result()
+                if res and res > 0:
+                    return float(res)
+            except:
+                continue
+    # Fallback leve via ticker da exchange
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
         if ticker and ticker.get('quoteVolume', 0) > 0:
@@ -289,7 +313,6 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     close_arr = close.values
     atr_arr = atr.values
 
-    # CORREÇÃO: Inicialização correta do estado da primeira vela
     if len(df) > 0:
         atr_stop[0] = close_arr[0] - (atr_arr[0] * multiplicador) if not np.isnan(atr_arr[0]) else close_arr[0]
         tendencia[0] = 1
@@ -332,7 +355,7 @@ def calcular_retracao_fibonacci(df):
     minima = df['low'].min()
     diff = maxima - minima
     return {
-        'fib_0': maxima,
+        'fib_0':   maxima,
         'fib_236': maxima - 0.236 * diff,
         'fib_382': maxima - 0.382 * diff,
         'fib_500': maxima - 0.500 * diff,
@@ -358,8 +381,6 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
         df = calcular_ssl_hybrid(df)
         df = calcular_atr_stop(df)
         df = calcular_ppo(df)
-        # CORREÇÃO: dropna aplicado apenas na coluna 'close'; SSL_Baseline pode ter NaN
-        # nas primeiras linhas por causa do rolling, preenchemos com forward fill
         df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
         df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
         return df.dropna(subset=['close'])
@@ -369,7 +390,6 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
 
 
 def obter_variacao_24h(simbolo_id):
-    # CORREÇÃO: Fallback ao ticker 24h quando OHLCV diário é insuficiente
     try:
         dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
         if dados_24h and len(dados_24h) >= 2:
@@ -421,12 +441,12 @@ def analisar_confluencia(df, fib_niveis, txt):
     else:
         pontos_baixa += 1.5
 
-    if preco_atual <= fib_niveis['fib_618']:
-        pontos_alta += 2.0
-        contexto_fib = txt["ctx_desconto"]
-    elif preco_atual >= fib_niveis['fib_382']:
+    if preco_atual >= fib_niveis['fib_382']:
         pontos_baixa += 2.0
         contexto_fib = txt["ctx_premium"]
+    elif preco_atual <= fib_niveis['fib_618']:
+        pontos_alta += 2.0
+        contexto_fib = txt["ctx_desconto"]
     else:
         contexto_fib = txt["ctx_neutro"]
 
@@ -439,7 +459,7 @@ def analisar_confluencia(df, fib_niveis, txt):
 
 
 # ─────────────────────────────────────────────
-# EXECUÇÃO DO PORTAL
+# SIDEBAR — widgets de controle (fora do fragment)
 # ─────────────────────────────────────────────
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
 idioma_selecionado = st.sidebar.selectbox(
@@ -458,35 +478,31 @@ simbolo_id = st.sidebar.selectbox(
     index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
 )
 
-intervalos = {
-    "1 Minuto": "1m",
-    "5 Minutos": "5m",
-    "15 Minutos": "15m",
-    "30 Minutos": "30m",
-    "1 Hora": "1h",
-    "4 Horas": "4h",
-    "1 Dia": "1d",
-    "1 Semana": "1w"
-}
+intervalos = txt["intervalos"]
 intervalo_escolhido = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=5)
 timeframe = intervalos[intervalo_escolhido]
+
 st.sidebar.markdown("---")
 modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
 intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
 
-status_placeholder = st.empty()
-df_dados = carregar_dados(simbolo_id, timeframe)
 
-if df_dados is None or df_dados.empty:
-    st.warning(txt["erro_dados"])
-else:
+# CORREÇÃO 1: Painel encapsulado em @st.fragment com run_every dinâmico.
+# O fragment atualiza de forma isolada sem bloquear os widgets do sidebar.
+# run_every=None desativa o refresh automático quando modo_vivo está desligado.
+@st.fragment(run_every=intervalo_refresh if modo_vivo else None)
+def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
+    df_dados = carregar_dados(simbolo_id, timeframe)
+
+    if df_dados is None or df_dados.empty:
+        st.warning(txt["erro_dados"])
+        return
+
     ultimo_reg = df_dados.iloc[-1]
     preco_atual = ultimo_reg['close']
     fib_niveis = calcular_retracao_fibonacci(df_dados)
     variacao_24h = obter_variacao_24h(simbolo_id)
-
-    with st.spinner(txt["buscando_marketcap"]):
-        market_cap = obter_market_cap_robusto(simbolo_id)
+    market_cap = obter_market_cap_robusto(simbolo_id)
 
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis, txt)
 
@@ -512,12 +528,10 @@ else:
     m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
     m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
-    # GRÁFICO PROFISSIONAL INTERATIVO LIGHTWEIGHT CHARTS (TRADINGVIEW)
+    st.markdown(f"**{txt['stop_atr']}:** {formatar_preco(ultimo_reg['ATR_Stop'])}")
+
     st.markdown(f"### {txt['grafico_titulo']}")
-
     df_tv = df_dados.reset_index(drop=True)
-
-    # CORREÇÃO: Lightweight Charts exige timestamps Unix em segundos (inteiros)
     df_tv['time_unix'] = (df_tv['timestamp'] // 1000).astype(int)
 
     velas_tv = df_tv[['time_unix', 'open', 'high', 'low', 'close']].rename(
@@ -571,11 +585,13 @@ else:
 
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     if modo_vivo:
-        status_placeholder.info(
+        st.info(
             f" 🟢  {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}"
         )
-        time.sleep(intervalo_refresh)
-        st.rerun()
     else:
-        status_placeholder.info(f" ⏸  {txt['ultima_atualizacao']}: {hora_atual}")
+        st.info(f" ⏸  {txt['ultima_atualizacao']}: {hora_atual}")
+
+
+# Chamada do fragment — recebe os parâmetros do sidebar como argumentos
+painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
