@@ -7,7 +7,6 @@ import requests
 import math
 from decimal import Decimal
 import re
-from bs4 import BeautifulSoup
 import plotly.graph_objects as go
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -18,6 +17,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CONSTANTES DE AQUECIMENTO
+# Os indicadores técnicos precisam de um número mínimo de velas para "aquecer"
+# antes de produzirem valores matematicamente corretos:
+#   RSI(14)       → 14 períodos
+#   MACD(12,26,9) → 26 + 9 = 35 períodos
+#   SSL(20)       → 20 períodos
+#   ATR(14)       → 14 períodos
+#   PPO(12,26,9)  → 26 + 9 = 35 períodos
+#   MFI(14)       → 14 períodos
+# Usamos 100 como margem segura. Carregamos 500 velas e descartamos as
+# primeiras 100 apenas para o cálculo do SINAL (não para o gráfico).
+VELAS_TOTAL = 500
+PERIODO_AQUECIMENTO = 100
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DICIONÁRIO DE IDIOMAS
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -33,20 +49,21 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
         "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
         "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
-        "erro_dados": "Dados históricos insuficientes nesta Exchange para calcular a confluência estrutural SMC. Escolha outro Ativo ou reduza o Tempo Gráfico.",
-        "ctx_desconto": "Ativo posicionado em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
-        "ctx_premium": "Ativo posicionado em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
-        "ctx_neutro": "Preço em zona neutra de equilíbrio de Fibonacci (Fair Value Zone).",
+        "erro_dados": "Dados históricos insuficientes nesta Exchange. Escolha outro ativo ou reduza o Tempo Gráfico.",
+        "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
+        "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
+        "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Última Atualização",
         "proximo_refresh": "Próximo refresh em",
         "segundos": "segundos",
         "pontos_compra": "Pontos de Compra",
         "pontos_venda": "Pontos de Venda",
         "grafico_titulo": "📈  Gráfico de Preço Interativo",
-        "buscando_marketcap": "🔍  Buscando Market Cap em USD...",
+        "buscando_marketcap": "🔍  Buscando Market Cap...",
         "marketcap_nao_disponivel": "Não disponível",
         "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Selecione o idioma da interface:",
+        "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
         "intervalos": {
             "1 Minuto": "1m",
             "5 Minutos": "5m",
@@ -72,20 +89,21 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
         "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
         "neutro": "🟡  NEUTRAL (AWAIT SMC)",
-        "erro_dados": "Insufficient historical data on this Exchange to calculate SMC structural confluence. Choose another Asset or reduce the Timeframe.",
-        "ctx_desconto": "Asset positioned in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
-        "ctx_premium": "Asset positioned in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
-        "ctx_neutro": "Price in neutral Fibonacci equilibrium zone (Fair Value Zone).",
+        "erro_dados": "Insufficient historical data on this Exchange. Choose another asset or reduce the Timeframe.",
+        "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
+        "ctx_premium": "Asset in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
+        "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
         "ultima_atualizacao": "Last Update",
         "proximo_refresh": "Next refresh in",
         "segundos": "seconds",
         "pontos_compra": "Buy Points",
         "pontos_venda": "Sell Points",
         "grafico_titulo": "📈  Interactive Price Chart",
-        "buscando_marketcap": "🔍  Searching Market Cap in USD...",
+        "buscando_marketcap": "🔍  Fetching Market Cap...",
         "marketcap_nao_disponivel": "Not available",
         "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
+        "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
         "intervalos": {
             "1 Minute": "1m",
             "5 Minutes": "5m",
@@ -99,7 +117,8 @@ DICIONARIO_LINGUAS = {
     }
 }
 
-
+# ─────────────────────────────────────────────────────────────────────────────
+# FORMATAÇÃO
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -139,12 +158,13 @@ def formatar_market_cap(valor):
         return f"$ {valor / 1_000_000_000:.2f}B"
     elif valor >= 1_000_000:
         return f"$ {valor / 1_000_000:.2f}M"
-    elif valor >= 1_000:
-        return f"$ {valor / 1_000:.2f}K"
     else:
-        return f"$ {valor:,.2f}"
+        # Qualquer valor abaixo de $1M não é market cap real de cripto listada
+        return "$ —"
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# EXCHANGE
 @st.cache_resource
 def inicializar_exchange():
     return ccxt.gate({'enableRateLimit': True, 'options': {'defaultType': 'spot'}})
@@ -178,76 +198,103 @@ def obter_nome_extenso_cripto(simbolo_id):
         return simbolo_id.split('/')[0]
 
 
-@st.cache_data(ttl=300)
+# ─────────────────────────────────────────────────────────────────────────────
+# MARKET CAP — CoinGecko via endpoint /coins/markets
+# Este endpoint retorna dados de mercado diretamente, sem precisar:
+#   1. Baixar a lista completa de 10.000+ moedas (/coins/list)
+#   2. Fazer uma segunda chamada para buscar detalhes (/coins/{id})
+# Uma única chamada retorna price, market_cap, volume para até 250 moedas.
+# Rate limit do plano gratuito: 10-30 chamadas/minuto. Com cache de 10min,
+# isso representa ~6 chamadas/hora por símbolo — bem dentro do limite.
+
+# Mapa de IDs canônicos para os símbolos mais negociados.
+# Necessário porque o CoinGecko usa IDs únicos (ex: "solana"), não símbolos
+# (ex: "sol"), e vários tokens diferentes partilham o mesmo símbolo.
+COINGECKO_ID_MAP = {
+    "BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana",
+    "BNB": "binancecoin", "XRP": "ripple", "ADA": "cardano",
+    "DOGE": "dogecoin", "TRX": "tron", "DOT": "polkadot",
+    "MATIC": "matic-network", "POL": "matic-network", "LTC": "litecoin",
+    "AVAX": "avalanche-2", "LINK": "chainlink", "UNI": "uniswap",
+    "ATOM": "cosmos", "XLM": "stellar", "ETC": "ethereum-classic",
+    "FIL": "filecoin", "NEAR": "near", "APT": "aptos",
+    "ARB": "arbitrum", "OP": "optimism", "SUI": "sui",
+    "INJ": "injective-protocol", "SEI": "sei-network",
+    "TON": "the-open-network", "PEPE": "pepe", "SHIB": "shiba-inu",
+    "WIF": "dogwifcoin", "BONK": "bonk", "FET": "fetch-ai",
+    "RENDER": "render-token", "TAO": "bittensor",
+    "JUP": "jupiter-exchange-solana", "W": "wormhole",
+    "PYTH": "pyth-network", "STRK": "starknet",
+    "MANTA": "manta-network", "LIT": "litentry",
+    "HBAR": "hedera-hashgraph", "VET": "vechain",
+    "ALGO": "algorand", "SAND": "the-sandbox",
+    "MANA": "decentraland", "AXS": "axie-infinity",
+    "CRV": "curve-dao-token", "AAVE": "aave",
+    "MKR": "maker", "SNX": "synthetix-network-token",
+    "GRT": "the-graph", "LDO": "lido-dao",
+    "IMX": "immutable-x", "RUNE": "thorchain",
+    "FLOKI": "floki", "CFX": "conflux-token",
+    "KAVA": "kava", "ZIL": "zilliqa",
+    "BLUR": "blur", "MAGIC": "magic",
+}
+
+
+@st.cache_data(ttl=600)  # Cache de 10 minutos — respeita rate limit gratuito
 def obter_market_cap_coingecko(simbolo):
-    try:
-        url_lista = "https://api.coingecko.com/api/v3/coins/list"
-        response = requests.get(url_lista, timeout=10)
-        if response.status_code == 200:
-            moedas = response.json()
-            simbolo_lower = simbolo.lower()
-            coin_id = next((m['id'] for m in moedas if m.get('symbol', '') == simbolo_lower), None)
-            if coin_id:
-                url_dados = (
-                    f"https://api.coingecko.com/api/v3/coins/{coin_id}"
-                    f"?localization=false&tickers=false&community_data=false&developer_data=false"
-                )
-                res = requests.get(url_dados, timeout=10)
-                if res.status_code == 200:
-                    return float(res.json().get('market_data', {}).get('market_cap', {}).get('usd', 0))
+    """
+    Busca market cap via endpoint /coins/markets do CoinGecko.
+    Vantagem: uma única chamada HTTP retorna dados completos.
+    Sem necessidade de baixar lista de moedas ou fazer duas chamadas.
+    """
+    coin_id = COINGECKO_ID_MAP.get(simbolo.upper())
+    if not coin_id:
         return None
-    except:
-        return None
-
-
-@st.cache_data(ttl=300)
-def obter_market_cap_coinmarketcap(simbolo):
     try:
-        headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                'AppleWebKit/537.36 (KHTML, like Gecko) '
-                'Chrome/120.0.0.0 Safari/537.36'
-            ),
-            'Accept-Language': 'en-US,en;q=0.9',
+        url = "https://api.coingecko.com/api/v3/coins/markets"
+        params = {
+            "vs_currency": "usd",
+            "ids": coin_id,
+            "order": "market_cap_desc",
+            "per_page": 1,
+            "page": 1,
+            "sparkline": "false"
         }
-        url = f"https://coinmarketcap.com/currencies/{simbolo.lower()}/"
-        response = requests.get(url, headers=headers, timeout=10)
+        headers = {"Accept": "application/json"}
+        response = requests.get(url, params=params, headers=headers, timeout=10)
         if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            for script in soup.find_all('script'):
-                if script.string and 'marketCap' in script.string:
-                    match = re.search(r'"marketCap":(\d+\.?\d*)', script.string)
-                    if match:
-                        return float(match.group(1))
+            dados = response.json()
+            if dados and len(dados) > 0:
+                mc = dados[0].get("market_cap")
+                # Validação: market cap real de qualquer cripto listada > $1M
+                if mc and float(mc) > 1_000_000:
+                    return float(mc)
+        elif response.status_code == 429:
+            # Rate limit atingido — retornar None sem crashar
+            return None
         return None
-    except:
+    except Exception:
         return None
 
 
 def obter_market_cap_robusto(simbolo_id):
+    """
+    Tenta obter market cap do CoinGecko.
+    Se o símbolo não estiver no mapa ou a API falhar, exibe 'Não disponível'.
+    Nunca inventa valores — prefere mostrar '—' a mostrar dado errado.
+    """
     simbolo = simbolo_id.split('/')[0]
-    funcoes = [obter_market_cap_coingecko, obter_market_cap_coinmarketcap]
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        futuros = {executor.submit(f, simbolo): f for f in funcoes}
-        for futuro in as_completed(futuros):
-            try:
-                res = futuro.result()
-                if res and res > 0:
-                    return float(res)
-            except:
-                continue
-    try:
-        ticker = gateio_client.fetch_ticker(simbolo_id)
-        if ticker and ticker.get('quoteVolume', 0) > 0:
-            return float(ticker.get('quoteVolume') * 500)
-    except:
-        pass
+    resultado = obter_market_cap_coingecko(simbolo)
+    if resultado and resultado > 1_000_000:
+        return resultado
     return None
 
 
-def calcular_rsi(df, col, periodo=14):
-    delta = df[col].diff()
+# ─────────────────────────────────────────────────────────────────────────────
+# INDICADORES TÉCNICOS
+
+def calcular_rsi(serie, periodo=14):
+    """RSI calculado sobre série pandas. Requer período de aquecimento."""
+    delta = serie.diff()
     ganho = delta.clip(lower=0)
     perda = -delta.clip(upper=0)
     ma_ganho = ganho.ewm(span=periodo, adjust=False).mean()
@@ -255,15 +302,17 @@ def calcular_rsi(df, col, periodo=14):
     return 100 - (100 / (1 + (ma_ganho / ma_perda.replace(0, 1e-10))))
 
 
-def calcular_macd(df, col):
-    ema_rapida = df[col].ewm(span=12, adjust=False).mean()
-    ema_lenta = df[col].ewm(span=26, adjust=False).mean()
-    macd = ema_rapida - ema_lenta
+def calcular_macd(serie):
+    """MACD(12,26,9). Requer mínimo 35 períodos de aquecimento."""
+    ema12 = serie.ewm(span=12, adjust=False).mean()
+    ema26 = serie.ewm(span=26, adjust=False).mean()
+    macd = ema12 - ema26
     sinal = macd.ewm(span=9, adjust=False).mean()
     return macd, sinal, macd - sinal
 
 
 def calcular_mfi(df, periodo=14):
+    """Money Flow Index. Requer período de aquecimento."""
     tp = (df['high'] + df['low'] + df['close']) / 3
     rmf = tp * df['volume']
     tp_shift = tp.shift(1)
@@ -275,6 +324,7 @@ def calcular_mfi(df, periodo=14):
 
 
 def calcular_ssl_hybrid(df, periodo=20):
+    """SSL Hybrid Baseline. Requer período de aquecimento."""
     sma_high = df['high'].rolling(window=periodo).mean()
     sma_low = df['low'].rolling(window=periodo).mean()
     close_arr = df['close'].values
@@ -291,15 +341,15 @@ def calcular_ssl_hybrid(df, periodo=20):
         elif close_arr[i] < sma_l_arr[i]:
             current = -1
         ssl_dir[i] = current
+    df = df.copy()
     df['ssl_dir'] = ssl_dir
-    df['SSL_Baseline'] = np.where(df['ssl_dir'] == 1, sma_high, sma_low)
+    df['SSL_Baseline'] = np.where(ssl_dir == 1, sma_high, sma_low)
     return df
 
 
 def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
-    high = df['high']
-    low = df['low']
-    close = df['close']
+    """ATR Trailing Stop. Requer período de aquecimento."""
+    high, low, close = df['high'], df['low'], df['close']
     tr = pd.concat(
         [high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()],
         axis=1
@@ -311,7 +361,10 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     atr_arr = atr.values
 
     if len(df) > 0:
-        atr_stop[0] = close_arr[0] - (atr_arr[0] * multiplicador) if not np.isnan(atr_arr[0]) else close_arr[0]
+        atr_stop[0] = (
+            close_arr[0] - (atr_arr[0] * multiplicador)
+            if not np.isnan(atr_arr[0]) else close_arr[0]
+        )
         tendencia[0] = 1
 
     for i in range(1, len(df)):
@@ -334,22 +387,33 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
                 tendencia[i] = -1
                 atr_stop[i] = min(atr_stop[i - 1], close_arr[i] + (atr_arr[i] * multiplicador))
 
+    df = df.copy()
     df['ATR_Stop'] = atr_stop
     df['atr_dir'] = tendencia
     return df
 
 
 def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
+    """Percentage Price Oscillator. Requer período de aquecimento."""
     ema_rapida = df[col].ewm(span=rapido, adjust=False).mean()
     ema_lenta = df[col].ewm(span=lento, adjust=False).mean()
+    df = df.copy()
     df['PPO'] = ((ema_rapida - ema_lenta) / ema_lenta) * 100
     df['PPO_Signal'] = df['PPO'].ewm(span=sinal_periodo, adjust=False).mean()
     return df
 
 
-def calcular_retracao_fibonacci(df):
-    maxima = df['high'].max()
-    minima = df['low'].min()
+# ─────────────────────────────────────────────────────────────────────────────
+# FIBONACCI
+# Calculado sobre as últimas velas APÓS o período de aquecimento,
+# representando a janela de análise real — não o histórico completo de 500 velas.
+def calcular_retracao_fibonacci(df_analise):
+    """
+    Recebe apenas o DataFrame pós-aquecimento (janela de análise).
+    Máxima e mínima representam o swing da janela analisada.
+    """
+    maxima = df_analise['high'].max()
+    minima = df_analise['low'].min()
     diff = maxima - minima
     return {
         'fib_0':   maxima,
@@ -362,15 +426,35 @@ def calcular_retracao_fibonacci(df):
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# CARREGAMENTO DE DADOS
+@st.cache_data(ttl=60)
 def carregar_dados(simbolo_id, timeframe_selecionado):
+    """
+    Carrega VELAS_TOTAL velas para garantir aquecimento adequado dos indicadores.
+    Retorna o DataFrame completo com todos os indicadores calculados.
+    O período de aquecimento (primeiras PERIODO_AQUECIMENTO velas) é usado
+    apenas internamente pelos algoritmos — o sinal final é extraído das velas
+    posteriores, já com indicadores estabilizados.
+    """
     try:
-        velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe_selecionado, limit=200)
-        if not velas:
+        velas = gateio_client.fetch_ohlcv(
+            simbolo_id,
+            timeframe=timeframe_selecionado,
+            limit=VELAS_TOTAL
+        )
+        if not velas or len(velas) < PERIODO_AQUECIMENTO + 50:
             return None
-        df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+        df = pd.DataFrame(
+            velas,
+            columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+        )
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df['RSI_14'] = calcular_rsi(df, 'close', 14)
-        macd, sinal, hist = calcular_macd(df, 'close')
+
+        # Calcular todos os indicadores sobre o DataFrame completo (500 velas).
+        # As primeiras PERIODO_AQUECIMENTO velas estabilizam os cálculos EWM/rolling.
+        df['RSI_14'] = calcular_rsi(df['close'], 14)
+        macd, sinal, hist = calcular_macd(df['close'])
         df['MACD'] = macd
         df['MACD_SIGNAL'] = sinal
         df['MACD_HIST'] = hist
@@ -378,66 +462,105 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
         df = calcular_ssl_hybrid(df)
         df = calcular_atr_stop(df)
         df = calcular_ppo(df)
+
+        # Preenchimento de NaN residuais (apenas nas primeiras velas do rolling)
         df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
         df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
-        return df.dropna(subset=['close'])
+
+        return df.dropna(subset=['close']).reset_index(drop=True)
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
         return None
 
 
 def obter_variacao_24h(simbolo_id):
-    try:
-        dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
-        if dados_24h and len(dados_24h) >= 2:
-            return ((dados_24h[-1][4] - dados_24h[-2][4]) / dados_24h[-2][4]) * 100
-    except:
-        pass
+    """Variação 24h diretamente do ticker da Gate.io — fonte oficial."""
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
         if ticker and ticker.get('percentage') is not None:
             return float(ticker['percentage'])
     except:
         pass
+    try:
+        dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
+        if dados_24h and len(dados_24h) >= 2:
+            return ((dados_24h[-1][4] - dados_24h[-2][4]) / dados_24h[-2][4]) * 100
+    except:
+        pass
     return 0.0
 
 
-def analisar_confluencia(df, fib_niveis, txt):
-    u = df.iloc[-1]
+# ─────────────────────────────────────────────────────────────────────────────
+# ANÁLISE DE CONFLUÊNCIA SMC
+def analisar_confluencia(df_completo, txt):
+    """
+    Análise de confluência feita sobre a janela pós-aquecimento.
+    df_completo: DataFrame com 500 velas e indicadores calculados.
+    A última linha (iloc[-1]) representa o candle atual com indicadores estáveis.
+    Fibonacci calculado sobre as últimas 200 velas pós-aquecimento.
+    """
+    # Janela de análise: descarta o período de aquecimento
+    df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
+
+    if df_analise.empty:
+        return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0
+
+    # Última vela com indicadores estabilizados
+    u = df_analise.iloc[-1]
     preco_atual = u['close']
+
+    # Fibonacci calculado sobre a janela de análise real
+    fib_niveis = calcular_retracao_fibonacci(df_analise)
+
     pontos_alta = 0.0
     pontos_baixa = 0.0
 
-    if u['RSI_14'] < 40:
-        pontos_alta += 2
-    elif u['RSI_14'] > 60:
-        pontos_baixa += 2
+    # RSI(14): sobrevendido < 40 → alta; sobrecomprado > 60 → baixa
+    rsi_val = u['RSI_14']
+    if not math.isnan(rsi_val):
+        if rsi_val < 40:
+            pontos_alta += 2
+        elif rsi_val > 60:
+            pontos_baixa += 2
 
-    if u['MACD_HIST'] > 0:
-        pontos_alta += 2
-    else:
-        pontos_baixa += 2
+    # MACD: histograma positivo → momentum de alta
+    macd_hist = u['MACD_HIST']
+    if not math.isnan(macd_hist):
+        if macd_hist > 0:
+            pontos_alta += 2
+        else:
+            pontos_baixa += 2
 
-    if u['MFI'] > 50:
-        pontos_alta += 1
-    else:
-        pontos_baixa += 1
+    # MFI: fluxo de dinheiro > 50 → pressão compradora
+    mfi_val = u['MFI']
+    if not math.isnan(mfi_val):
+        if mfi_val > 50:
+            pontos_alta += 1
+        else:
+            pontos_baixa += 1
 
+    # SSL Hybrid: direção da baseline
     if u['ssl_dir'] == 1:
         pontos_alta += 1
     else:
         pontos_baixa += 1
 
+    # ATR Trailing Stop: tendência do stop
     if u['atr_dir'] == 1:
         pontos_alta += 1
     else:
         pontos_baixa += 1
 
-    if u['PPO'] > u['PPO_Signal']:
-        pontos_alta += 1.5
-    else:
-        pontos_baixa += 1.5
+    # PPO: linha acima do sinal → momentum positivo
+    ppo_val = u['PPO']
+    ppo_sig = u['PPO_Signal']
+    if not (math.isnan(ppo_val) or math.isnan(ppo_sig)):
+        if ppo_val > ppo_sig:
+            pontos_alta += 1.5
+        else:
+            pontos_baixa += 1.5
 
+    # Fibonacci: posição do preço na grade de retração
     if preco_atual >= fib_niveis['fib_382']:
         pontos_baixa += 2.0
         contexto_fib = txt["ctx_premium"]
@@ -448,23 +571,39 @@ def analisar_confluencia(df, fib_niveis, txt):
         contexto_fib = txt["ctx_neutro"]
 
     if pontos_alta >= 8.5:
-        return txt["compra_forte"], "#00cc66", f"{contexto_fib} SMC + PPO Order Flow Bullish.", pontos_alta, pontos_baixa
+        return (
+            txt["compra_forte"], "#00cc66",
+            f"{contexto_fib} SMC + PPO Order Flow Bullish.",
+            pontos_alta, pontos_baixa
+        )
     elif pontos_baixa >= 8.5:
-        return txt["venda_forte"], "#ff3333", f"{contexto_fib} SMC + PPO Order Flow Bearish.", pontos_alta, pontos_baixa
+        return (
+            txt["venda_forte"], "#ff3333",
+            f"{contexto_fib} SMC + PPO Order Flow Bearish.",
+            pontos_alta, pontos_baixa
+        )
     else:
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
 
 
-def renderizar_grafico_plotly(df, simbolo_id):
+# ─────────────────────────────────────────────────────────────────────────────
+# GRÁFICO
+def renderizar_grafico_plotly(df_completo, simbolo_id):
+    """
+    Gráfico exibe as últimas 300 velas pós-aquecimento para melhor visualização.
+    O período de aquecimento (primeiras 100 velas) é omitido do gráfico,
+    pois seus valores de indicador ainda estão em estabilização.
+    """
+    df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
+
     fig = go.Figure()
 
-    # Candlestick
     fig.add_trace(go.Candlestick(
-        x=df['time'],
-        open=df['open'],
-        high=df['high'],
-        low=df['low'],
-        close=df['close'],
+        x=df_grafico['time'],
+        open=df_grafico['open'],
+        high=df_grafico['high'],
+        low=df_grafico['low'],
+        close=df_grafico['close'],
         name=simbolo_id,
         increasing_line_color='#10b981',
         decreasing_line_color='#ef4444',
@@ -472,19 +611,17 @@ def renderizar_grafico_plotly(df, simbolo_id):
         decreasing_fillcolor='#ef4444'
     ))
 
-    # SSL Baseline
     fig.add_trace(go.Scatter(
-        x=df['time'],
-        y=df['SSL_Baseline'],
+        x=df_grafico['time'],
+        y=df_grafico['SSL_Baseline'],
         mode='lines',
-        name='SMC Baseline',
+        name='SMC Baseline (SSL)',
         line=dict(color='#00aaff', width=2)
     ))
 
-    # ATR Stop
     fig.add_trace(go.Scatter(
-        x=df['time'],
-        y=df['ATR_Stop'],
+        x=df_grafico['time'],
+        y=df_grafico['ATR_Stop'],
         mode='lines',
         name='ATR Trailing Stop',
         line=dict(color='#ffaa00', width=1, dash='dash')
@@ -505,12 +642,12 @@ def renderizar_grafico_plotly(df, simbolo_id):
         height=520
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    # Corrigido: width='stretch' substitui use_container_width=True (depreciado)
+    st.plotly_chart(fig, width='stretch')
 
 
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
-# ─────────────────────────────────────────────
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
 idioma_selecionado = st.sidebar.selectbox(
     DICIONARIO_LINGUAS['Português (BR)']['idioma_selecao'],
@@ -529,14 +666,20 @@ simbolo_id = st.sidebar.selectbox(
 )
 
 intervalos = txt["intervalos"]
-intervalo_escolhido = st.sidebar.selectbox(txt["tempo_grafico"], list(intervalos.keys()), index=5)
+intervalo_escolhido = st.sidebar.selectbox(
+    txt["tempo_grafico"], list(intervalos.keys()), index=5
+)
 timeframe = intervalos[intervalo_escolhido]
 
 st.sidebar.markdown("---")
 modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
-intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
+intervalo_refresh = st.sidebar.slider(
+    txt["intervalo_refresh"], min_value=15, max_value=120, value=30
+)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# PAINEL PRINCIPAL
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
 def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     df_dados = carregar_dados(simbolo_id, timeframe)
@@ -545,26 +688,48 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         st.warning(txt["erro_dados"])
         return
 
-    ultimo_reg = df_dados.iloc[-1]
+    # Dados da última vela estabilizada (pós-aquecimento)
+    df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
+    if df_analise.empty:
+        st.warning(txt["erro_dados"])
+        return
+
+    ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
-    fib_niveis = calcular_retracao_fibonacci(df_dados)
+
+    # Variação 24h: fonte oficial Gate.io ticker
     variacao_24h = obter_variacao_24h(simbolo_id)
+
+    # Market Cap: CoinGecko /coins/markets (uma chamada, cache 10min)
     market_cap = obter_market_cap_robusto(simbolo_id)
 
-    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, fib_niveis, txt)
+    # Análise SMC
+    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
+        df_dados, txt
+    )
 
+    # Banner de sinal
+    ppo_line = ultimo_reg['PPO']
+    ppo_sig = ultimo_reg['PPO_Signal']
+    ppo_txt = (
+        f"PPO: {ppo_line:.3f} / Signal: {ppo_sig:.3f}"
+        if not (math.isnan(ppo_line) or math.isnan(ppo_sig))
+        else "PPO: —"
+    )
     st.markdown(f"""
-    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;border:2px solid {cor_sinal};margin-bottom:20px;">
+    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
+                border:2px solid {cor_sinal};margin-bottom:20px;">
     <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
-    <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>PPO Check:</b> Line {ultimo_reg['PPO']:.3f} / Signal {ultimo_reg['PPO_Signal']:.3f}</p>
+    <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>{ppo_txt}</b></p>
     </div>
     """, unsafe_allow_html=True)
 
+    # Métricas
     nome_completo_ativo = obter_nome_extenso_cripto(simbolo_id)
-    label_customizado_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
+    label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
 
     m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric(label_customizado_preco, formatar_preco(preco_atual))
+    m1.metric(label_preco, formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
 
     if market_cap is not None:
@@ -575,19 +740,34 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
     m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
-    st.markdown(f"**{txt['stop_atr']}:** {formatar_preco(ultimo_reg['ATR_Stop'])}")
+    # Stop ATR
+    atr_stop_val = ultimo_reg['ATR_Stop']
+    st.markdown(
+        f"**{txt['stop_atr']}:** {formatar_preco(atr_stop_val)}"
+        f"  |  RSI: **{ultimo_reg['RSI_14']:.1f}**"
+        f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
+    )
 
+    # Gráfico
     st.markdown(f"### {txt['grafico_titulo']}")
     renderizar_grafico_plotly(df_dados, simbolo_id)
 
+    # Status
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
+    n_velas = len(df_analise)
     if modo_vivo:
         st.info(
-            f"🟢  {txt['ultima_atualizacao']}: {hora_atual} | "
-            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}"
+            f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
+            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+            f"Velas analisadas: {n_velas}"
         )
     else:
-        st.info(f"⏸  {txt['ultima_atualizacao']}: {hora_atual}")
+        st.info(
+            f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+            f"Velas analisadas: {n_velas}"
+        )
 
 
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
