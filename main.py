@@ -8,20 +8,20 @@ import math
 from decimal import Decimal
 import re
 from bs4 import BeautifulSoup
-from streamlit_lightweight_charts import renderLightweightCharts
+import plotly.graph_objects as go
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
-    page_icon=" 🏦 ",
+    page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
-        "titulo": " 🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
-        "config_globais": " ⚙️  Configurações Globais",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Configurações Globais",
         "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
         "tempo_grafico": "Tempo Gráfico:",
         "modo_vivo": "Ativar Monitoramento em Tempo Real",
@@ -30,9 +30,9 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Variação 24h (Exchange)",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "Preço Stop ATR",
-        "compra_forte": " 🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "venda_forte": " 🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "neutro": " 🟡  NEUTRO (AGUARDAR SMC)",
+        "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
         "erro_dados": "Dados históricos insuficientes nesta Exchange para calcular a confluência estrutural SMC. Escolha outro Ativo ou reduza o Tempo Gráfico.",
         "ctx_desconto": "Ativo posicionado em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
         "ctx_premium": "Ativo posicionado em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
@@ -42,10 +42,10 @@ DICIONARIO_LINGUAS = {
         "segundos": "segundos",
         "pontos_compra": "Pontos de Compra",
         "pontos_venda": "Pontos de Venda",
-        "grafico_titulo": " 📈  Gráfico de Preço Interativo (TradingView Engine)",
-        "buscando_marketcap": " 🔍  Buscando Market Cap em USD...",
+        "grafico_titulo": "📈  Gráfico de Preço Interativo",
+        "buscando_marketcap": "🔍  Buscando Market Cap em USD...",
         "marketcap_nao_disponivel": "Não disponível",
-        "idioma_label": " 🌐  Idioma / Language",
+        "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Selecione o idioma da interface:",
         "intervalos": {
             "1 Minuto": "1m",
@@ -59,8 +59,8 @@ DICIONARIO_LINGUAS = {
         }
     },
     "English (EN)": {
-        "titulo": " 🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
-        "config_globais": " ⚙️  Global Settings",
+        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
+        "config_globais": "⚙️  Global Settings",
         "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Enable Real-Time Monitoring",
@@ -69,9 +69,9 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24h Variation (Exchange)",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "ATR Stop Price",
-        "compra_forte": " 🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
-        "venda_forte": " 🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
-        "neutro": " 🟡  NEUTRAL (AWAIT SMC)",
+        "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
+        "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
+        "neutro": "🟡  NEUTRAL (AWAIT SMC)",
         "erro_dados": "Insufficient historical data on this Exchange to calculate SMC structural confluence. Choose another Asset or reduce the Timeframe.",
         "ctx_desconto": "Asset positioned in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
         "ctx_premium": "Asset positioned in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
@@ -81,10 +81,10 @@ DICIONARIO_LINGUAS = {
         "segundos": "seconds",
         "pontos_compra": "Buy Points",
         "pontos_venda": "Sell Points",
-        "grafico_titulo": " 📈  Interactive Price Chart (TradingView Engine)",
-        "buscando_marketcap": " 🔍  Searching Market Cap in USD...",
+        "grafico_titulo": "📈  Interactive Price Chart",
+        "buscando_marketcap": "🔍  Searching Market Cap in USD...",
         "marketcap_nao_disponivel": "Not available",
-        "idioma_label": " 🌐  Language / Idioma",
+        "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
         "intervalos": {
             "1 Minute": "1m",
@@ -225,8 +225,6 @@ def obter_market_cap_coinmarketcap(simbolo):
         return None
 
 
-# CORREÇÃO 2: Requisições paralelas com ThreadPoolExecutor — tempo de espera
-# reduzido ao da chamada mais rápida, sem congelar o dashboard.
 def obter_market_cap_robusto(simbolo_id):
     simbolo = simbolo_id.split('/')[0]
     funcoes = [obter_market_cap_coingecko, obter_market_cap_coinmarketcap]
@@ -239,7 +237,6 @@ def obter_market_cap_robusto(simbolo_id):
                     return float(res)
             except:
                 continue
-    # Fallback leve via ticker da exchange
     try:
         ticker = gateio_client.fetch_ticker(simbolo_id)
         if ticker and ticker.get('quoteVolume', 0) > 0:
@@ -458,8 +455,61 @@ def analisar_confluencia(df, fib_niveis, txt):
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
 
 
+def renderizar_grafico_plotly(df, simbolo_id):
+    fig = go.Figure()
+
+    # Candlestick
+    fig.add_trace(go.Candlestick(
+        x=df['time'],
+        open=df['open'],
+        high=df['high'],
+        low=df['low'],
+        close=df['close'],
+        name=simbolo_id,
+        increasing_line_color='#10b981',
+        decreasing_line_color='#ef4444',
+        increasing_fillcolor='#10b981',
+        decreasing_fillcolor='#ef4444'
+    ))
+
+    # SSL Baseline
+    fig.add_trace(go.Scatter(
+        x=df['time'],
+        y=df['SSL_Baseline'],
+        mode='lines',
+        name='SMC Baseline',
+        line=dict(color='#00aaff', width=2)
+    ))
+
+    # ATR Stop
+    fig.add_trace(go.Scatter(
+        x=df['time'],
+        y=df['ATR_Stop'],
+        mode='lines',
+        name='ATR Trailing Stop',
+        line=dict(color='#ffaa00', width=1, dash='dash')
+    ))
+
+    fig.update_layout(
+        paper_bgcolor='#0b0f19',
+        plot_bgcolor='#0b0f19',
+        font=dict(color='#e2e8f0'),
+        xaxis=dict(
+            gridcolor='#1e293b',
+            showgrid=True,
+            rangeslider=dict(visible=False)
+        ),
+        yaxis=dict(gridcolor='#1e293b', showgrid=True),
+        legend=dict(bgcolor='#1e293b', bordercolor='#475569', borderwidth=1),
+        margin=dict(l=10, r=10, t=30, b=10),
+        height=520
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
 # ─────────────────────────────────────────────
-# SIDEBAR — widgets de controle (fora do fragment)
+# SIDEBAR
 # ─────────────────────────────────────────────
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
 idioma_selecionado = st.sidebar.selectbox(
@@ -487,9 +537,6 @@ modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
 intervalo_refresh = st.sidebar.slider(txt["intervalo_refresh"], min_value=5, max_value=60, value=15)
 
 
-# CORREÇÃO 1: Painel encapsulado em @st.fragment com run_every dinâmico.
-# O fragment atualiza de forma isolada sem bloquear os widgets do sidebar.
-# run_every=None desativa o refresh automático quando modo_vivo está desligado.
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
 def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     df_dados = carregar_dados(simbolo_id, timeframe)
@@ -531,67 +578,16 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     st.markdown(f"**{txt['stop_atr']}:** {formatar_preco(ultimo_reg['ATR_Stop'])}")
 
     st.markdown(f"### {txt['grafico_titulo']}")
-    df_tv = df_dados.reset_index(drop=True)
-    df_tv['time_unix'] = (df_tv['timestamp'] // 1000).astype(int)
-
-    velas_tv = df_tv[['time_unix', 'open', 'high', 'low', 'close']].rename(
-        columns={'time_unix': 'time'}
-    ).to_dict(orient='records')
-
-    ssl_tv = df_tv[['time_unix', 'SSL_Baseline']].rename(
-        columns={'time_unix': 'time', 'SSL_Baseline': 'value'}
-    ).dropna().to_dict(orient='records')
-
-    atr_tv = df_tv[['time_unix', 'ATR_Stop']].rename(
-        columns={'time_unix': 'time', 'ATR_Stop': 'value'}
-    ).dropna().to_dict(orient='records')
-
-    config_visual_grafico = {
-        "layout": {"textColor": '#e2e8f0', "background": {"type": 'solid', "color": '#0b0f19'}},
-        "grid": {"vertLines": {"color": '#1e293b'}, "horzLines": {"color": '#1e293b'}},
-        "crosshair": {"mode": 0},
-        "priceScale": {"borderColor": '#475569'},
-        "timeScale": {"borderColor": '#475569', "timeVisible": True}
-    }
-
-    camadas_do_grafico = [
-        {
-            "type": "Candlestick",
-            "data": velas_tv,
-            "options": {
-                "upColor": '#10b981',
-                "downColor": '#ef4444',
-                "borderVisible": False,
-                "wickUpColor": '#10b981',
-                "wickDownColor": '#ef4444'
-            }
-        },
-        {
-            "type": "Line",
-            "data": ssl_tv,
-            "options": {"color": '#00aaff', "lineWidth": 2, "title": "SMC Baseline"}
-        },
-        {
-            "type": "Line",
-            "data": atr_tv,
-            "options": {"color": '#ffaa00', "lineWidth": 1, "lineStyle": 2, "title": "ATR Trailing"}
-        }
-    ]
-
-    renderLightweightCharts(
-        [{"chart": config_visual_grafico, "series": camadas_do_grafico}],
-        'bricsvault_tv_chart'
-    )
+    renderizar_grafico_plotly(df_dados, simbolo_id)
 
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     if modo_vivo:
         st.info(
-            f" 🟢  {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"🟢  {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}"
         )
     else:
-        st.info(f" ⏸  {txt['ultima_atualizacao']}: {hora_atual}")
+        st.info(f"⏸  {txt['ultima_atualizacao']}: {hora_atual}")
 
 
-# Chamada do fragment — recebe os parâmetros do sidebar como argumentos
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
