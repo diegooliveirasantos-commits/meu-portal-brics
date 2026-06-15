@@ -1,4 +1,7 @@
 import streamlit as st
+import os
+import hashlib
+import sys
 import ccxt
 import pandas as pd
 import numpy as np
@@ -9,6 +12,67 @@ from decimal import Decimal
 import re
 import plotly.graph_objects as go
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# ============================================
+# SISTEMA ANTI-CÓPIA BRICSVAULT
+# Proteção contra execução não autorizada
+# ============================================
+
+def protecao_anti_copia():
+    """Impede execução em domínios não autorizados."""
+    
+    # 1. DOMÍNIOS AUTORIZADOS
+    app_url = os.environ.get("STREAMLIT_APP_URL", "")
+    server_name = os.environ.get("STREAMLIT_SERVER_ADDRESS", "")
+    
+    # Lista de identificadores permitidos
+    IDENTIFICADORES_PERMITIDOS = [
+        "bricsvault-portal",           # Nome do seu app no Streamlit Cloud
+        "diegooliveirasantos-commits", # Seu usuário GitHub
+        "localhost",                    # Desenvolvimento local
+        "127.0.0.1",                   # Desenvolvimento local
+        "0.0.0.0",                     # Desenvolvimento local
+    ]
+    
+    # Verificar se é ambiente autorizado
+    autorizado = False
+    
+    # Verificar URL do Streamlit Cloud
+    for identificador in IDENTIFICADORES_PERMITIDOS:
+        if identificador in app_url or identificador in server_name:
+            autorizado = True
+            break
+    
+    # Se estiver rodando localmente (sem variáveis de ambiente do Streamlit)
+    if not app_url and not server_name:
+        autorizado = True  # Permitir desenvolvimento local
+    
+    if not autorizado:
+        st.set_page_config(page_title="🚫 ACESSO BLOQUEADO", page_icon="🔒")
+        st.error("## 🚫 ACESSO NÃO AUTORIZADO")
+        st.warning("Este software é propriedade de **Diego Oliveira Santos**")
+        st.info("🔗 Acesse apenas em: https://bricsvault-portal.streamlit.app")
+        st.markdown("---")
+        st.caption("BRICSVAULT © 2024 - Todos os direitos reservados")
+        st.stop()
+        sys.exit()
+    
+    # 2. VERIFICAÇÃO DE TOKEN (Opcional - se configurar Secrets)
+    try:
+        token_verificacao = st.secrets.get("TOKEN_VERIFICACAO", None)
+        if token_verificacao and token_verificacao != "BRICSVAULT_AUTENTICO_2024":
+            st.error("🔑 Token de verificação inválido")
+            st.stop()
+    except Exception:
+        # Se secrets não existir (desenvolvimento local), permite continuar
+        pass
+
+# EXECUTAR PROTEÇÃO (deve ser a primeira coisa)
+protecao_anti_copia()
+
+# ============================================
+# FIM DO SISTEMA ANTI-CÓPIA
+# ============================================
 
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -106,14 +170,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 Módulo Fear & Greed",
         "modulo_liquidez": "💧 Módulo Liquidez",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minutos": "5m",
-            "15 Minutos": "15m",
-            "30 Minutos": "30m",
-            "1 Hora": "1h",
-            "4 Horas": "4h",
-            "1 Dia": "1d",
-            "1 Semana": "1w"
+            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
+            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
+            "1 Dia": "1d", "1 Semana": "1w"
         }
     },
     "English (EN)": {
@@ -197,14 +256,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 Fear & Greed Module",
         "modulo_liquidez": "💧 Liquidity Module",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minutes": "5m",
-            "15 Minutes": "15m",
-            "30 Minutes": "30m",
-            "1 Hour": "1h",
-            "4 Hours": "4h",
-            "1 Day": "1d",
-            "1 Week": "1w"
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
+            "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
+            "1 Day": "1d", "1 Week": "1w"
         }
     },
     "中文 (Mandarim)": {
@@ -239,7 +293,7 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  语言",
         "idioma_selecao": "选择界面语言:",
         "aviso_aquecimento": "⚠️ 预热K线",
-        "backtest_titulo": "📊 高级回测 — 最近100个信号",
+        "backtest_titulo": "📊 高级回测 — 100个信号",
         "backtest_compra": "买入",
         "backtest_venda": "卖出",
         "backtest_total": "总信号",
@@ -288,105 +342,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 恐惧贪婪模块",
         "modulo_liquidez": "💧 流动性模块",
         "intervalos": {
-            "1 分钟": "1m",
-            "5 分钟": "5m",
-            "15 分钟": "15m",
-            "30 分钟": "30m",
-            "1 小时": "1h",
-            "4 小时": "4h",
-            "1 天": "1d",
-            "1 周": "1w"
-        }
-    },
-    "हिन्दी (Hindi)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स इंजन",
-        "config_globais": "⚙️  वैश्विक सेटिंग्स",
-        "selecione_cripto": "क्रिप्टोकरेंसी चुनें (/USDT):",
-        "tempo_grafico": "समय-सीमा:",
-        "modo_vivo": "रीयल-टाइम मॉनिटरिंग",
-        "intervalo_refresh": "रीफ्रेश अंतराल (सेकंड):",
-        "preco_spot": "स्पॉट मूल्य",
-        "variacao_24h": "24 घंटे का बदलाव",
-        "market_cap": "मार्केट कैप (USD)",
-        "stop_atr": "ATR स्टॉप",
-        "compra_forte": "🟢  मजबूत खरीद",
-        "venda_forte": "🔴  मजबूत बिक्री",
-        "neutro": "🟡  तटस्थ",
-        "spike_alta": "🚀  तेजी का स्पाइक",
-        "spike_baixa": "💥  मंदी का स्पाइक",
-        "erro_dados": "अपर्याप्त डेटा।",
-        "ctx_desconto": "फिबोनाची डिस्काउंट ज़ोन।",
-        "ctx_premium": "फिबोनाची प्रीमियम ज़ोन।",
-        "ctx_neutro": "फिबोनाची तटस्थ क्षेत्र।",
-        "ultima_atualizacao": "अंतिम अपडेट",
-        "proximo_refresh": "अगला रीफ्रेश",
-        "segundos": "सेकंड",
-        "pontos_compra": "खरीद अंक",
-        "pontos_venda": "बिक्री अंक",
-        "sinal_spike": "अस्थिरता स्पाइक",
-        "grafico_titulo": "📈  मूल्य चार्ट",
-        "buscando_marketcap": "🔍  मार्केट कैप...",
-        "marketcap_nao_disponivel": "उपलब्ध नहीं",
-        "idioma_label": "🌐  भाषा",
-        "idioma_selecao": "भाषा चुनें:",
-        "aviso_aquecimento": "⚠️ वार्म-अप कैंडल्स",
-        "backtest_titulo": "📊 बैकटेस्टिंग — 100 सिग्नल",
-        "backtest_compra": "खरीद",
-        "backtest_venda": "बिक्री",
-        "backtest_total": "कुल",
-        "backtest_acertos": "सफल",
-        "backtest_taxa": "सफलता दर",
-        "backtest_profit_factor": "लाभ कारक",
-        "backtest_avg_win": "औसत लाभ",
-        "backtest_avg_loss": "औसत हानि",
-        "backtest_historico": "हाल के सिग्नल",
-        "backtest_data": "दिनांक",
-        "backtest_sinal": "सिग्नल",
-        "backtest_preco": "प्रवेश मूल्य",
-        "backtest_resultado": "परिणाम",
-        "backtest_acerto": "✅ सफल",
-        "backtest_erro": "❌ असफल",
-        "backtest_metricas": "प्रदर्शन मीट्रिक्स",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 फियर एंड ग्रीड",
-        "medo_extremo": "अत्यधिक भय",
-        "medo": "भय",
-        "neutro_fg": "तटस्थ",
-        "ganancia": "लालच",
-        "ganancia_extrema": "अत्यधिक लालच",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ अनिश्चित",
-        "divergencia_obv_bull": "📈 OBV बुलिश",
-        "divergencia_obv_bear": "📉 OBV बियरिश",
-        "divergencia_obv_none": "➖ कोई नहीं",
-        "alinhamento_mtf": "🔄 मल्टी-TF",
-        "alinhamento_mtf_sim": "✅ संरेखित",
-        "alinhamento_mtf_nao": "❌ नहीं",
-        "filtro_liquidez": "💧 तरलता",
-        "liquidez_ok": "✅ उच्च",
-        "liquidez_baixa": "⚠️ कम",
-        "volume_direcional_bull": "📊 बुलिश वॉल्यूम",
-        "volume_direcional_bear": "📊 बियरिश वॉल्यूम",
-        "volume_direcional_neutro": "📊 न्यूट्रल",
-        "limiar_dinamico": "गतिशील सीमा",
-        "modulo_mtf": "🔍 मल्टी-TF",
-        "modulo_estrutura": "🏗️ SMC संरचना",
-        "modulo_obv": "📊 OBV डाइवर्जेंस",
-        "modulo_volume": "📈 दिशात्मक वॉल्यूम",
-        "modulo_fg": "😱 फियर & ग्रीड",
-        "modulo_liquidez": "💧 तरलता",
-        "intervalos": {
-            "1 मिनट": "1m",
-            "5 मिनट": "5m",
-            "15 मिनट": "15m",
-            "30 मिनट": "30m",
-            "1 घंटा": "1h",
-            "4 घंटे": "4h",
-            "1 दिन": "1d",
-            "1 सप्ताह": "1w"
+            "1 分钟": "1m", "5 分钟": "5m", "15 分钟": "15m",
+            "30 分钟": "30m", "1 小时": "1h", "4 小时": "4h",
+            "1 天": "1d", "1 周": "1w"
         }
     },
     "Español (Espanhol)": {
@@ -470,14 +428,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 Miedo & Codicia",
         "modulo_liquidez": "💧 Liquidez",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minutos": "5m",
-            "15 Minutos": "15m",
-            "30 Minutos": "30m",
-            "1 Hora": "1h",
-            "4 Horas": "4h",
-            "1 Día": "1d",
-            "1 Semana": "1w"
+            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
+            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
+            "1 Día": "1d", "1 Semana": "1w"
         }
     },
     "Français (Francês)": {
@@ -561,105 +514,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 Peur & Cupidité",
         "modulo_liquidez": "💧 Liquidité",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minutes": "5m",
-            "15 Minutes": "15m",
-            "30 Minutes": "30m",
-            "1 Heure": "1h",
-            "4 Heures": "4h",
-            "1 Jour": "1d",
-            "1 Semaine": "1w"
-        }
-    },
-    "Русский (Russo)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель SMC",
-        "config_globais": "⚙️  Настройки",
-        "selecione_cripto": "Выберите криптовалюту (/USDT):",
-        "tempo_grafico": "Таймфрейм:",
-        "modo_vivo": "Реальный Время",
-        "intervalo_refresh": "Интервал (Сек):",
-        "preco_spot": "Спот Цена",
-        "variacao_24h": "Изменение 24ч",
-        "market_cap": "Капитализация (USD)",
-        "stop_atr": "Стоп ATR",
-        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА",
-        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА",
-        "neutro": "🟡  НЕЙТРАЛЬНО",
-        "spike_alta": "🚀  ВСПЛЕСК ВВЕРХ",
-        "spike_baixa": "💥  ВСПЛЕСК ВНИЗ",
-        "erro_dados": "Недостаточно данных.",
-        "ctx_desconto": "Зона Скидки Фибоначчи.",
-        "ctx_premium": "Премиум Зона Фибоначчи.",
-        "ctx_neutro": "Нейтральная зона Фибоначчи.",
-        "ultima_atualizacao": "Обновление",
-        "proximo_refresh": "Следующее через",
-        "segundos": "сек",
-        "pontos_compra": "Очки Покупки",
-        "pontos_venda": "Очки Продажи",
-        "sinal_spike": "Всплеск",
-        "grafico_titulo": "📈  График Цены",
-        "buscando_marketcap": "🔍  Капитализация...",
-        "marketcap_nao_disponivel": "Недоступно",
-        "idioma_label": "🌐  Язык",
-        "idioma_selecao": "Выберите язык:",
-        "aviso_aquecimento": "⚠️ Разогрев свечей",
-        "backtest_titulo": "📊 Бэктестинг — 100 Сигналов",
-        "backtest_compra": "Покупка",
-        "backtest_venda": "Продажа",
-        "backtest_total": "Всего",
-        "backtest_acertos": "Успешно",
-        "backtest_taxa": "% Успеха",
-        "backtest_profit_factor": "Фактор Прибыли",
-        "backtest_avg_win": "Ср. Прибыль",
-        "backtest_avg_loss": "Ср. Убыток",
-        "backtest_historico": "История",
-        "backtest_data": "Дата",
-        "backtest_sinal": "Сигнал",
-        "backtest_preco": "Цена Входа",
-        "backtest_resultado": "Результат",
-        "backtest_acerto": "✅ Успех",
-        "backtest_erro": "❌ Неудача",
-        "backtest_metricas": "Метрики",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 Страх и Жадность",
-        "medo_extremo": "Экстрим Страх",
-        "medo": "Страх",
-        "neutro_fg": "Нейтрально",
-        "ganancia": "Жадность",
-        "ganancia_extrema": "Экстрим Жадность",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ Неопределено",
-        "divergencia_obv_bull": "📈 OBV Бычий",
-        "divergencia_obv_bear": "📉 OBV Медвежий",
-        "divergencia_obv_none": "➖ Нет",
-        "alinhamento_mtf": "🔄 Мульти-TF",
-        "alinhamento_mtf_sim": "✅ Совпадает",
-        "alinhamento_mtf_nao": "❌ Нет",
-        "filtro_liquidez": "💧 Ликвидность",
-        "liquidez_ok": "✅ Высокая",
-        "liquidez_baixa": "⚠️ Низкая",
-        "volume_direcional_bull": "📊 Бычий Объем",
-        "volume_direcional_bear": "📊 Медвежий Объем",
-        "volume_direcional_neutro": "📊 Нейтральный",
-        "limiar_dinamico": "Дин. Порог",
-        "modulo_mtf": "🔍 Мульти-TF",
-        "modulo_estrutura": "🏗️ Структура SMC",
-        "modulo_obv": "📊 Дивергенция OBV",
-        "modulo_volume": "📈 Напр. Объем",
-        "modulo_fg": "😱 Страх и Жадность",
-        "modulo_liquidez": "💧 Ликвидность",
-        "intervalos": {
-            "1 Минута": "1m",
-            "5 Минут": "5m",
-            "15 Минут": "15m",
-            "30 Минут": "30m",
-            "1 Час": "1h",
-            "4 Часа": "4h",
-            "1 День": "1d",
-            "1 Неделя": "1w"
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
+            "30 Minutes": "30m", "1 Heure": "1h", "4 Heures": "4h",
+            "1 Jour": "1d", "1 Semaine": "1w"
         }
     },
     "日本語 (Japonês)": {
@@ -743,14 +600,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 恐怖＆強欲",
         "modulo_liquidez": "💧 流動性",
         "intervalos": {
-            "1 分": "1m",
-            "5 分": "5m",
-            "15 分": "15m",
-            "30 分": "30m",
-            "1 時間": "1h",
-            "4 時間": "4h",
-            "1 日": "1d",
-            "1 週間": "1w"
+            "1 分": "1m", "5 分": "5m", "15 分": "15m",
+            "30 分": "30m", "1 時間": "1h", "4 時間": "4h",
+            "1 日": "1d", "1 週間": "1w"
         }
     },
     "Deutsch (Alemão)": {
@@ -834,14 +686,95 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 Fear & Greed",
         "modulo_liquidez": "💧 Liquidität",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minuten": "5m",
-            "15 Minuten": "15m",
-            "30 Minuten": "30m",
-            "1 Stunde": "1h",
-            "4 Stunden": "4h",
-            "1 Tag": "1d",
-            "1 Woche": "1w"
+            "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m",
+            "30 Minuten": "30m", "1 Stunde": "1h", "4 Stunden": "4h",
+            "1 Tag": "1d", "1 Woche": "1w"
+        }
+    },
+    "Русский (Russo)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель SMC",
+        "config_globais": "⚙️  Настройки",
+        "selecione_cripto": "Выберите криптовалюту (/USDT):",
+        "tempo_grafico": "Таймфрейм:",
+        "modo_vivo": "Реальный Время",
+        "intervalo_refresh": "Интервал (Сек):",
+        "preco_spot": "Спот Цена",
+        "variacao_24h": "Изменение 24ч",
+        "market_cap": "Капитализация (USD)",
+        "stop_atr": "Стоп ATR",
+        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА",
+        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА",
+        "neutro": "🟡  НЕЙТРАЛЬНО",
+        "spike_alta": "🚀  ВСПЛЕСК ВВЕРХ",
+        "spike_baixa": "💥  ВСПЛЕСК ВНИЗ",
+        "erro_dados": "Недостаточно данных.",
+        "ctx_desconto": "Зона Скидки Фибоначчи.",
+        "ctx_premium": "Премиум Зона Фибоначчи.",
+        "ctx_neutro": "Нейтральная зона Фибоначчи.",
+        "ultima_atualizacao": "Обновление",
+        "proximo_refresh": "Следующее через",
+        "segundos": "сек",
+        "pontos_compra": "Очки Покупки",
+        "pontos_venda": "Очки Продажи",
+        "sinal_spike": "Всплеск",
+        "grafico_titulo": "📈  График Цены",
+        "buscando_marketcap": "🔍  Капитализация...",
+        "marketcap_nao_disponivel": "Недоступно",
+        "idioma_label": "🌐  Язык",
+        "idioma_selecao": "Выберите язык:",
+        "aviso_aquecimento": "⚠️ Разогрев свечей",
+        "backtest_titulo": "📊 Бэктестинг — 100 Сигналов",
+        "backtest_compra": "Покупка",
+        "backtest_venda": "Продажа",
+        "backtest_total": "Всего",
+        "backtest_acertos": "Успешно",
+        "backtest_taxa": "% Успеха",
+        "backtest_profit_factor": "Фактор Прибыли",
+        "backtest_avg_win": "Ср. Прибыль",
+        "backtest_avg_loss": "Ср. Убыток",
+        "backtest_historico": "История",
+        "backtest_data": "Дата",
+        "backtest_sinal": "Сигнал",
+        "backtest_preco": "Цена Входа",
+        "backtest_resultado": "Результат",
+        "backtest_acerto": "✅ Успех",
+        "backtest_erro": "❌ Неудача",
+        "backtest_metricas": "Метрики",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 Страх и Жадность",
+        "medo_extremo": "Экстрим Страх",
+        "medo": "Страх",
+        "neutro_fg": "Нейтрально",
+        "ganancia": "Жадность",
+        "ganancia_extrema": "Экстрим Жадность",
+        "estrutura_bos": "🏗️ BOS",
+        "estrutura_choch": "🔄 CHoCH",
+        "estrutura_indefinida": "⏳ Неопределено",
+        "divergencia_obv_bull": "📈 OBV Бычий",
+        "divergencia_obv_bear": "📉 OBV Медвежий",
+        "divergencia_obv_none": "➖ Нет",
+        "alinhamento_mtf": "🔄 Мульти-TF",
+        "alinhamento_mtf_sim": "✅ Совпадает",
+        "alinhamento_mtf_nao": "❌ Нет",
+        "filtro_liquidez": "💧 Ликвидность",
+        "liquidez_ok": "✅ Высокая",
+        "liquidez_baixa": "⚠️ Низкая",
+        "volume_direcional_bull": "📊 Бычий Объем",
+        "volume_direcional_bear": "📊 Медвежий Объем",
+        "volume_direcional_neutro": "📊 Нейтральный",
+        "limiar_dinamico": "Дин. Порог",
+        "modulo_mtf": "🔍 Мульти-TF",
+        "modulo_estrutura": "🏗️ Структура SMC",
+        "modulo_obv": "📊 Дивергенция OBV",
+        "modulo_volume": "📈 Напр. Объем",
+        "modulo_fg": "😱 Страх и Жадность",
+        "modulo_liquidez": "💧 Ликвидность",
+        "intervalos": {
+            "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m",
+            "30 Минут": "30m", "1 Час": "1h", "4 Часа": "4h",
+            "1 День": "1d", "1 Неделя": "1w"
         }
     },
     "한국어 (Coreano)": {
@@ -925,651 +858,9 @@ DICIONARIO_LINGUAS = {
         "modulo_fg": "😱 공포·탐욕",
         "modulo_liquidez": "💧 유동성",
         "intervalos": {
-            "1 분": "1m",
-            "5 분": "5m",
-            "15 분": "15m",
-            "30 분": "30m",
-            "1 시간": "1h",
-            "4 시간": "4h",
-            "1 일": "1d",
-            "1 주": "1w"
-        }
-    },
-    "العربية (Árabe)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - محرك SMC",
-        "config_globais": "⚙️  الإعدادات",
-        "selecione_cripto": "اختر عملة (/USDT):",
-        "tempo_grafico": "الإطار الزمني:",
-        "modo_vivo": "مراقبة مباشرة",
-        "intervalo_refresh": "فاصل التحديث (ثانية):",
-        "preco_spot": "السعر الفوري",
-        "variacao_24h": "تغير 24 ساعة",
-        "market_cap": "القيمة السوقية (USD)",
-        "stop_atr": "وقف ATR",
-        "compra_forte": "🟢  شراء قوي",
-        "venda_forte": "🔴  بيع قوي",
-        "neutro": "🟡  محايد",
-        "spike_alta": "🚀  ارتفاع حاد",
-        "spike_baixa": "💥  انخفاض حاد",
-        "erro_dados": "بيانات غير كافية.",
-        "ctx_desconto": "منطقة خصم فيبوناتشي.",
-        "ctx_premium": "منطقة فيبوناتشي الممتازة.",
-        "ctx_neutro": "منطقة فيبوناتشي المحايدة.",
-        "ultima_atualizacao": "آخر تحديث",
-        "proximo_refresh": "التالي خلال",
-        "segundos": "ثانية",
-        "pontos_compra": "نقاط الشراء",
-        "pontos_venda": "نقاط البيع",
-        "sinal_spike": "ارتفاع التقلب",
-        "grafico_titulo": "📈  رسم بياني",
-        "buscando_marketcap": "🔍  القيمة السوقية...",
-        "marketcap_nao_disponivel": "غير متوفر",
-        "idioma_label": "🌐  اللغة",
-        "idioma_selecao": "اختر اللغة:",
-        "aviso_aquecimento": "⚠️ شموع التسخين",
-        "backtest_titulo": "📊 اختبار خلفي — 100 إشارة",
-        "backtest_compra": "شراء",
-        "backtest_venda": "بيع",
-        "backtest_total": "المجموع",
-        "backtest_acertos": "ناجحة",
-        "backtest_taxa": "نسبة النجاح",
-        "backtest_profit_factor": "عامل الربح",
-        "backtest_avg_win": "متوسط الربح",
-        "backtest_avg_loss": "متوسط الخسارة",
-        "backtest_historico": "السجل",
-        "backtest_data": "التاريخ",
-        "backtest_sinal": "الإشارة",
-        "backtest_preco": "سعر الدخول",
-        "backtest_resultado": "النتيجة",
-        "backtest_acerto": "✅ ناجح",
-        "backtest_erro": "❌ فاشل",
-        "backtest_metricas": "مقاييس الأداء",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 الخوف والطمع",
-        "medo_extremo": "خوف شديد",
-        "medo": "خوف",
-        "neutro_fg": "محايد",
-        "ganancia": "طمع",
-        "ganancia_extrema": "طمع شديد",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ غير محدد",
-        "divergencia_obv_bull": "📈 OBV صاعد",
-        "divergencia_obv_bear": "📉 OBV هابط",
-        "divergencia_obv_none": "➖ لا يوجد",
-        "alinhamento_mtf": "🔄 متعدد الأطر",
-        "alinhamento_mtf_sim": "✅ متوافق",
-        "alinhamento_mtf_nao": "❌ غير متوافق",
-        "filtro_liquidez": "💧 السيولة",
-        "liquidez_ok": "✅ مرتفعة",
-        "liquidez_baixa": "⚠️ منخفضة",
-        "volume_direcional_bull": "📊 حجم صاعد",
-        "volume_direcional_bear": "📊 حجم هابط",
-        "volume_direcional_neutro": "📊 محايد",
-        "limiar_dinamico": "عتبة ديناميكية",
-        "modulo_mtf": "🔍 متعدد الأطر",
-        "modulo_estrutura": "🏗️ هيكل SMC",
-        "modulo_obv": "📊 تباعد OBV",
-        "modulo_volume": "📈 الحجم الاتجاهي",
-        "modulo_fg": "😱 الخوف والطمع",
-        "modulo_liquidez": "💧 السيولة",
-        "intervalos": {
-            "1 دقيقة": "1m",
-            "5 دقائق": "5m",
-            "15 دقيقة": "15m",
-            "30 دقيقة": "30m",
-            "1 ساعة": "1h",
-            "4 ساعات": "4h",
-            "1 يوم": "1d",
-            "1 أسبوع": "1w"
-        }
-    },
-    "বাংলা (Bengali)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC ইঞ্জিন",
-        "config_globais": "⚙️  সেটিংস",
-        "selecione_cripto": "ক্রিপ্টো বাছুন (/USDT):",
-        "tempo_grafico": "টাইমফ্রেম:",
-        "modo_vivo": "লাইভ মনিটরিং",
-        "intervalo_refresh": "রিফ্রেশ (সেকেন্ড):",
-        "preco_spot": "স্পট মূল্য",
-        "variacao_24h": "২৪ঘণ্টা পরিবর্তন",
-        "market_cap": "মার্কেট ক্যাপ (USD)",
-        "stop_atr": "ATR স্টপ",
-        "compra_forte": "🟢  শক্তিশালী ক্রয়",
-        "venda_forte": "🔴  শক্তিশালী বিক্রয়",
-        "neutro": "🟡  নিরপেক্ষ",
-        "spike_alta": "🚀  ঊর্ধ্বমুখী স্পাইক",
-        "spike_baixa": "💥  নিম্নমুখী স্পাইক",
-        "erro_dados": "অপর্যাপ্ত ডেটা।",
-        "ctx_desconto": "ফিবোনাচি ডিসকাউন্ট।",
-        "ctx_premium": "ফিবোনাচি প্রিমিয়াম।",
-        "ctx_neutro": "ফিবোনাচি নিরপেক্ষ।",
-        "ultima_atualizacao": "শেষ আপডেট",
-        "proximo_refresh": "পরবর্তী",
-        "segundos": "সেকেন্ড",
-        "pontos_compra": "ক্রয় পয়েন্ট",
-        "pontos_venda": "বিক্রয় পয়েন্ট",
-        "sinal_spike": "অস্থিরতা স্পাইক",
-        "grafico_titulo": "📈  মূল্য চার্ট",
-        "buscando_marketcap": "🔍  মার্কেট ক্যাপ...",
-        "marketcap_nao_disponivel": "উপলব্ধ নয়",
-        "idioma_label": "🌐  ভাষা",
-        "idioma_selecao": "ভাষা বাছুন:",
-        "aviso_aquecimento": "⚠️ ওয়ার্ম-আপ",
-        "backtest_titulo": "📊 ব্যাকটেস্টিং — ১০০ সিগন্যাল",
-        "backtest_compra": "ক্রয়",
-        "backtest_venda": "বিক্রয়",
-        "backtest_total": "মোট",
-        "backtest_acertos": "সফল",
-        "backtest_taxa": "সাফল্যের হার",
-        "backtest_profit_factor": "লাভ ফ্যাক্টর",
-        "backtest_avg_win": "গড় লাভ",
-        "backtest_avg_loss": "গড় ক্ষতি",
-        "backtest_historico": "ইতিহাস",
-        "backtest_data": "তারিখ",
-        "backtest_sinal": "সিগন্যাল",
-        "backtest_preco": "প্রবেশ মূল্য",
-        "backtest_resultado": "ফলাফল",
-        "backtest_acerto": "✅ সফল",
-        "backtest_erro": "❌ ব্যর্থ",
-        "backtest_metricas": "কর্মক্ষমতা",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 ভয় ও লোভ",
-        "medo_extremo": "চরম ভয়",
-        "medo": "ভয়",
-        "neutro_fg": "নিরপেক্ষ",
-        "ganancia": "লোভ",
-        "ganancia_extrema": "চরম লোভ",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ অনির্ধারিত",
-        "divergencia_obv_bull": "📈 OBV বুলিশ",
-        "divergencia_obv_bear": "📉 OBV বিয়ারিশ",
-        "divergencia_obv_none": "➖ নেই",
-        "alinhamento_mtf": "🔄 মাল্টি-TF",
-        "alinhamento_mtf_sim": "✅ সংযুক্ত",
-        "alinhamento_mtf_nao": "❌ নয়",
-        "filtro_liquidez": "💧 তরলতা",
-        "liquidez_ok": "✅ উচ্চ",
-        "liquidez_baixa": "⚠️ নিম্ন",
-        "volume_direcional_bull": "📊 বুলিশ ভলিউম",
-        "volume_direcional_bear": "📊 বিয়ারিশ ভলিউম",
-        "volume_direcional_neutro": "📊 নিরপেক্ষ",
-        "limiar_dinamico": "গতিশীল সীমা",
-        "modulo_mtf": "🔍 মাল্টি-TF",
-        "modulo_estrutura": "🏗️ SMC কাঠামো",
-        "modulo_obv": "📊 OBV ডাইভারজেন্স",
-        "modulo_volume": "📈 দিকনির্দেশক ভলিউম",
-        "modulo_fg": "😱 ভয় ও লোভ",
-        "modulo_liquidez": "💧 তরলতা",
-        "intervalos": {
-            "১ মিনিট": "1m",
-            "৫ মিনিট": "5m",
-            "১৫ মিনিট": "15m",
-            "৩০ মিনিট": "30m",
-            "১ ঘন্টা": "1h",
-            "৪ ঘন্টা": "4h",
-            "১ দিন": "1d",
-            "১ সপ্তাহ": "1w"
-        }
-    },
-    "Türkçe (Turco)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC Motoru",
-        "config_globais": "⚙️  Ayarlar",
-        "selecione_cripto": "Kripto Seç (/USDT):",
-        "tempo_grafico": "Zaman Dilimi:",
-        "modo_vivo": "Canlı İzleme",
-        "intervalo_refresh": "Yenileme (Saniye):",
-        "preco_spot": "Spot Fiyat",
-        "variacao_24h": "24s Değişim",
-        "market_cap": "Piyasa Değeri (USD)",
-        "stop_atr": "ATR Stop",
-        "compra_forte": "🟢  GÜÇLÜ AL",
-        "venda_forte": "🔴  GÜÇLÜ SAT",
-        "neutro": "🟡  NÖTR",
-        "spike_alta": "🚀  YÜKSELİŞ",
-        "spike_baixa": "💥  DÜŞÜŞ",
-        "erro_dados": "Yetersiz veri.",
-        "ctx_desconto": "Fibonacci İndirim Bölgesi.",
-        "ctx_premium": "Fibonacci Premium Bölgesi.",
-        "ctx_neutro": "Fibonacci Nötr Bölge.",
-        "ultima_atualizacao": "Son Güncelleme",
-        "proximo_refresh": "Sonraki",
-        "segundos": "saniye",
-        "pontos_compra": "Alış Puanı",
-        "pontos_venda": "Satış Puanı",
-        "sinal_spike": "Volatilite",
-        "grafico_titulo": "📈  Fiyat Grafiği",
-        "buscando_marketcap": "🔍  Piyasa Değeri...",
-        "marketcap_nao_disponivel": "Mevcut değil",
-        "idioma_label": "🌐  Dil",
-        "idioma_selecao": "Dil seçin:",
-        "aviso_aquecimento": "⚠️ Isınma mumları",
-        "backtest_titulo": "📊 Geriye Dönük Test — 100 Sinyal",
-        "backtest_compra": "Alış",
-        "backtest_venda": "Satış",
-        "backtest_total": "Toplam",
-        "backtest_acertos": "Başarılı",
-        "backtest_taxa": "Başarı Oranı",
-        "backtest_profit_factor": "Kâr Faktörü",
-        "backtest_avg_win": "Ort. Kâr",
-        "backtest_avg_loss": "Ort. Zarar",
-        "backtest_historico": "Geçmiş",
-        "backtest_data": "Tarih",
-        "backtest_sinal": "Sinyal",
-        "backtest_preco": "Giriş",
-        "backtest_resultado": "Sonuç",
-        "backtest_acerto": "✅ Başarılı",
-        "backtest_erro": "❌ Başarısız",
-        "backtest_metricas": "Metrikler",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 Korku & Açgözlülük",
-        "medo_extremo": "Aşırı Korku",
-        "medo": "Korku",
-        "neutro_fg": "Nötr",
-        "ganancia": "Açgözlülük",
-        "ganancia_extrema": "Aşırı Açgözlülük",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ Belirsiz",
-        "divergencia_obv_bull": "📈 OBV Yükseliş",
-        "divergencia_obv_bear": "📉 OBV Düşüş",
-        "divergencia_obv_none": "➖ Yok",
-        "alinhamento_mtf": "🔄 Çoklu TF",
-        "alinhamento_mtf_sim": "✅ Uyumlu",
-        "alinhamento_mtf_nao": "❌ Uyumsuz",
-        "filtro_liquidez": "💧 Likidite",
-        "liquidez_ok": "✅ Yüksek",
-        "liquidez_baixa": "⚠️ Düşük",
-        "volume_direcional_bull": "📊 Yükseliş Hacmi",
-        "volume_direcional_bear": "📊 Düşüş Hacmi",
-        "volume_direcional_neutro": "📊 Nötr",
-        "limiar_dinamico": "Dinamik Eşik",
-        "modulo_mtf": "🔍 Çoklu TF",
-        "modulo_estrutura": "🏗️ SMC Yapı",
-        "modulo_obv": "📊 OBV Uyumsuzluk",
-        "modulo_volume": "📈 Yönlü Hacim",
-        "modulo_fg": "😱 Korku & Açgözlülük",
-        "modulo_liquidez": "💧 Likidite",
-        "intervalos": {
-            "1 Dakika": "1m",
-            "5 Dakika": "5m",
-            "15 Dakika": "15m",
-            "30 Dakika": "30m",
-            "1 Saat": "1h",
-            "4 Saat": "4h",
-            "1 Gün": "1d",
-            "1 Hafta": "1w"
-        }
-    },
-    "Tiếng Việt (Vietnamita)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Động Cơ SMC",
-        "config_globais": "⚙️  Cài Đặt",
-        "selecione_cripto": "Chọn Crypto (/USDT):",
-        "tempo_grafico": "Khung Thời Gian:",
-        "modo_vivo": "Giám Sát Live",
-        "intervalo_refresh": "Làm Mới (Giây):",
-        "preco_spot": "Giá Spot",
-        "variacao_24h": "Biến Động 24h",
-        "market_cap": "Vốn Hóa (USD)",
-        "stop_atr": "Cắt Lỗ ATR",
-        "compra_forte": "🟢  MUA MẠNH",
-        "venda_forte": "🔴  BÁN MẠNH",
-        "neutro": "🟡  TRUNG LẬP",
-        "spike_alta": "🚀  TĂNG ĐỘT BIẾN",
-        "spike_baixa": "💥  GIẢM ĐỘT BIẾN",
-        "erro_dados": "Dữ liệu không đủ.",
-        "ctx_desconto": "Vùng Chiết Khấu Fibonacci.",
-        "ctx_premium": "Vùng Premium Fibonacci.",
-        "ctx_neutro": "Vùng Trung Lập Fibonacci.",
-        "ultima_atualizacao": "Cập Nhật Lần Cuối",
-        "proximo_refresh": "Làm mới sau",
-        "segundos": "giây",
-        "pontos_compra": "Điểm Mua",
-        "pontos_venda": "Điểm Bán",
-        "sinal_spike": "Đột Biến",
-        "grafico_titulo": "📈  Biểu Đồ Giá",
-        "buscando_marketcap": "🔍  Vốn Hóa...",
-        "marketcap_nao_disponivel": "Không có",
-        "idioma_label": "🌐  Ngôn Ngữ",
-        "idioma_selecao": "Chọn ngôn ngữ:",
-        "aviso_aquecimento": "⚠️ Nến khởi động",
-        "backtest_titulo": "📊 Backtesting — 100 Tín Hiệu",
-        "backtest_compra": "Mua",
-        "backtest_venda": "Bán",
-        "backtest_total": "Tổng",
-        "backtest_acertos": "Thành Công",
-        "backtest_taxa": "Tỷ Lệ",
-        "backtest_profit_factor": "Hệ Số Lợi Nhuận",
-        "backtest_avg_win": "Lãi TB",
-        "backtest_avg_loss": "Lỗ TB",
-        "backtest_historico": "Lịch Sử",
-        "backtest_data": "Ngày",
-        "backtest_sinal": "Tín Hiệu",
-        "backtest_preco": "Giá Vào",
-        "backtest_resultado": "Kết Quả",
-        "backtest_acerto": "✅ Thành Công",
-        "backtest_erro": "❌ Thất Bại",
-        "backtest_metricas": "Chỉ Số",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 Sợ Hãi & Tham Lam",
-        "medo_extremo": "Sợ Cực Độ",
-        "medo": "Sợ Hãi",
-        "neutro_fg": "Trung Lập",
-        "ganancia": "Tham Lam",
-        "ganancia_extrema": "Tham Cực Độ",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ Không XĐ",
-        "divergencia_obv_bull": "📈 OBV Tăng",
-        "divergencia_obv_bear": "📉 OBV Giảm",
-        "divergencia_obv_none": "➖ Không",
-        "alinhamento_mtf": "🔄 Đa TF",
-        "alinhamento_mtf_sim": "✅ Căn Chỉnh",
-        "alinhamento_mtf_nao": "❌ Không",
-        "filtro_liquidez": "💧 Thanh Khoản",
-        "liquidez_ok": "✅ Cao",
-        "liquidez_baixa": "⚠️ Thấp",
-        "volume_direcional_bull": "📊 KL Tăng",
-        "volume_direcional_bear": "📊 KL Giảm",
-        "volume_direcional_neutro": "📊 Trung Lập",
-        "limiar_dinamico": "Ngưỡng Động",
-        "modulo_mtf": "🔍 Đa TF",
-        "modulo_estrutura": "🏗️ Cấu Trúc SMC",
-        "modulo_obv": "📊 Phân Kỳ OBV",
-        "modulo_volume": "📈 KL Hướng",
-        "modulo_fg": "😱 Sợ & Tham",
-        "modulo_liquidez": "💧 Thanh Khoản",
-        "intervalos": {
-            "1 Phút": "1m",
-            "5 Phút": "5m",
-            "15 Phút": "15m",
-            "30 Phút": "30m",
-            "1 Giờ": "1h",
-            "4 Giờ": "4h",
-            "1 Ngày": "1d",
-            "1 Tuần": "1w"
-        }
-    },
-    "Italiano (Italiano)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motore SMC",
-        "config_globais": "⚙️  Impostazioni",
-        "selecione_cripto": "Seleziona Crypto (/USDT):",
-        "tempo_grafico": "Timeframe:",
-        "modo_vivo": "Monitoraggio Live",
-        "intervalo_refresh": "Intervallo (Secondi):",
-        "preco_spot": "Prezzo Spot",
-        "variacao_24h": "Variazione 24h",
-        "market_cap": "Cap. Mercato (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  ACQUISTO FORTE",
-        "venda_forte": "🔴  VENDITA FORTE",
-        "neutro": "🟡  NEUTRO",
-        "spike_alta": "🚀  SPIKE RIALZISTA",
-        "spike_baixa": "💥  SPIKE RIBASSISTA",
-        "erro_dados": "Dati insufficienti.",
-        "ctx_desconto": "Zona Sconto Fibonacci.",
-        "ctx_premium": "Zona Premium Fibonacci.",
-        "ctx_neutro": "Zona Neutra Fibonacci.",
-        "ultima_atualizacao": "Ultimo Aggiornamento",
-        "proximo_refresh": "Prossimo tra",
-        "segundos": "secondi",
-        "pontos_compra": "Punti Acquisto",
-        "pontos_venda": "Punti Vendita",
-        "sinal_spike": "Spike Volatilità",
-        "grafico_titulo": "📈  Grafico Prezzi",
-        "buscando_marketcap": "🔍  Market Cap...",
-        "marketcap_nao_disponivel": "Non disponibile",
-        "idioma_label": "🌐  Lingua",
-        "idioma_selecao": "Seleziona lingua:",
-        "aviso_aquecimento": "⚠️ Candele riscaldamento",
-        "backtest_titulo": "📊 Backtesting — 100 Segnali",
-        "backtest_compra": "Acquisto",
-        "backtest_venda": "Vendita",
-        "backtest_total": "Totale",
-        "backtest_acertos": "Successi",
-        "backtest_taxa": "Tasso Successo",
-        "backtest_profit_factor": "Fattore Profitto",
-        "backtest_avg_win": "Guadagno Medio",
-        "backtest_avg_loss": "Perdita Media",
-        "backtest_historico": "Cronologia",
-        "backtest_data": "Data",
-        "backtest_sinal": "Segnale",
-        "backtest_preco": "Prezzo Entrata",
-        "backtest_resultado": "Risultato",
-        "backtest_acerto": "✅ Successo",
-        "backtest_erro": "❌ Fallito",
-        "backtest_metricas": "Metriche",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 Paura & Avidità",
-        "medo_extremo": "Paura Estrema",
-        "medo": "Paura",
-        "neutro_fg": "Neutro",
-        "ganancia": "Avidità",
-        "ganancia_extrema": "Avidità Estrema",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ Indefinito",
-        "divergencia_obv_bull": "📈 OBV Rialzista",
-        "divergencia_obv_bear": "📉 OBV Ribassista",
-        "divergencia_obv_none": "➖ Nessuna",
-        "alinhamento_mtf": "🔄 Multi-TF",
-        "alinhamento_mtf_sim": "✅ Allineato",
-        "alinhamento_mtf_nao": "❌ Non Allineato",
-        "filtro_liquidez": "💧 Liquidità",
-        "liquidez_ok": "✅ Alta",
-        "liquidez_baixa": "⚠️ Bassa",
-        "volume_direcional_bull": "📊 Vol. Rialzista",
-        "volume_direcional_bear": "📊 Vol. Ribassista",
-        "volume_direcional_neutro": "📊 Neutro",
-        "limiar_dinamico": "Soglia Dinamica",
-        "modulo_mtf": "🔍 Multi-TF",
-        "modulo_estrutura": "🏗️ Struttura SMC",
-        "modulo_obv": "📊 Divergenza OBV",
-        "modulo_volume": "📈 Vol. Direzionale",
-        "modulo_fg": "😱 Paura & Avidità",
-        "modulo_liquidez": "💧 Liquidità",
-        "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minuti": "5m",
-            "15 Minuti": "15m",
-            "30 Minuti": "30m",
-            "1 Ora": "1h",
-            "4 Ore": "4h",
-            "1 Giorno": "1d",
-            "1 Settimana": "1w"
-        }
-    },
-    "ไทย (Tailandês)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - เครื่องมือ SMC",
-        "config_globais": "⚙️  การตั้งค่า",
-        "selecione_cripto": "เลือกคริปโต (/USDT):",
-        "tempo_grafico": "กรอบเวลา:",
-        "modo_vivo": "ติดตามเรียลไทม์",
-        "intervalo_refresh": "รีเฟรช (วินาที):",
-        "preco_spot": "ราคาสปอต",
-        "variacao_24h": "เปลี่ยน 24ชม.",
-        "market_cap": "มูลค่าตลาด (USD)",
-        "stop_atr": "หยุด ATR",
-        "compra_forte": "🟢  ซื้อแข็งแกร่ง",
-        "venda_forte": "🔴  ขายแข็งแกร่ง",
-        "neutro": "🟡  เป็นกลาง",
-        "spike_alta": "🚀  พุ่งขึ้น",
-        "spike_baixa": "💥  ดิ่งลง",
-        "erro_dados": "ข้อมูลไม่เพียงพอ",
-        "ctx_desconto": "เขตส่วนลดฟิโบ",
-        "ctx_premium": "เขตพรีเมียมฟิโบ",
-        "ctx_neutro": "เขตเป็นกลางฟิโบ",
-        "ultima_atualizacao": "อัปเดตล่าสุด",
-        "proximo_refresh": "ถัดไปใน",
-        "segundos": "วินาที",
-        "pontos_compra": "คะแนนซื้อ",
-        "pontos_venda": "คะแนนขาย",
-        "sinal_spike": "ความผันผวน",
-        "grafico_titulo": "📈  กราฟราคา",
-        "buscando_marketcap": "🔍  มูลค่าตลาด...",
-        "marketcap_nao_disponivel": "ไม่พร้อมใช้งาน",
-        "idioma_label": "🌐  ภาษา",
-        "idioma_selecao": "เลือกภาษา:",
-        "aviso_aquecimento": "⚠️ แท่งเทียนอุ่น",
-        "backtest_titulo": "📊 ทดสอบย้อนหลัง — 100 สัญญาณ",
-        "backtest_compra": "ซื้อ",
-        "backtest_venda": "ขาย",
-        "backtest_total": "รวม",
-        "backtest_acertos": "สำเร็จ",
-        "backtest_taxa": "อัตราสำเร็จ",
-        "backtest_profit_factor": "ปัจจัยกำไร",
-        "backtest_avg_win": "กำไรเฉลี่ย",
-        "backtest_avg_loss": "ขาดทุนเฉลี่ย",
-        "backtest_historico": "ประวัติ",
-        "backtest_data": "วันที่",
-        "backtest_sinal": "สัญญาณ",
-        "backtest_preco": "ราคาเข้า",
-        "backtest_resultado": "ผลลัพธ์",
-        "backtest_acerto": "✅ สำเร็จ",
-        "backtest_erro": "❌ ล้มเหลว",
-        "backtest_metricas": "ตัวชี้วัด",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 กลัวและโลภ",
-        "medo_extremo": "กลัวสุดขีด",
-        "medo": "กลัว",
-        "neutro_fg": "เป็นกลาง",
-        "ganancia": "โลภ",
-        "ganancia_extrema": "โลภสุดขีด",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ ไม่ระบุ",
-        "divergencia_obv_bull": "📈 OBV ขาขึ้น",
-        "divergencia_obv_bear": "📉 OBV ขาลง",
-        "divergencia_obv_none": "➖ ไม่มี",
-        "alinhamento_mtf": "🔄 หลาย TF",
-        "alinhamento_mtf_sim": "✅ สอดคล้อง",
-        "alinhamento_mtf_nao": "❌ ไม่สอดคล้อง",
-        "filtro_liquidez": "💧 สภาพคล่อง",
-        "liquidez_ok": "✅ สูง",
-        "liquidez_baixa": "⚠️ ต่ำ",
-        "volume_direcional_bull": "📊 วอลุ่มขาขึ้น",
-        "volume_direcional_bear": "📊 วอลุ่มขาลง",
-        "volume_direcional_neutro": "📊 เป็นกลาง",
-        "limiar_dinamico": "เกณฑ์พลวัต",
-        "modulo_mtf": "🔍 หลาย TF",
-        "modulo_estrutura": "🏗️ โครงสร้าง SMC",
-        "modulo_obv": "📊 การเบี่ยงเบน OBV",
-        "modulo_volume": "📈 วอลุ่มทิศทาง",
-        "modulo_fg": "😱 กลัวและโลภ",
-        "modulo_liquidez": "💧 สภาพคล่อง",
-        "intervalos": {
-            "1 นาที": "1m",
-            "5 นาที": "5m",
-            "15 นาที": "15m",
-            "30 นาที": "30m",
-            "1 ชั่วโมง": "1h",
-            "4 ชั่วโมง": "4h",
-            "1 วัน": "1d",
-            "1 สัปดาห์": "1w"
-        }
-    },
-    "Bahasa Indonesia (Indonésio)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Mesin SMC",
-        "config_globais": "⚙️  Pengaturan",
-        "selecione_cripto": "Pilih Kripto (/USDT):",
-        "tempo_grafico": "Jangka Waktu:",
-        "modo_vivo": "Pantauan Langsung",
-        "intervalo_refresh": "Interval (Detik):",
-        "preco_spot": "Harga Spot",
-        "variacao_24h": "Perubahan 24j",
-        "market_cap": "Kap. Pasar (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  BELI KUAT",
-        "venda_forte": "🔴  JUAL KUAT",
-        "neutro": "🟡  NETRAL",
-        "spike_alta": "🚀  LONJAKAN NAIK",
-        "spike_baixa": "💥  LONJAKAN TURUN",
-        "erro_dados": "Data tidak cukup.",
-        "ctx_desconto": "Zona Diskon Fibonacci.",
-        "ctx_premium": "Zona Premium Fibonacci.",
-        "ctx_neutro": "Zona Netral Fibonacci.",
-        "ultima_atualizacao": "Update Terakhir",
-        "proximo_refresh": "Berikutnya",
-        "segundos": "detik",
-        "pontos_compra": "Poin Beli",
-        "pontos_venda": "Poin Jual",
-        "sinal_spike": "Lonjakan",
-        "grafico_titulo": "📈  Grafik Harga",
-        "buscando_marketcap": "🔍  Kap. Pasar...",
-        "marketcap_nao_disponivel": "Tak tersedia",
-        "idioma_label": "🌐  Bahasa",
-        "idioma_selecao": "Pilih bahasa:",
-        "aviso_aquecimento": "⚠️ Lilin pemanasan",
-        "backtest_titulo": "📊 Backtesting — 100 Sinyal",
-        "backtest_compra": "Beli",
-        "backtest_venda": "Jual",
-        "backtest_total": "Total",
-        "backtest_acertos": "Berhasil",
-        "backtest_taxa": "Tingkat Sukses",
-        "backtest_profit_factor": "Faktor Laba",
-        "backtest_avg_win": "Laba Rata2",
-        "backtest_avg_loss": "Rugi Rata2",
-        "backtest_historico": "Riwayat",
-        "backtest_data": "Tanggal",
-        "backtest_sinal": "Sinyal",
-        "backtest_preco": "Harga Masuk",
-        "backtest_resultado": "Hasil",
-        "backtest_acerto": "✅ Berhasil",
-        "backtest_erro": "❌ Gagal",
-        "backtest_metricas": "Metrik",
-        "poc_label": "POC",
-        "vah_label": "VAH",
-        "val_label": "VAL",
-        "fear_greed_label": "😱 Takut & Serakah",
-        "medo_extremo": "Takut Ekstrem",
-        "medo": "Takut",
-        "neutro_fg": "Netral",
-        "ganancia": "Serakah",
-        "ganancia_extrema": "Serakah Ekstrem",
-        "estrutura_bos": "🏗️ BOS",
-        "estrutura_choch": "🔄 CHoCH",
-        "estrutura_indefinida": "⏳ Tak Pasti",
-        "divergencia_obv_bull": "📈 OBV Bullish",
-        "divergencia_obv_bear": "📉 OBV Bearish",
-        "divergencia_obv_none": "➖ Tidak Ada",
-        "alinhamento_mtf": "🔄 Multi-TF",
-        "alinhamento_mtf_sim": "✅ Selaras",
-        "alinhamento_mtf_nao": "❌ Tidak",
-        "filtro_liquidez": "💧 Likuiditas",
-        "liquidez_ok": "✅ Tinggi",
-        "liquidez_baixa": "⚠️ Rendah",
-        "volume_direcional_bull": "📊 Vol. Bullish",
-        "volume_direcional_bear": "📊 Vol. Bearish",
-        "volume_direcional_neutro": "📊 Netral",
-        "limiar_dinamico": "Ambang Dinamis",
-        "modulo_mtf": "🔍 Multi-TF",
-        "modulo_estrutura": "🏗️ Struktur SMC",
-        "modulo_obv": "📊 Divergensi OBV",
-        "modulo_volume": "📈 Vol. Arah",
-        "modulo_fg": "😱 Takut & Serakah",
-        "modulo_liquidez": "💧 Likuiditas",
-        "intervalos": {
-            "1 Menit": "1m",
-            "5 Menit": "5m",
-            "15 Menit": "15m",
-            "30 Menit": "30m",
-            "1 Jam": "1h",
-            "4 Jam": "4h",
-            "1 Hari": "1d",
-            "1 Minggu": "1w"
+            "1 분": "1m", "5 분": "5m", "15 분": "15m",
+            "30 분": "30m", "1 시간": "1h", "4 시간": "4h",
+            "1 일": "1d", "1 주": "1w"
         }
     }
 }
@@ -1902,7 +1193,6 @@ def calcular_volume_profile(df, num_bins=50, value_area_pct=0.70):
 # ─────────────────────────────────────────────────────────────────────────────
 # MÓDULO 1: ANÁLISE MULTI-TIMEFRAME (MTF)
 def carregar_dados_mtf(simbolo_id, timeframe):
-    """Carrega dados para um timeframe específico para MTF."""
     try:
         velas = gateio_client.fetch_ohlcv(simbolo_id, timeframe=timeframe, limit=VELAS_TOTAL)
         if not velas or len(velas) < PERIODO_AQUECIMENTO + 50:
@@ -1923,19 +1213,10 @@ def carregar_dados_mtf(simbolo_id, timeframe):
 
 
 def analisar_alinhamento_mtf(simbolo_id, timeframe_atual):
-    """
-    Confirma se timeframe atual está alinhado com timeframes superiores.
-    Retorna: (alinhado_bool, peso_mtf, detalhes_dict)
-    """
     mapa_tf_superior = {
-        '1m': ['15m', '1h'],
-        '5m': ['30m', '4h'],
-        '15m': ['1h', '4h'],
-        '30m': ['1h', '4h'],
-        '1h': ['4h', '1d'],
-        '4h': ['1d', '1w'],
-        '1d': ['1w', '1w'],
-        '1w': ['1w', '1w']
+        '1m': ['15m', '1h'], '5m': ['30m', '4h'], '15m': ['1h', '4h'],
+        '30m': ['1h', '4h'], '1h': ['4h', '1d'], '4h': ['1d', '1w'],
+        '1d': ['1w', '1w'], '1w': ['1w', '1w']
     }
 
     tfs_superiores = mapa_tf_superior.get(timeframe_atual, ['4h', '1d'])
@@ -1950,27 +1231,17 @@ def analisar_alinhamento_mtf(simbolo_id, timeframe_atual):
         u = df_superior.iloc[-1]
         score_tf = 0
 
-        if u['ssl_dir'] == 1:
-            score_tf += 1
-        else:
-            score_tf -= 1
-
-        if u['MACD_HIST'] > 0:
-            score_tf += 1
-        else:
-            score_tf -= 1
-
+        if u['ssl_dir'] == 1: score_tf += 1
+        else: score_tf -= 1
+        if u['MACD_HIST'] > 0: score_tf += 1
+        else: score_tf -= 1
         if not np.isnan(u.get('OBV_Aceleracao', 0)):
-            if u['OBV_Aceleracao'] > 0:
-                score_tf += 1
-            else:
-                score_tf -= 1
+            if u['OBV_Aceleracao'] > 0: score_tf += 1
+            else: score_tf -= 1
 
         detalhes[tf] = 'bullish' if score_tf >= 2 else ('bearish' if score_tf <= -2 else 'neutral')
-        if score_tf >= 1:
-            alinhamentos += 1
-        elif score_tf <= -1:
-            alinhamentos -= 1
+        if score_tf >= 1: alinhamentos += 1
+        elif score_tf <= -1: alinhamentos -= 1
 
     peso_mtf = alinhamentos * 1.25
     return alinhamentos >= 1, peso_mtf, detalhes
@@ -1979,10 +1250,6 @@ def analisar_alinhamento_mtf(simbolo_id, timeframe_atual):
 # ─────────────────────────────────────────────────────────────────────────────
 # MÓDULO 2: ANÁLISE DE ESTRUTURA SMC (BOS/CHoCH)
 def detectar_estrutura_smc(df):
-    """
-    Detecta Break of Structure (BOS) e Change of Character (CHoCH).
-    Usa swing highs/lows para identificar quebras de estrutura.
-    """
     if len(df) < 50:
         return 'INDEFINIDO', 0.0
 
@@ -1991,7 +1258,6 @@ def detectar_estrutura_smc(df):
     low = df_recente['low'].values
     close = df_recente['close'].values
 
-    # Encontrar swing highs e lows (pivôs de 5 velas)
     swing_highs = []
     swing_lows = []
     for i in range(2, len(df_recente) - 2):
@@ -2003,39 +1269,32 @@ def detectar_estrutura_smc(df):
     if len(swing_highs) < 2 or len(swing_lows) < 2:
         return 'INDEFINIDO', 0.0
 
-    # Analisar últimos 2 swing highs e 2 swing lows
     ultimos_highs = swing_highs[-2:]
     ultimos_lows = swing_lows[-2:]
-
     preco_atual = close[-1]
 
-    # BOS Bullish: preço rompe último swing high
     if len(ultimos_highs) >= 2:
         ultimo_sh = ultimos_highs[-1][1]
         penultimo_sh = ultimos_highs[-2][1]
         if preco_atual > ultimo_sh and ultimo_sh > penultimo_sh:
             return 'BOS', 3.5
 
-    # BOS Bearish: preço rompe último swing low
     if len(ultimos_lows) >= 2:
         ultimo_sl = ultimos_lows[-1][1]
         penultimo_sl = ultimos_lows[-2][1]
         if preco_atual < ultimo_sl and ultimo_sl < penultimo_sl:
             return 'BOS', -3.5
 
-    # CHoCH Bullish: preço faz fundo mais alto e rompe estrutura anterior
     if len(ultimos_lows) >= 2 and len(ultimos_highs) >= 1:
         if ultimos_lows[-1][1] > ultimos_lows[-2][1]:
             if preco_atual > ultimos_highs[-1][1]:
                 return 'CHoCH', 3.0
 
-    # CHoCH Bearish: preço faz topo mais baixo e rompe estrutura anterior
     if len(ultimos_highs) >= 2 and len(ultimos_lows) >= 1:
         if ultimos_highs[-1][1] < ultimos_highs[-2][1]:
             if preco_atual < ultimos_lows[-1][1]:
                 return 'CHoCH', -3.0
 
-    # Verificar tendência pela direção dos pivôs
     if len(ultimos_highs) >= 2 and len(ultimos_lows) >= 2:
         highs_subindo = ultimos_highs[-1][1] > ultimos_highs[-2][1]
         lows_subindo = ultimos_lows[-1][1] > ultimos_lows[-2][1]
@@ -2050,19 +1309,10 @@ def detectar_estrutura_smc(df):
 # ─────────────────────────────────────────────────────────────────────────────
 # MÓDULO 3: DIVERGÊNCIA OBV/PREÇO
 def detectar_divergencia_obv(df, periodo=25):
-    """
-    Detecta divergência entre OBV e Preço.
-    Bullish: Preço faz fundo menor, OBV faz fundo maior.
-    Bearish: Preço faz topo maior, OBV faz topo menor.
-    """
     if len(df) < periodo:
         return 'NONE', 0.0
 
     df_window = df.iloc[-periodo:]
-    preco = df_window['close'].values
-    obv = df_window['OBV'].values
-
-    # Encontrar máximos e mínimos na janela (simplificado)
     meio = len(df_window) // 2
     primeira_metade = df_window.iloc[:meio]
     segunda_metade = df_window.iloc[meio:]
@@ -2077,11 +1327,8 @@ def detectar_divergencia_obv(df, periodo=25):
     obv_min_1 = primeira_metade['OBV'].min()
     obv_min_2 = segunda_metade['OBV'].min()
 
-    # Divergência Bearish: preço faz topo maior, OBV faz topo menor
     if preco_max_2 > preco_max_1 and obv_max_2 < obv_max_1:
         return 'BEARISH', -3.0
-
-    # Divergência Bullish: preço faz fundo menor, OBV faz fundo maior
     if preco_min_2 < preco_min_1 and obv_min_2 > obv_min_1:
         return 'BULLISH', 3.0
 
@@ -2091,54 +1338,35 @@ def detectar_divergencia_obv(df, periodo=25):
 # ─────────────────────────────────────────────────────────────────────────────
 # MÓDULO 4: VOLUME DIRECIONAL
 def calcular_volume_direcional(df, periodo=15):
-    """
-    Compara volume em candles de alta vs baixa.
-    Retorna: ratio (>1 = bullish, <1 = bearish), peso
-    """
     velas_alta = df['close'] > df['open']
     velas_baixa = df['close'] < df['open']
 
     vol_alta = df.loc[velas_alta, 'volume'].tail(periodo).mean()
     vol_baixa = df.loc[velas_baixa, 'volume'].tail(periodo).mean()
 
-    if pd.isna(vol_alta):
-        vol_alta = 0
-    if pd.isna(vol_baixa):
-        vol_baixa = 0
+    if pd.isna(vol_alta): vol_alta = 0
+    if pd.isna(vol_baixa): vol_baixa = 0
 
     if vol_baixa > 0:
         ratio = vol_alta / vol_baixa
     else:
         ratio = 2.0 if vol_alta > 0 else 1.0
 
-    if ratio > 1.5:
-        return 'BULLISH', 2.0
-    elif ratio < 0.67:
-        return 'BEARISH', -2.0
-    elif ratio > 1.2:
-        return 'LEAN_BULLISH', 1.0
-    elif ratio < 0.83:
-        return 'LEAN_BEARISH', -1.0
-    else:
-        return 'NEUTRO', 0.0
+    if ratio > 1.5: return 'BULLISH', 2.0
+    elif ratio < 0.67: return 'BEARISH', -2.0
+    elif ratio > 1.2: return 'LEAN_BULLISH', 1.0
+    elif ratio < 0.83: return 'LEAN_BEARISH', -1.0
+    else: return 'NEUTRO', 0.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MÓDULO 5: FILTRO DE LIQUIDEZ
 def filtro_liquidez(timestamp):
-    """
-    Evita sinais em horários de baixa liquidez.
-    UTC: Sobreposição Londres-NY = 13-17h (melhor liquidez)
-    """
     hora_utc = timestamp.hour
-
-    # Horários de alta liquidez (sobreposição sessões)
     if 8 <= hora_utc <= 21:
         return True, "Alta liquidez - Sessões Principais"
-    # Média liquidez
     elif hora_utc in [6, 7, 22, 23]:
         return True, "Liquidez moderada"
-    # Baixa liquidez (sessão asiática profunda)
     else:
         return False, "Baixa liquidez - Sessão Asiática"
 
@@ -2146,44 +1374,27 @@ def filtro_liquidez(timestamp):
 # ─────────────────────────────────────────────────────────────────────────────
 # MÓDULO 6: INTEGRAÇÃO FEAR & GREED
 def integrar_fear_greed(fg_valor):
-    """
-    Filtro contrário: comprar no medo, vender na ganância.
-    """
     if fg_valor is None:
         return 0.0, 0.0
-
-    if fg_valor <= 25:
-        return 2.0, -3.0
-    elif fg_valor <= 40:
-        return 1.0, -1.5
-    elif fg_valor >= 75:
-        return -3.0, 2.0
-    elif fg_valor >= 60:
-        return -1.5, 1.0
-    else:
-        return 0.0, 0.0
+    if fg_valor <= 25: return 2.0, -3.0
+    elif fg_valor <= 40: return 1.0, -1.5
+    elif fg_valor >= 75: return -3.0, 2.0
+    elif fg_valor >= 60: return -1.5, 1.0
+    else: return 0.0, 0.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CÁLCULO DO LIMIAR DINÂMICO
 def calcular_limiar_dinamico(df):
-    """Limiar ajustado pela volatilidade do ativo."""
     atr_series = calcular_atr(df)
     if atr_series.empty or pd.isna(atr_series.iloc[-1]):
         return 9.0
-
     atr_percentual = (atr_series.iloc[-1] / df['close'].iloc[-1]) * 100
-
-    if atr_percentual > 8:
-        return 11.0
-    elif atr_percentual > 5:
-        return 10.0
-    elif atr_percentual > 3:
-        return 9.0
-    elif atr_percentual > 1.5:
-        return 8.0
-    else:
-        return 7.0
+    if atr_percentual > 8: return 11.0
+    elif atr_percentual > 5: return 10.0
+    elif atr_percentual > 3: return 9.0
+    elif atr_percentual > 1.5: return 8.0
+    else: return 7.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2209,18 +1420,12 @@ def calcular_retracao_fibonacci(df_analise):
 def carregar_dados(simbolo_id, timeframe_selecionado):
     try:
         velas = gateio_client.fetch_ohlcv(
-            simbolo_id,
-            timeframe=timeframe_selecionado,
-            limit=VELAS_TOTAL
+            simbolo_id, timeframe=timeframe_selecionado, limit=VELAS_TOTAL
         )
         if not velas or len(velas) < PERIODO_AQUECIMENTO + 50:
             return None
-        df = pd.DataFrame(
-            velas,
-            columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        )
+        df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-
         df['RSI_14'] = calcular_rsi(df['close'], 14)
         macd, sinal, hist = calcular_macd(df['close'])
         df['MACD'] = macd
@@ -2236,7 +1441,6 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
         df['ATR_14'] = calcular_atr(df)
         df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
         df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
-
         return df.dropna(subset=['close']).reset_index(drop=True)
     except Exception as e:
         st.error(f"Erro ao carregar dados: {e}")
@@ -2264,7 +1468,6 @@ def obter_variacao_24h(simbolo_id):
 def detectar_spike_volatilidade(df_analise):
     if len(df_analise) < 25:
         return None
-
     u = df_analise.iloc[-1]
     range_pct = ((u['high'] - u['low']) / u['open']) * 100 if u['open'] > 0 else 0
     vol_medio = df_analise['volume'].iloc[-21:-1].mean()
@@ -2272,26 +1475,22 @@ def detectar_spike_volatilidade(df_analise):
     vol_ratio = vol_atual / vol_medio if vol_medio > 0 else 1
     obv_acel = u.get('OBV_Aceleracao', 0)
     direcao = 1 if u['close'] > u['open'] else -1
-
     spike_range = range_pct > 5.0
     spike_volume = vol_ratio > 2.0
     spike_obv = abs(obv_acel) > (df_analise['OBV_Aceleracao'].abs().mean() * 2.5 if len(df_analise) > 25 else 0)
-
     score = 0
     if spike_range: score += 1
     if spike_volume: score += 1
     if spike_obv and not (np.isnan(obv_acel) or np.isinf(obv_acel)): score += 1
-
     if score >= 2:
         return "ALTA" if direcao > 0 else "BAIXA"
     return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA SMC AVANÇADA (OTIMIZADA PARA 80%+)
+# ANÁLISE DE CONFLUÊNCIA SMC AVANÇADA
 def analisar_confluencia(df_completo, simbolo_id, timeframe, fg_valor, txt):
     df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
-
     if df_analise.empty:
         return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0, None, None, None, None, {}
 
@@ -2299,16 +1498,10 @@ def analisar_confluencia(df_completo, simbolo_id, timeframe, fg_valor, txt):
     preco_atual = u['close']
     timestamp_atual = u['time']
 
-    # Fibonacci
     fib_niveis = calcular_retracao_fibonacci(df_analise)
-
-    # Volume Profile
     poc, vah, val = calcular_volume_profile(df_analise)
-
-    # Limiar dinâmico
     limiar_dinamico = calcular_limiar_dinamico(df_completo)
 
-    # Módulos Avançados
     alinhado_mtf, peso_mtf, detalhes_mtf = analisar_alinhamento_mtf(simbolo_id, timeframe)
     estrutura_smc, peso_estrutura = detectar_estrutura_smc(df_analise)
     divergencia_obv, peso_divergencia = detectar_divergencia_obv(df_analise)
@@ -2316,75 +1509,47 @@ def analisar_confluencia(df_completo, simbolo_id, timeframe, fg_valor, txt):
     liquidez_ok, liquidez_msg = filtro_liquidez(timestamp_atual)
     peso_fg_compra, peso_fg_venda = integrar_fear_greed(fg_valor)
 
-    # Pontuação base (indicadores originais com pesos ajustados)
     pontos_alta = 0.0
     pontos_baixa = 0.0
 
-    # RSI com peso maior em extremos
     rsi_val = u['RSI_14']
     if not math.isnan(rsi_val):
-        if rsi_val < 30:
-            pontos_alta += 3.0
-        elif rsi_val < 40:
-            pontos_alta += 2.0
-        elif rsi_val > 70:
-            pontos_baixa += 3.0
-        elif rsi_val > 60:
-            pontos_baixa += 2.0
+        if rsi_val < 30: pontos_alta += 3.0
+        elif rsi_val < 40: pontos_alta += 2.0
+        elif rsi_val > 70: pontos_baixa += 3.0
+        elif rsi_val > 60: pontos_baixa += 2.0
 
-    # MACD
     macd_hist = u['MACD_HIST']
     if not math.isnan(macd_hist):
-        if macd_hist > 0:
-            pontos_alta += 2.5
-        else:
-            pontos_baixa += 2.5
+        if macd_hist > 0: pontos_alta += 2.5
+        else: pontos_baixa += 2.5
 
-    # OBV Aceleração
     obv_acel = u.get('OBV_Aceleracao', 0)
     if not (np.isnan(obv_acel) or np.isinf(obv_acel)):
-        if obv_acel > 0:
-            pontos_alta += 1.0
-        else:
-            pontos_baixa += 1.0
+        if obv_acel > 0: pontos_alta += 1.0
+        else: pontos_baixa += 1.0
 
-    # MFI
     mfi_val = u['MFI']
     if not math.isnan(mfi_val):
-        if mfi_val < 30:
-            pontos_alta += 1.5
-        elif mfi_val > 70:
-            pontos_baixa += 1.5
+        if mfi_val < 30: pontos_alta += 1.5
+        elif mfi_val > 70: pontos_baixa += 1.5
 
-    # SSL
-    if u['ssl_dir'] == 1:
-        pontos_alta += 1.0
-    else:
-        pontos_baixa += 1.0
+    if u['ssl_dir'] == 1: pontos_alta += 1.0
+    else: pontos_baixa += 1.0
 
-    # ATR
-    if u['atr_dir'] == 1:
-        pontos_alta += 1.0
-    else:
-        pontos_baixa += 1.0
+    if u['atr_dir'] == 1: pontos_alta += 1.0
+    else: pontos_baixa += 1.0
 
-    # PPO
     ppo_val = u['PPO']
     ppo_sig = u['PPO_Signal']
     if not (math.isnan(ppo_val) or math.isnan(ppo_sig)):
-        if ppo_val > ppo_sig:
-            pontos_alta += 1.5
-        else:
-            pontos_baixa += 1.5
+        if ppo_val > ppo_sig: pontos_alta += 1.5
+        else: pontos_baixa += 1.5
 
-    # Volume Profile
     if poc is not None and vah is not None and val is not None:
-        if preco_atual <= val:
-            pontos_alta += 2.0
-        elif preco_atual >= vah:
-            pontos_baixa += 2.0
+        if preco_atual <= val: pontos_alta += 2.0
+        elif preco_atual >= vah: pontos_baixa += 2.0
 
-    # Fibonacci
     if preco_atual >= fib_niveis['fib_382']:
         pontos_baixa += 2.0
         contexto_fib = txt["ctx_premium"]
@@ -2394,73 +1559,47 @@ def analisar_confluencia(df_completo, simbolo_id, timeframe, fg_valor, txt):
     else:
         contexto_fib = txt["ctx_neutro"]
 
-    # === INTEGRAÇÃO DOS MÓDULOS AVANÇADOS ===
+    if peso_estrutura > 0: pontos_alta += abs(peso_estrutura)
+    elif peso_estrutura < 0: pontos_baixa += abs(peso_estrutura)
 
-    # Estrutura SMC (peso 3.5)
-    if peso_estrutura > 0:
-        pontos_alta += abs(peso_estrutura)
-    elif peso_estrutura < 0:
-        pontos_baixa += abs(peso_estrutura)
+    if peso_divergencia > 0: pontos_alta += abs(peso_divergencia)
+    elif peso_divergencia < 0: pontos_baixa += abs(peso_divergencia)
 
-    # Divergência OBV (peso 3.0)
-    if peso_divergencia > 0:
-        pontos_alta += abs(peso_divergencia)
-    elif peso_divergencia < 0:
-        pontos_baixa += abs(peso_divergencia)
+    if peso_volume > 0: pontos_alta += abs(peso_volume)
+    elif peso_volume < 0: pontos_baixa += abs(peso_volume)
 
-    # Volume Direcional (peso 2.0)
-    if peso_volume > 0:
-        pontos_alta += abs(peso_volume)
-    elif peso_volume < 0:
-        pontos_baixa += abs(peso_volume)
+    if peso_mtf > 0: pontos_alta += abs(peso_mtf)
+    elif peso_mtf < 0: pontos_baixa += abs(peso_mtf)
 
-    # Alinhamento MTF (peso 2.5)
-    if peso_mtf > 0:
-        pontos_alta += abs(peso_mtf)
-    elif peso_mtf < 0:
-        pontos_baixa += abs(peso_mtf)
-
-    # Fear & Greed
     pontos_alta += peso_fg_compra
     pontos_baixa += peso_fg_venda
 
-    # Filtro de Liquidez: reduz sinais em baixa liquidez
     if not liquidez_ok:
         pontos_alta *= 0.6
         pontos_baixa *= 0.6
 
-    # Spike
     spike = detectar_spike_volatilidade(df_analise)
 
-    # Detalhes dos módulos para exibição
     modulos_info = {
-        'mtf_alinhado': alinhado_mtf,
-        'mtf_peso': peso_mtf,
-        'mtf_detalhes': detalhes_mtf,
-        'estrutura': estrutura_smc,
-        'estrutura_peso': peso_estrutura,
-        'divergencia_obv': divergencia_obv,
-        'divergencia_peso': peso_divergencia,
-        'volume_direcional': volume_dir,
-        'volume_peso': peso_volume,
-        'liquidez_ok': liquidez_ok,
-        'liquidez_msg': liquidez_msg,
-        'fg_peso_compra': peso_fg_compra,
-        'fg_peso_venda': peso_fg_venda,
+        'mtf_alinhado': alinhado_mtf, 'mtf_peso': peso_mtf, 'mtf_detalhes': detalhes_mtf,
+        'estrutura': estrutura_smc, 'estrutura_peso': peso_estrutura,
+        'divergencia_obv': divergencia_obv, 'divergencia_peso': peso_divergencia,
+        'volume_direcional': volume_dir, 'volume_peso': peso_volume,
+        'liquidez_ok': liquidez_ok, 'liquidez_msg': liquidez_msg,
+        'fg_peso_compra': peso_fg_compra, 'fg_peso_venda': peso_fg_venda,
         'limiar_dinamico': limiar_dinamico
     }
 
-    # Decisão final com limiar dinâmico
     if pontos_alta >= limiar_dinamico and pontos_alta > pontos_baixa:
         return (
             txt["compra_forte"], "#00cc66",
-            f"{contexto_fib} | {estrutura_smc} | Alinhamento MTF: {'✅' if alinhado_mtf else '⚠️'}",
+            f"{contexto_fib} | {estrutura_smc} | MTF: {'✅' if alinhado_mtf else '⚠️'}",
             pontos_alta, pontos_baixa, spike, poc, vah, val, modulos_info
         )
     elif pontos_baixa >= limiar_dinamico and pontos_baixa > pontos_alta:
         return (
             txt["venda_forte"], "#ff3333",
-            f"{contexto_fib} | {estrutura_smc} | Alinhamento MTF: {'✅' if alinhado_mtf else '⚠️'}",
+            f"{contexto_fib} | {estrutura_smc} | MTF: {'✅' if alinhado_mtf else '⚠️'}",
             pontos_alta, pontos_baixa, spike, poc, vah, val, modulos_info
         )
     else:
@@ -2492,7 +1631,6 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
         u = janela.iloc[-1]
         preco_entrada = u['close']
 
-        # Classificação simplificada
         rsi_val = u['RSI_14']
         macd_hist = u['MACD_HIST']
         ssl_dir = u.get('ssl_dir', 0)
@@ -2524,7 +1662,6 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
             sinais_venda += 1
 
         if tipo_sinal:
-            # Definir TP e SL
             tp_pct = 1.5
             sl_pct = 0.75
 
@@ -2535,7 +1672,6 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
                 tp_preco = preco_entrada * (1 - tp_pct / 100)
                 sl_preco = preco_entrada * (1 + sl_pct / 100)
 
-            # Verificar candles futuros (até 20 velas)
             acerto = False
             pnl_pct = 0
             idx_fim = min(i + 20, len(df_analise))
@@ -2543,7 +1679,6 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
             for j in range(i + 1, idx_fim):
                 high_j = df_analise.iloc[j]['high']
                 low_j = df_analise.iloc[j]['low']
-                close_j = df_analise.iloc[j]['close']
 
                 if tipo_sinal == "COMPRA":
                     if high_j >= tp_preco:
@@ -2562,7 +1697,6 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
                         pnl_pct = -sl_pct
                         break
             else:
-                # Fim da janela: usar último close
                 ultimo_close = df_analise.iloc[idx_fim - 1]['close']
                 pnl_pct = ((ultimo_close - preco_entrada) / preco_entrada) * 100
                 if tipo_sinal == "VENDA":
@@ -2570,10 +1704,8 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
                 acerto = pnl_pct > 0
 
             if acerto:
-                if tipo_sinal == "COMPRA":
-                    acertos_compra += 1
-                else:
-                    acertos_venda += 1
+                if tipo_sinal == "COMPRA": acertos_compra += 1
+                else: acertos_venda += 1
                 ganhos.append(pnl_pct)
             else:
                 perdas.append(abs(pnl_pct))
@@ -2589,7 +1721,6 @@ def executar_backtesting(df_completo, simbolo_id, timeframe, txt):
     total_sinais = sinais_compra + sinais_venda
     total_acertos = acertos_compra + acertos_venda
     taxa_acerto = (total_acertos / total_sinais * 100) if total_sinais > 0 else 0
-
     profit_factor = (sum(ganhos) / sum(perdas)) if (perdas and sum(perdas) > 0) else (float('inf') if ganhos else 0)
     avg_win = np.mean(ganhos) if ganhos else 0
     avg_loss = np.mean(perdas) if perdas else 0
@@ -2606,30 +1737,22 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, poc, vah, val, txt):
 
     fig.add_trace(go.Candlestick(
         x=df_grafico['time'],
-        open=df_grafico['open'],
-        high=df_grafico['high'],
-        low=df_grafico['low'],
-        close=df_grafico['close'],
+        open=df_grafico['open'], high=df_grafico['high'],
+        low=df_grafico['low'], close=df_grafico['close'],
         name=simbolo_id,
-        increasing_line_color='#10b981',
-        decreasing_line_color='#ef4444',
-        increasing_fillcolor='#10b981',
-        decreasing_fillcolor='#ef4444'
+        increasing_line_color='#10b981', decreasing_line_color='#ef4444',
+        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef4444'
     ))
 
     fig.add_trace(go.Scatter(
-        x=df_grafico['time'],
-        y=df_grafico['SSL_Baseline'],
-        mode='lines',
-        name='SMC Baseline (SSL)',
+        x=df_grafico['time'], y=df_grafico['SSL_Baseline'],
+        mode='lines', name='SMC Baseline (SSL)',
         line=dict(color='#00aaff', width=2)
     ))
 
     fig.add_trace(go.Scatter(
-        x=df_grafico['time'],
-        y=df_grafico['ATR_Stop'],
-        mode='lines',
-        name='ATR Trailing Stop',
+        x=df_grafico['time'], y=df_grafico['ATR_Stop'],
+        mode='lines', name='ATR Trailing Stop',
         line=dict(color='#ffaa00', width=1, dash='dash')
     ))
 
@@ -2650,8 +1773,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, poc, vah, val, txt):
                       annotation_font=dict(color="#51cf66", size=10))
 
     fig.update_layout(
-        paper_bgcolor='#0b0f19',
-        plot_bgcolor='#0b0f19',
+        paper_bgcolor='#0b0f19', plot_bgcolor='#0b0f19',
         font=dict(color='#e2e8f0'),
         xaxis=dict(gridcolor='#1e293b', showgrid=True, rangeslider=dict(visible=False)),
         yaxis=dict(gridcolor='#1e293b', showgrid=True),
@@ -2721,7 +1843,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         df_dados, simbolo_id, timeframe, fg_valor, txt
     )
 
-    # Banner principal
     ppo_line = ultimo_reg['PPO']
     ppo_sig = ultimo_reg['PPO_Signal']
     ppo_txt = (
@@ -2737,7 +1858,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     </div>
     """, unsafe_allow_html=True)
 
-    # Métricas principais
     nome_completo_ativo = obter_nome_extenso_cripto(simbolo_id)
     label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
 
@@ -2759,7 +1879,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
 
     m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
-    # Segunda linha de métricas
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -2791,7 +1910,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         else:
             st.metric(txt["filtro_liquidez"], "—")
 
-    # Módulos Avançados Status
     st.markdown("---")
     st.markdown(f"### 🔬 Módulos de Confluência Avançada")
 
@@ -2837,7 +1955,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
             limiar = modulos_info.get('limiar_dinamico', 9.0)
             st.metric(txt["limiar_dinamico"], f"{limiar:.1f}")
 
-    # Indicadores técnicos
     atr_stop_val = ultimo_reg['ATR_Stop']
     st.markdown(
         f"**{txt['stop_atr']}:** {formatar_preco(atr_stop_val)}"
@@ -2846,7 +1963,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         f"  |  MACD Hist: **{ultimo_reg['MACD_HIST']:.6f}**"
     )
 
-    # Gráfico
     st.markdown(f"### {txt['grafico_titulo']}")
     renderizar_grafico_plotly(df_dados, simbolo_id, poc, vah, val, txt)
 
@@ -2857,7 +1973,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
             f"Preço: {'🟡 Equilíbrio' if val <= preco_atual <= vah else ('🔴 Distribuição' if preco_atual > vah else '🟢 Acumulação')}"
         )
 
-    # Backtesting
     st.markdown("---")
     st.markdown(f"### {txt['backtest_titulo']}")
 
@@ -2878,7 +1993,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         bt5.metric(txt["backtest_taxa"], f"{taxa_acerto:.1f}%",
                    delta="🎯 80%+" if taxa_acerto >= 80 else None, delta_color=cor_taxa)
 
-        # Métricas avançadas
         st.markdown(f"**{txt['backtest_metricas']}**")
         pm1, pm2, pm3 = st.columns(3)
         pm1.metric(txt["backtest_profit_factor"], f"{profit_factor:.2f}" if profit_factor != float('inf') else "∞")
@@ -2902,7 +2016,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     else:
         st.info("Backtesting requer mais dados históricos. Aguarde mais candles ou troque para um timeframe menor.")
 
-    # Status
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     n_velas = len(df_analise)
     if modo_vivo:
