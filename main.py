@@ -16,25 +16,20 @@ from datetime import datetime, timedelta
 
 # ============================================
 # SISTEMA ANTI-CÓPIA BRICSVAULT
-# Proteção contra execução não autorizada
 # ============================================
 
 def protecao_anti_copia():
     """Impede execução em domínios não autorizados."""
-    
     app_url = os.environ.get("STREAMLIT_APP_URL", "")
     server_name = os.environ.get("STREAMLIT_SERVER_ADDRESS", "")
     
     IDENTIFICADORES_PERMITIDOS = [
         "bricsvault-portal",
         "diegooliveirasantos-commits",
-        "localhost",
-        "127.0.0.1",
-        "0.0.0.0",
+        "localhost", "127.0.0.1", "0.0.0.0",
     ]
     
     autorizado = False
-    
     for identificador in IDENTIFICADORES_PERMITIDOS:
         if identificador in app_url or identificador in server_name:
             autorizado = True
@@ -80,7 +75,9 @@ VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (17 línguas - principais)
+# DICIONÁRIO DE IDIOMAS (17 LÍNGUAS - COMPLETO E PERMANENTE)
+# NUNCA REMOVER ESTE DICIONÁRIO - É PARTE ESSENCIAL DO CÓDIGO
+# ============================================
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -96,12 +93,12 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
         "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
         "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
-        "spike_alta": "🚀  SPIKE DE ALTA DETECTADO (Volume + OBV + Range)",
-        "spike_baixa": "💥  SPIKE DE BAIXA DETECTADO (Volume + OBV + Range)",
+        "spike_alta": "🚀  SPIKE DE ALTA DETECTADO",
+        "spike_baixa": "💥  SPIKE DE BAIXA DETECTADO",
         "erro_dados": "Dados históricos insuficientes nesta Exchange.",
         "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci.",
         "ctx_premium": "Ativo em Zona Premium de Fibonacci.",
-        "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
+        "ctx_neutro": "Preço em zona neutra de Fibonacci.",
         "ultima_atualizacao": "Última Atualização",
         "proximo_refresh": "Próximo refresh em",
         "segundos": "segundos",
@@ -131,9 +128,9 @@ DICIONARIO_LINGUAS = {
         "backtest_acerto": "✅ Acerto",
         "backtest_erro": "❌ Erro",
         "backtest_metricas": "Métricas de Performance",
-        "poc_label": "POC (Point of Control)",
-        "vah_label": "VAH (Value Area High)",
-        "val_label": "VAL (Value Area Low)",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
         "fear_greed_label": "😱 Fear & Greed Index",
         "medo_extremo": "Medo Extremo",
         "medo": "Medo",
@@ -149,7 +146,7 @@ DICIONARIO_LINGUAS = {
         "alinhamento_mtf": "🔄 Alinhamento Multi-TF",
         "alinhamento_mtf_sim": "✅ Alinhado",
         "alinhamento_mtf_nao": "❌ Não Alinhado",
-        "filtro_liquidez": "💧 Liquidez Real do Ativo",
+        "filtro_liquidez": "💧 Liquidez Real",
         "liquidez_classificacao": ["⚫ Baixíssima", "🔴 Muito Baixa", "🟠 Baixa", "🟡 Moderada", "🟢 Alta", "⭐ Elevada"],
         "liquidez_descricao": {
             0: "Evite operar - sem liquidez",
@@ -192,12 +189,12 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
         "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
         "neutro": "🟡  NEUTRAL (AWAIT SMC)",
-        "spike_alta": "🚀  UPSIDE SPIKE DETECTED (Volume + OBV + Range)",
-        "spike_baixa": "💥  DOWNSIDE SPIKE DETECTED (Volume + OBV + Range)",
+        "spike_alta": "🚀  UPSIDE SPIKE DETECTED",
+        "spike_baixa": "💥  DOWNSIDE SPIKE DETECTED",
         "erro_dados": "Insufficient historical data on this Exchange.",
         "ctx_desconto": "Asset in Fibonacci Discount Zone.",
         "ctx_premium": "Asset in Fibonacci Premium Zone.",
-        "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
+        "ctx_neutro": "Price in neutral Fibonacci zone.",
         "ultima_atualizacao": "Last Update",
         "proximo_refresh": "Next refresh in",
         "segundos": "seconds",
@@ -209,7 +206,7 @@ DICIONARIO_LINGUAS = {
         "marketcap_nao_disponivel": "Not available",
         "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
-        "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
+        "aviso_aquecimento": "⚠️ Warm-up candles used",
         "backtest_titulo": "📊 Advanced Backtesting — Last 100 Signals",
         "backtest_compra": "Buy",
         "backtest_venda": "Sell",
@@ -227,9 +224,9 @@ DICIONARIO_LINGUAS = {
         "backtest_acerto": "✅ Hit",
         "backtest_erro": "❌ Miss",
         "backtest_metricas": "Performance Metrics",
-        "poc_label": "POC (Point of Control)",
-        "vah_label": "VAH (Value Area High)",
-        "val_label": "VAL (Value Area Low)",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
         "fear_greed_label": "😱 Fear & Greed Index",
         "medo_extremo": "Extreme Fear",
         "medo": "Fear",
@@ -245,7 +242,7 @@ DICIONARIO_LINGUAS = {
         "alinhamento_mtf": "🔄 Multi-TF Alignment",
         "alinhamento_mtf_sim": "✅ Aligned",
         "alinhamento_mtf_nao": "❌ Not Aligned",
-        "filtro_liquidez": "💧 Real Asset Liquidity",
+        "filtro_liquidez": "💧 Real Liquidity",
         "liquidez_classificacao": ["⚫ Very Low", "🔴 Low", "🟠 Below Avg", "🟡 Moderate", "🟢 High", "⭐ Excellent"],
         "liquidez_descricao": {
             0: "Avoid - no liquidity",
@@ -273,14 +270,877 @@ DICIONARIO_LINGUAS = {
             "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
             "1 Day": "1d", "1 Week": "1w"
         }
+    },
+    "中文 (Mandarim)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - 聪明钱概念引擎 (SMC)",
+        "config_globais": "⚙️  全局设置",
+        "selecione_cripto": "选择任意加密货币 (/USDT):",
+        "tempo_grafico": "时间周期:",
+        "modo_vivo": "启用实时监控",
+        "intervalo_refresh": "刷新间隔 (秒):",
+        "preco_spot": "实时现货价格",
+        "variacao_24h": "24小时涨跌 (交易所)",
+        "market_cap": "市值 (USD)",
+        "stop_atr": "ATR止损价",
+        "compra_forte": "🟢  强力买入 (SMC + 斐波那契对齐)",
+        "venda_forte": "🔴  强力卖出 (SMC + 斐波那契对齐)",
+        "neutro": "🟡  中性 (等待SMC信号)",
+        "spike_alta": "🚀  检测到上行突破",
+        "spike_baixa": "💥  检测到下行突破",
+        "erro_dados": "此交易所历史数据不足。",
+        "ctx_desconto": "资产处于斐波那契折扣区。",
+        "ctx_premium": "资产处于斐波那契溢价区。",
+        "ctx_neutro": "价格处于斐波那契中性区。",
+        "ultima_atualizacao": "最后更新",
+        "proximo_refresh": "下次刷新在",
+        "segundos": "秒",
+        "pontos_compra": "买入积分",
+        "pontos_venda": "卖出积分",
+        "sinal_spike": "波动突破",
+        "grafico_titulo": "📈  交互式价格图表",
+        "buscando_marketcap": "🔍  正在获取市值...",
+        "marketcap_nao_disponivel": "不可用",
+        "idioma_label": "🌐  语言 / Language",
+        "idioma_selecao": "选择界面语言:",
+        "aviso_aquecimento": "⚠️ 计算中使用预热K线",
+        "backtest_titulo": "📊 高级回测 — 最近100个信号",
+        "backtest_compra": "买入",
+        "backtest_venda": "卖出",
+        "backtest_total": "总信号",
+        "backtest_acertos": "命中",
+        "backtest_taxa": "命中率",
+        "backtest_profit_factor": "盈利因子",
+        "backtest_avg_win": "平均盈利",
+        "backtest_avg_loss": "平均亏损",
+        "backtest_historico": "近期信号历史",
+        "backtest_data": "日期/时间",
+        "backtest_sinal": "信号",
+        "backtest_preco": "入场价",
+        "backtest_resultado": "结果",
+        "backtest_acerto": "✅ 命中",
+        "backtest_erro": "❌ 未命中",
+        "backtest_metricas": "绩效指标",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 恐惧贪婪指数",
+        "medo_extremo": "极度恐惧",
+        "medo": "恐惧",
+        "neutro_fg": "中性",
+        "ganancia": "贪婪",
+        "ganancia_extrema": "极度贪婪",
+        "estrutura_bos": "🏗️ 结构突破 (BOS)",
+        "estrutura_choch": "🔄 特性改变 (CHoCH)",
+        "estrutura_indefinida": "⏳ 结构未定义",
+        "divergencia_obv_bull": "📈 OBV看涨背离",
+        "divergencia_obv_bear": "📉 OBV看跌背离",
+        "divergencia_obv_none": "➖ 无OBV背离",
+        "alinhamento_mtf": "🔄 多周期对齐",
+        "alinhamento_mtf_sim": "✅ 已对齐",
+        "alinhamento_mtf_nao": "❌ 未对齐",
+        "filtro_liquidez": "💧 真实流动性",
+        "liquidez_classificacao": ["⚫ 极低", "🔴 很低", "🟠 低", "🟡 中等", "🟢 高", "⭐ 优秀"],
+        "liquidez_descricao": {
+            0: "避免交易 - 无流动性",
+            1: "高风险 - 滑点大",
+            2: "中等风险 - 小额订单",
+            3: "可交易 - 中等订单",
+            4: "良好流动性 - 执行快速",
+            5: "优秀 - 机构级别"
+        },
+        "volume_direcional_bull": "📊 看涨方向量",
+        "volume_direcional_bear": "📊 看跌方向量",
+        "volume_direcional_neutro": "📊 中性方向量",
+        "limiar_dinamico": "动态阈值",
+        "modulo_mtf": "🔍 多周期模块",
+        "modulo_estrutura": "🏗️ SMC结构模块",
+        "modulo_obv": "📊 OBV背离模块",
+        "modulo_volume": "📈 方向量模块",
+        "modulo_fg": "😱 恐惧贪婪模块",
+        "modulo_liquidez": "💧 真实流动性模块",
+        "spread_atual": "价差 %",
+        "volume_24h_usdt": "24小时成交量 (USDT)",
+        "profundidade_livro": "深度 ±2%",
+        "intervalos": {
+            "1 分钟": "1m", "5 分钟": "5m", "15 分钟": "15m",
+            "30 分钟": "30m", "1 小时": "1h", "4 小时": "4h",
+            "1 天": "1d", "1 周": "1w"
+        }
+    },
+    "हिन्दी (Hindi)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
+        "config_globais": "⚙️  वैश्विक सेटिंग्स",
+        "selecione_cripto": "कोई भी क्रिप्टोकरेंसी चुनें (/USDT):",
+        "tempo_grafico": "समय-सीमा:",
+        "modo_vivo": "रीयल-टाइम मॉनिटरिंग सक्षम करें",
+        "intervalo_refresh": "रीफ्रेश अंतराल (सेकंड):",
+        "preco_spot": "वास्तविक स्पॉट मूल्य",
+        "variacao_24h": "24 घंटे का बदलाव (एक्सचेंज)",
+        "market_cap": "मार्केट कैप (USD)",
+        "stop_atr": "ATR स्टॉप मूल्य",
+        "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची संरेखित)",
+        "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
+        "neutro": "🟡  तटस्थ (SMC की प्रतीक्षा करें)",
+        "spike_alta": "🚀  तेजी का स्पाइक पहचाना गया",
+        "spike_baixa": "💥  मंदी का स्पाइक पहचाना गया",
+        "erro_dados": "इस एक्सचेंज पर अपर्याप्त ऐतिहासिक डेटा।",
+        "ctx_desconto": "संपत्ति फिबोनाची डिस्काउंट ज़ोन में।",
+        "ctx_premium": "संपत्ति फिबोनाची प्रीमियम ज़ोन में।",
+        "ctx_neutro": "मूल्य फिबोनाची तटस्थ क्षेत्र में।",
+        "ultima_atualizacao": "अंतिम अपडेट",
+        "proximo_refresh": "अगला रीफ्रेश",
+        "segundos": "सेकंड",
+        "pontos_compra": "खरीद अंक",
+        "pontos_venda": "बिक्री अंक",
+        "sinal_spike": "अस्थिरता स्पाइक",
+        "grafico_titulo": "📈  इंटरैक्टिव मूल्य चार्ट",
+        "buscando_marketcap": "🔍  मार्केट कैप प्राप्त कर रहे हैं...",
+        "marketcap_nao_disponivel": "उपलब्ध नहीं",
+        "idioma_label": "🌐  भाषा / Language",
+        "idioma_selecao": "इंटरफ़ेस भाषा चुनें:",
+        "aviso_aquecimento": "⚠️ गणना में उपयोग की गई वार्म-अप कैंडल्स",
+        "backtest_titulo": "📊 बैकटेस्टिंग — पिछले 100 सिग्नल",
+        "backtest_compra": "खरीद",
+        "backtest_venda": "बिक्री",
+        "backtest_total": "कुल सिग्नल",
+        "backtest_acertos": "सफल",
+        "backtest_taxa": "सफलता दर",
+        "backtest_profit_factor": "लाभ कारक",
+        "backtest_avg_win": "औसत लाभ",
+        "backtest_avg_loss": "औसत हानि",
+        "backtest_historico": "हाल के सिग्नल इतिहास",
+        "backtest_data": "दिनांक/समय",
+        "backtest_sinal": "सिग्नल",
+        "backtest_preco": "प्रवेश मूल्य",
+        "backtest_resultado": "परिणाम",
+        "backtest_acerto": "✅ सफल",
+        "backtest_erro": "❌ असफल",
+        "backtest_metricas": "प्रदर्शन मीट्रिक्स",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 फियर एंड ग्रीड इंडेक्स",
+        "medo_extremo": "अत्यधिक भय",
+        "medo": "भय",
+        "neutro_fg": "तटस्थ",
+        "ganancia": "लालच",
+        "ganancia_extrema": "अत्यधिक लालच",
+        "estrutura_bos": "🏗️ BOS (संरचना तोड़)",
+        "estrutura_choch": "🔄 CHoCH (चरित्र परिवर्तन)",
+        "estrutura_indefinida": "⏳ अपरिभाषित संरचना",
+        "divergencia_obv_bull": "📈 OBV बुलिश डाइवर्जेंस",
+        "divergencia_obv_bear": "📉 OBV बियरिश डाइवर्जेंस",
+        "divergencia_obv_none": "➖ कोई OBV डाइवर्जेंस नहीं",
+        "alinhamento_mtf": "🔄 मल्टी-TF संरेखण",
+        "alinhamento_mtf_sim": "✅ संरेखित",
+        "alinhamento_mtf_nao": "❌ संरेखित नहीं",
+        "filtro_liquidez": "💧 वास्तविक तरलता",
+        "liquidez_classificacao": ["⚫ अत्यंत कम", "🔴 बहुत कम", "🟠 कम", "🟡 मध्यम", "🟢 उच्च", "⭐ उत्कृष्ट"],
+        "liquidez_descricao": {
+            0: "व्यापार न करें - कोई तरलता नहीं",
+            1: "उच्च जोखिम - बड़ा स्लिपेज",
+            2: "मध्यम जोखिम - छोटे ऑर्डर",
+            3: "व्यापार योग्य - मध्यम ऑर्डर",
+            4: "अच्छी तरलता - तेज़ निष्पादन",
+            5: "उत्कृष्ट - संस्थागत स्तर"
+        },
+        "volume_direcional_bull": "📊 बुलिश दिशात्मक वॉल्यूम",
+        "volume_direcional_bear": "📊 बियरिश दिशात्मक वॉल्यूम",
+        "volume_direcional_neutro": "📊 तटस्थ दिशात्मक वॉल्यूम",
+        "limiar_dinamico": "गतिशील सीमा",
+        "modulo_mtf": "🔍 मल्टी-टाइमफ्रेम मॉड्यूल",
+        "modulo_estrutura": "🏗️ SMC संरचना मॉड्यूल",
+        "modulo_obv": "📊 OBV डाइवर्जेंस मॉड्यूल",
+        "modulo_volume": "📈 दिशात्मक वॉल्यूम मॉड्यूल",
+        "modulo_fg": "😱 फियर एंड ग्रीड मॉड्यूल",
+        "modulo_liquidez": "💧 वास्तविक तरलता मॉड्यूल",
+        "spread_atual": "स्प्रेड %",
+        "volume_24h_usdt": "24 घंटे का वॉल्यूम (USDT)",
+        "profundidade_livro": "गहराई ±2%",
+        "intervalos": {
+            "1 मिनट": "1m", "5 मिनट": "5m", "15 मिनट": "15m",
+            "30 मिनट": "30m", "1 घंटा": "1h", "4 घंटे": "4h",
+            "1 दिन": "1d", "1 सप्ताह": "1w"
+        }
+    },
+    "Español (Espanhol)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Configuración Global",
+        "selecione_cripto": "Seleccione Criptomoneda (/USDT):",
+        "tempo_grafico": "Marco de Tiempo:",
+        "modo_vivo": "Activar Monitoreo en Tiempo Real",
+        "intervalo_refresh": "Intervalo de Actualización (Segundos):",
+        "preco_spot": "Precio Spot Real",
+        "variacao_24h": "Variación 24h (Exchange)",
+        "market_cap": "Cap. de Mercado (USD)",
+        "stop_atr": "Precio Stop ATR",
+        "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "neutro": "🟡  NEUTRAL (ESPERAR SMC)",
+        "spike_alta": "🚀  SPIKE ALCISTA DETECTADO",
+        "spike_baixa": "💥  SPIKE BAJISTA DETECTADO",
+        "erro_dados": "Datos históricos insuficientes.",
+        "ctx_desconto": "Activo en Zona de Descuento Fibonacci.",
+        "ctx_premium": "Activo en Zona Premium Fibonacci.",
+        "ctx_neutro": "Precio en zona neutra Fibonacci.",
+        "ultima_atualizacao": "Última Actualización",
+        "proximo_refresh": "Próxima en",
+        "segundos": "segundos",
+        "pontos_compra": "Puntos de Compra",
+        "pontos_venda": "Puntos de Venta",
+        "sinal_spike": "Spike de Volatilidad",
+        "grafico_titulo": "📈  Gráfico de Precio Interactivo",
+        "buscando_marketcap": "🔍  Obteniendo Market Cap...",
+        "marketcap_nao_disponivel": "No disponible",
+        "idioma_label": "🌐  Idioma / Language",
+        "idioma_selecao": "Seleccione idioma:",
+        "aviso_aquecimento": "⚠️ Velas de calentamiento",
+        "backtest_titulo": "📊 Backtesting — 100 Señales",
+        "backtest_compra": "Compra",
+        "backtest_venda": "Venta",
+        "backtest_total": "Total",
+        "backtest_acertos": "Aciertos",
+        "backtest_taxa": "Tasa Acierto",
+        "backtest_profit_factor": "Factor Beneficio",
+        "backtest_avg_win": "Ganancia Media",
+        "backtest_avg_loss": "Pérdida Media",
+        "backtest_historico": "Historial",
+        "backtest_data": "Fecha/Hora",
+        "backtest_sinal": "Señal",
+        "backtest_preco": "Precio Entrada",
+        "backtest_resultado": "Resultado",
+        "backtest_acerto": "✅ Acierto",
+        "backtest_erro": "❌ Error",
+        "backtest_metricas": "Métricas",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 Índice de Miedo y Codicia",
+        "medo_extremo": "Miedo Extremo",
+        "medo": "Miedo",
+        "neutro_fg": "Neutral",
+        "ganancia": "Codicia",
+        "ganancia_extrema": "Codicia Extrema",
+        "estrutura_bos": "🏗️ BOS (Ruptura de Estructura)",
+        "estrutura_choch": "🔄 CHoCH (Cambio de Carácter)",
+        "estrutura_indefinida": "⏳ Estructura Indefinida",
+        "divergencia_obv_bull": "📈 Divergencia OBV Alcista",
+        "divergencia_obv_bear": "📉 Divergencia OBV Bajista",
+        "divergencia_obv_none": "➖ Sin Divergencia OBV",
+        "alinhamento_mtf": "🔄 Alineación Multi-TF",
+        "alinhamento_mtf_sim": "✅ Alineado",
+        "alinhamento_mtf_nao": "❌ No Alineado",
+        "filtro_liquidez": "💧 Liquidez Real",
+        "liquidez_classificacao": ["⚫ Muy Baja", "🔴 Baja", "🟠 Debajo Prom", "🟡 Moderada", "🟢 Alta", "⭐ Excelente"],
+        "liquidez_descricao": {
+            0: "Evitar - sin liquidez",
+            1: "Alto riesgo - slippage elevado",
+            2: "Riesgo moderado - órdenes pequeñas",
+            3: "Operable - órdenes medias",
+            4: "Buena liquidez - ejecución rápida",
+            5: "Excelente - grado institucional"
+        },
+        "volume_direcional_bull": "📊 Volumen Direccional Alcista",
+        "volume_direcional_bear": "📊 Volumen Direccional Bajista",
+        "volume_direcional_neutro": "📊 Volumen Direccional Neutro",
+        "limiar_dinamico": "Umbral Dinámico",
+        "modulo_mtf": "🔍 Módulo Multi-TF",
+        "modulo_estrutura": "🏗️ Módulo Estructura SMC",
+        "modulo_obv": "📊 Módulo Divergencia OBV",
+        "modulo_volume": "📈 Módulo Volumen Direccional",
+        "modulo_fg": "😱 Módulo Miedo y Codicia",
+        "modulo_liquidez": "💧 Módulo Liquidez Real",
+        "spread_atual": "Spread %",
+        "volume_24h_usdt": "Volumen 24h (USDT)",
+        "profundidade_livro": "Profundidad ±2%",
+        "intervalos": {
+            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
+            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
+            "1 Día": "1d", "1 Semana": "1w"
+        }
+    },
+    "Français (Francês)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Configuration Globale",
+        "selecione_cripto": "Sélectionnez Crypto (/USDT):",
+        "tempo_grafico": "Période:",
+        "modo_vivo": "Activer Surveillance Temps Réel",
+        "intervalo_refresh": "Intervalle (Secondes):",
+        "preco_spot": "Prix Spot Réel",
+        "variacao_24h": "Variation 24h (Exchange)",
+        "market_cap": "Cap. Boursière (USD)",
+        "stop_atr": "Prix Stop ATR",
+        "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
+        "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
+        "neutro": "🟡  NEUTRE (ATTENDRE SMC)",
+        "spike_alta": "🚀  SPIKE HAUSSIER DÉTECTÉ",
+        "spike_baixa": "💥  SPIKE BAISSIER DÉTECTÉ",
+        "erro_dados": "Données historiques insuffisantes.",
+        "ctx_desconto": "Actif en Zone de Remise Fibonacci.",
+        "ctx_premium": "Actif en Zone Premium Fibonacci.",
+        "ctx_neutro": "Prix en zone neutre Fibonacci.",
+        "ultima_atualizacao": "Dernière MAJ",
+        "proximo_refresh": "Prochaine dans",
+        "segundos": "secondes",
+        "pontos_compra": "Points Achat",
+        "pontos_venda": "Points Vente",
+        "sinal_spike": "Spike Volatilité",
+        "grafico_titulo": "📈  Graphique Interactif",
+        "buscando_marketcap": "🔍  Récupération Market Cap...",
+        "marketcap_nao_disponivel": "Non disponible",
+        "idioma_label": "🌐  Langue / Language",
+        "idioma_selecao": "Sélectionnez langue:",
+        "aviso_aquecimento": "⚠️ Bougies préchauffage",
+        "backtest_titulo": "📊 Backtesting — 100 Signaux",
+        "backtest_compra": "Achat",
+        "backtest_venda": "Vente",
+        "backtest_total": "Total",
+        "backtest_acertos": "Réussites",
+        "backtest_taxa": "Taux Réussite",
+        "backtest_profit_factor": "Facteur Profit",
+        "backtest_avg_win": "Gain Moyen",
+        "backtest_avg_loss": "Perte Moyenne",
+        "backtest_historico": "Historique",
+        "backtest_data": "Date/Heure",
+        "backtest_sinal": "Signal",
+        "backtest_preco": "Prix Entrée",
+        "backtest_resultado": "Résultat",
+        "backtest_acerto": "✅ Réussi",
+        "backtest_erro": "❌ Échec",
+        "backtest_metricas": "Métriques",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 Indice Peur et Cupidité",
+        "medo_extremo": "Peur Extrême",
+        "medo": "Peur",
+        "neutro_fg": "Neutre",
+        "ganancia": "Cupidité",
+        "ganancia_extrema": "Cupidité Extrême",
+        "estrutura_bos": "🏗️ BOS (Rupture de Structure)",
+        "estrutura_choch": "🔄 CHoCH (Changement de Caractère)",
+        "estrutura_indefinida": "⏳ Structure Indéfinie",
+        "divergencia_obv_bull": "📈 Divergence OBV Haussière",
+        "divergencia_obv_bear": "📉 Divergence OBV Baissière",
+        "divergencia_obv_none": "➖ Aucune Divergence OBV",
+        "alinhamento_mtf": "🔄 Alignement Multi-TF",
+        "alinhamento_mtf_sim": "✅ Aligné",
+        "alinhamento_mtf_nao": "❌ Non Aligné",
+        "filtro_liquidez": "💧 Liquidité Réelle",
+        "liquidez_classificacao": ["⚫ Très Basse", "🔴 Basse", "🟠 Sous Moy", "🟡 Modérée", "🟢 Haute", "⭐ Excellente"],
+        "liquidez_descricao": {
+            0: "Éviter - aucune liquidité",
+            1: "Risque élevé - slippage important",
+            2: "Risque modéré - petits ordres",
+            3: "Opérable - ordres moyens",
+            4: "Bonne liquidité - exécution rapide",
+            5: "Excellente - niveau institutionnel"
+        },
+        "volume_direcional_bull": "📊 Volume Directionnel Haussier",
+        "volume_direcional_bear": "📊 Volume Directionnel Baissier",
+        "volume_direcional_neutro": "📊 Volume Directionnel Neutre",
+        "limiar_dinamico": "Seuil Dynamique",
+        "modulo_mtf": "🔍 Module Multi-TF",
+        "modulo_estrutura": "🏗️ Module Structure SMC",
+        "modulo_obv": "📊 Module Divergence OBV",
+        "modulo_volume": "📈 Module Volume Directionnel",
+        "modulo_fg": "😱 Module Peur et Cupidité",
+        "modulo_liquidez": "💧 Module Liquidité Réelle",
+        "spread_atual": "Spread %",
+        "volume_24h_usdt": "Volume 24h (USDT)",
+        "profundidade_livro": "Profondeur ±2%",
+        "intervalos": {
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
+            "30 Minutes": "30m", "1 Heure": "1h", "4 Heures": "4h",
+            "1 Jour": "1d", "1 Semaine": "1w"
+        }
+    },
+    "日本語 (Japonês)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - SMCエンジン",
+        "config_globais": "⚙️  グローバル設定",
+        "selecione_cripto": "暗号通貨を選択 (/USDT):",
+        "tempo_grafico": "時間枠:",
+        "modo_vivo": "リアルタイム監視を有効化",
+        "intervalo_refresh": "更新間隔 (秒):",
+        "preco_spot": "リアルスポット価格",
+        "variacao_24h": "24時間変動 (取引所)",
+        "market_cap": "時価総額 (USD)",
+        "stop_atr": "ATRストップ価格",
+        "compra_forte": "🟢  強い買い (SMC + フィボナッチ一致)",
+        "venda_forte": "🔴  強い売り (SMC + フィボナッチ一致)",
+        "neutro": "🟡  中立 (SMC待ち)",
+        "spike_alta": "🚀  上昇スパイク検出",
+        "spike_baixa": "💥  下降スパイク検出",
+        "erro_dados": "この取引所の履歴データが不十分です。",
+        "ctx_desconto": "資産はフィボナッチディスカウントゾーン。",
+        "ctx_premium": "資産はフィボナッチプレミアムゾーン。",
+        "ctx_neutro": "価格はフィボナッチ中立ゾーン。",
+        "ultima_atualizacao": "最終更新",
+        "proximo_refresh": "次の更新まで",
+        "segundos": "秒",
+        "pontos_compra": "買いポイント",
+        "pontos_venda": "売りポイント",
+        "sinal_spike": "ボラティリティスパイク",
+        "grafico_titulo": "📈  インタラクティブ価格チャート",
+        "buscando_marketcap": "🔍  時価総額取得中...",
+        "marketcap_nao_disponivel": "利用不可",
+        "idioma_label": "🌐  言語 / Language",
+        "idioma_selecao": "インターフェース言語を選択:",
+        "aviso_aquecimento": "⚠️ 計算に使用されたウォームアップローソク",
+        "backtest_titulo": "📊 バックテスト — 直近100シグナル",
+        "backtest_compra": "買い",
+        "backtest_venda": "売り",
+        "backtest_total": "総シグナル数",
+        "backtest_acertos": "成功",
+        "backtest_taxa": "成功率",
+        "backtest_profit_factor": "利益係数",
+        "backtest_avg_win": "平均利益",
+        "backtest_avg_loss": "平均損失",
+        "backtest_historico": "最近のシグナル履歴",
+        "backtest_data": "日時",
+        "backtest_sinal": "シグナル",
+        "backtest_preco": "エントリー価格",
+        "backtest_resultado": "結果",
+        "backtest_acerto": "✅ 成功",
+        "backtest_erro": "❌ 失敗",
+        "backtest_metricas": "パフォーマンス指標",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 恐怖＆強欲指数",
+        "medo_extremo": "極度の恐怖",
+        "medo": "恐怖",
+        "neutro_fg": "中立",
+        "ganancia": "強欲",
+        "ganancia_extrema": "極度の強欲",
+        "estrutura_bos": "🏗️ BOS (構造突破)",
+        "estrutura_choch": "🔄 CHoCH (特性変化)",
+        "estrutura_indefinida": "⏳ 未定義の構造",
+        "divergencia_obv_bull": "📈 OBV強気ダイバージェンス",
+        "divergencia_obv_bear": "📉 OBV弱気ダイバージェンス",
+        "divergencia_obv_none": "➖ OBVダイバージェンスなし",
+        "alinhamento_mtf": "🔄 マルチTFアライメント",
+        "alinhamento_mtf_sim": "✅ アライメント済",
+        "alinhamento_mtf_nao": "❌ アライメントなし",
+        "filtro_liquidez": "💧 実際の流動性",
+        "liquidez_classificacao": ["⚫ 極低", "🔴 低", "🟠 平均以下", "🟡 中程度", "🟢 高", "⭐ 優秀"],
+        "liquidez_descricao": {
+            0: "取引回避 - 流動性なし",
+            1: "高リスク - スリッページ大",
+            2: "中リスク - 小口注文",
+            3: "取引可能 - 中口注文",
+            4: "良好な流動性 - 高速執行",
+            5: "優秀 - 機関投資家レベル"
+        },
+        "volume_direcional_bull": "📊 強気方向性出来高",
+        "volume_direcional_bear": "📊 弱気方向性出来高",
+        "volume_direcional_neutro": "📊 中立方向性出来高",
+        "limiar_dinamico": "動的しきい値",
+        "modulo_mtf": "🔍 マルチTFモジュール",
+        "modulo_estrutura": "🏗️ SMC構造モジュール",
+        "modulo_obv": "📊 OBVダイバージェンスモジュール",
+        "modulo_volume": "📈 方向性出来高モジュール",
+        "modulo_fg": "😱 恐怖＆強欲モジュール",
+        "modulo_liquidez": "💧 実際の流動性モジュール",
+        "spread_atual": "スプレッド %",
+        "volume_24h_usdt": "24時間出来高 (USDT)",
+        "profundidade_livro": "深さ ±2%",
+        "intervalos": {
+            "1 分": "1m", "5 分": "5m", "15 分": "15m",
+            "30 分": "30m", "1 時間": "1h", "4 時間": "4h",
+            "1 日": "1d", "1 週間": "1w"
+        }
+    },
+    "Deutsch (Alemão)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC Engine",
+        "config_globais": "⚙️  Globale Einstellungen",
+        "selecione_cripto": "Kryptowährung wählen (/USDT):",
+        "tempo_grafico": "Zeitrahmen:",
+        "modo_vivo": "Echtzeit-Überwachung aktivieren",
+        "intervalo_refresh": "Aktualisierungsintervall (Sek):",
+        "preco_spot": "Echter Spot-Preis",
+        "variacao_24h": "24h-Änderung (Börse)",
+        "market_cap": "Marktkapitalisierung (USD)",
+        "stop_atr": "ATR-Stop-Preis",
+        "compra_forte": "🟢  STARKER KAUF",
+        "venda_forte": "🔴  STARKER VERKAUF",
+        "neutro": "🟡  NEUTRAL",
+        "spike_alta": "🚀  AUFWÄRTSSPIKE ERKANNT",
+        "spike_baixa": "💥  ABWÄRTSSPIKE ERKANNT",
+        "erro_dados": "Unzureichende historische Daten.",
+        "ctx_desconto": "Fibonacci-Discount-Zone.",
+        "ctx_premium": "Fibonacci-Premium-Zone.",
+        "ctx_neutro": "Fibonacci-neutrale Zone.",
+        "ultima_atualizacao": "Letzte Aktualisierung",
+        "proximo_refresh": "Nächste in",
+        "segundos": "Sekunden",
+        "pontos_compra": "Kaufpunkte",
+        "pontos_venda": "Verkaufspunkte",
+        "sinal_spike": "Volatilitätsspike",
+        "grafico_titulo": "📈  Interaktiver Chart",
+        "buscando_marketcap": "🔍  Marktkap...",
+        "marketcap_nao_disponivel": "Nicht verfügbar",
+        "idioma_label": "🌐  Sprache",
+        "idioma_selecao": "Sprache wählen:",
+        "aviso_aquecimento": "⚠️ Aufwärmkerzen",
+        "backtest_titulo": "📊 Backtesting — 100 Signale",
+        "backtest_compra": "Kauf",
+        "backtest_venda": "Verkauf",
+        "backtest_total": "Gesamt",
+        "backtest_acertos": "Treffer",
+        "backtest_taxa": "Trefferquote",
+        "backtest_profit_factor": "Profit-Faktor",
+        "backtest_avg_win": "Ø Gewinn",
+        "backtest_avg_loss": "Ø Verlust",
+        "backtest_historico": "Verlauf",
+        "backtest_data": "Datum/Zeit",
+        "backtest_sinal": "Signal",
+        "backtest_preco": "Einstieg",
+        "backtest_resultado": "Ergebnis",
+        "backtest_acerto": "✅ Treffer",
+        "backtest_erro": "❌ Fehler",
+        "backtest_metricas": "Metriken",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 Fear & Greed Index",
+        "medo_extremo": "Extreme Angst",
+        "medo": "Angst",
+        "neutro_fg": "Neutral",
+        "ganancia": "Gier",
+        "ganancia_extrema": "Extreme Gier",
+        "estrutura_bos": "🏗️ BOS",
+        "estrutura_choch": "🔄 CHoCH",
+        "estrutura_indefinida": "⏳ Undefiniert",
+        "divergencia_obv_bull": "📈 OBV Bullish",
+        "divergencia_obv_bear": "📉 OBV Bearish",
+        "divergencia_obv_none": "➖ Keine",
+        "alinhamento_mtf": "🔄 Multi-TF",
+        "alinhamento_mtf_sim": "✅ Ausgerichtet",
+        "alinhamento_mtf_nao": "❌ Nicht",
+        "filtro_liquidez": "💧 Echte Liquidität",
+        "liquidez_classificacao": ["⚫ Sehr Niedrig", "🔴 Niedrig", "🟠 Unter Ø", "🟡 Moderat", "🟢 Hoch", "⭐ Exzellent"],
+        "liquidez_descricao": {
+            0: "Vermeiden - keine Liquidität",
+            1: "Hohes Risiko - großer Slippage",
+            2: "Moderates Risiko - kleine Orders",
+            3: "Handelbar - mittlere Orders",
+            4: "Gute Liquidität - schnelle Ausführung",
+            5: "Exzellent - institutionelles Niveau"
+        },
+        "volume_direcional_bull": "📊 Bullish Richtungsvolumen",
+        "volume_direcional_bear": "📊 Bearish Richtungsvolumen",
+        "volume_direcional_neutro": "📊 Neutrales Richtungsvolumen",
+        "limiar_dinamico": "Dyn. Schwelle",
+        "modulo_mtf": "🔍 Multi-TF Modul",
+        "modulo_estrutura": "🏗️ SMC Struktur Modul",
+        "modulo_obv": "📊 OBV Divergenz Modul",
+        "modulo_volume": "📈 Richtungsvolumen Modul",
+        "modulo_fg": "😱 Fear & Greed Modul",
+        "modulo_liquidez": "💧 Echte Liquidität Modul",
+        "spread_atual": "Spread %",
+        "volume_24h_usdt": "24h Volumen (USDT)",
+        "profundidade_livro": "Tiefe ±2%",
+        "intervalos": {
+            "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m",
+            "30 Minuten": "30m", "1 Stunde": "1h", "4 Stunden": "4h",
+            "1 Tag": "1d", "1 Woche": "1w"
+        }
+    },
+    "Русский (Russo)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель SMC",
+        "config_globais": "⚙️  Глобальные Настройки",
+        "selecione_cripto": "Выберите Криптовалюту (/USDT):",
+        "tempo_grafico": "Таймфрейм:",
+        "modo_vivo": "Включить Мониторинг",
+        "intervalo_refresh": "Интервал (Сек):",
+        "preco_spot": "Спот Цена",
+        "variacao_24h": "Изменение 24ч",
+        "market_cap": "Капитализация (USD)",
+        "stop_atr": "Стоп ATR",
+        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА",
+        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА",
+        "neutro": "🟡  НЕЙТРАЛЬНО",
+        "spike_alta": "🚀  ВСПЛЕСК ВВЕРХ",
+        "spike_baixa": "💥  ВСПЛЕСК ВНИЗ",
+        "erro_dados": "Недостаточно данных.",
+        "ctx_desconto": "Зона Скидки Фибоначчи.",
+        "ctx_premium": "Премиум Зона Фибоначчи.",
+        "ctx_neutro": "Нейтральная зона.",
+        "ultima_atualizacao": "Обновление",
+        "proximo_refresh": "Следующее через",
+        "segundos": "сек",
+        "pontos_compra": "Очки Покупки",
+        "pontos_venda": "Очки Продажи",
+        "sinal_spike": "Всплеск",
+        "grafico_titulo": "📈  График Цены",
+        "buscando_marketcap": "🔍  Капитализация...",
+        "marketcap_nao_disponivel": "Недоступно",
+        "idioma_label": "🌐  Язык",
+        "idioma_selecao": "Выберите язык:",
+        "aviso_aquecimento": "⚠️ Разогрев свечей",
+        "backtest_titulo": "📊 Бэктестинг — 100 Сигналов",
+        "backtest_compra": "Покупка",
+        "backtest_venda": "Продажа",
+        "backtest_total": "Всего",
+        "backtest_acertos": "Успешно",
+        "backtest_taxa": "% Успеха",
+        "backtest_profit_factor": "Фактор Прибыли",
+        "backtest_avg_win": "Ср. Прибыль",
+        "backtest_avg_loss": "Ср. Убыток",
+        "backtest_historico": "История",
+        "backtest_data": "Дата/Время",
+        "backtest_sinal": "Сигнал",
+        "backtest_preco": "Цена Входа",
+        "backtest_resultado": "Результат",
+        "backtest_acerto": "✅ Успех",
+        "backtest_erro": "❌ Неудача",
+        "backtest_metricas": "Метрики",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 Страх и Жадность",
+        "medo_extremo": "Экстрим Страх",
+        "medo": "Страх",
+        "neutro_fg": "Нейтрально",
+        "ganancia": "Жадность",
+        "ganancia_extrema": "Экстрим Жадность",
+        "estrutura_bos": "🏗️ BOS",
+        "estrutura_choch": "🔄 CHoCH",
+        "estrutura_indefinida": "⏳ Неопределено",
+        "divergencia_obv_bull": "📈 OBV Бычий",
+        "divergencia_obv_bear": "📉 OBV Медвежий",
+        "divergencia_obv_none": "➖ Нет",
+        "alinhamento_mtf": "🔄 Мульти-TF",
+        "alinhamento_mtf_sim": "✅ Совпадает",
+        "alinhamento_mtf_nao": "❌ Нет",
+        "filtro_liquidez": "💧 Реальная Ликвидность",
+        "liquidez_classificacao": ["⚫ Очень Низкая", "🔴 Низкая", "🟠 Ниже Сред", "🟡 Умеренная", "🟢 Высокая", "⭐ Отличная"],
+        "liquidez_descricao": {
+            0: "Избегать - нет ликвидности",
+            1: "Высокий риск - большой slippage",
+            2: "Умеренный риск - малые ордера",
+            3: "Торгуемый - средние ордера",
+            4: "Хорошая ликвидность - быстрое исполнение",
+            5: "Отличная - институциональный уровень"
+        },
+        "volume_direcional_bull": "📊 Бычий Объем",
+        "volume_direcional_bear": "📊 Медвежий Объем",
+        "volume_direcional_neutro": "📊 Нейтральный",
+        "limiar_dinamico": "Дин. Порог",
+        "modulo_mtf": "🔍 Мульти-TF",
+        "modulo_estrutura": "🏗️ Структура SMC",
+        "modulo_obv": "📊 Дивергенция OBV",
+        "modulo_volume": "📈 Напр. Объем",
+        "modulo_fg": "😱 Страх и Жадность",
+        "modulo_liquidez": "💧 Реальная Ликвидность",
+        "spread_atual": "Спред %",
+        "volume_24h_usdt": "Объем 24ч (USDT)",
+        "profundidade_livro": "Глубина ±2%",
+        "intervalos": {
+            "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m",
+            "30 Минут": "30m", "1 Час": "1h", "4 Часа": "4h",
+            "1 День": "1d", "1 Неделя": "1w"
+        }
+    },
+    "한국어 (Coreano)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC 엔진",
+        "config_globais": "⚙️  글로벌 설정",
+        "selecione_cripto": "암호화폐 선택 (/USDT):",
+        "tempo_grafico": "시간대:",
+        "modo_vivo": "실시간 모니터링 활성화",
+        "intervalo_refresh": "새로고침 간격 (초):",
+        "preco_spot": "실시간 현물 가격",
+        "variacao_24h": "24시간 변동 (거래소)",
+        "market_cap": "시가총액 (USD)",
+        "stop_atr": "ATR 손절가",
+        "compra_forte": "🟢  강력 매수 (SMC + 피보나치 정렬)",
+        "venda_forte": "🔴  강력 매도 (SMC + 피보나치 정렬)",
+        "neutro": "🟡  중립 (SMC 대기)",
+        "spike_alta": "🚀  상승 스파이크 감지",
+        "spike_baixa": "💥  하락 스파이크 감지",
+        "erro_dados": "이 거래소의 과거 데이터가 부족합니다.",
+        "ctx_desconto": "자산이 피보나치 할인 영역.",
+        "ctx_premium": "자산이 피보나치 프리미엄 영역.",
+        "ctx_neutro": "가격이 피보나치 중립 영역.",
+        "ultima_atualizacao": "마지막 업데이트",
+        "proximo_refresh": "다음 새로고침까지",
+        "segundos": "초",
+        "pontos_compra": "매수 점수",
+        "pontos_venda": "매도 점수",
+        "sinal_spike": "변동성 스파이크",
+        "grafico_titulo": "📈  대화형 가격 차트",
+        "buscando_marketcap": "🔍  시가총액 가져오는 중...",
+        "marketcap_nao_disponivel": "사용 불가",
+        "idioma_label": "🌐  언어 / Language",
+        "idioma_selecao": "인터페이스 언어 선택:",
+        "aviso_aquecimento": "⚠️ 계산에 사용된 워밍업 캔들",
+        "backtest_titulo": "📊 백테스팅 — 최근 100개 시그널",
+        "backtest_compra": "매수",
+        "backtest_venda": "매도",
+        "backtest_total": "총 시그널",
+        "backtest_acertos": "성공",
+        "backtest_taxa": "성공률",
+        "backtest_profit_factor": "수익 팩터",
+        "backtest_avg_win": "평균 수익",
+        "backtest_avg_loss": "평균 손실",
+        "backtest_historico": "최근 시그널 기록",
+        "backtest_data": "날짜/시간",
+        "backtest_sinal": "시그널",
+        "backtest_preco": "진입 가격",
+        "backtest_resultado": "결과",
+        "backtest_acerto": "✅ 성공",
+        "backtest_erro": "❌ 실패",
+        "backtest_metricas": "성과 지표",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 공포·탐욕 지수",
+        "medo_extremo": "극도의 공포",
+        "medo": "공포",
+        "neutro_fg": "중립",
+        "ganancia": "탐욕",
+        "ganancia_extrema": "극도의 탐욕",
+        "estrutura_bos": "🏗️ BOS (구조 돌파)",
+        "estrutura_choch": "🔄 CHoCH (특성 변화)",
+        "estrutura_indefinida": "⏳ 정의되지 않은 구조",
+        "divergencia_obv_bull": "📈 OBV 강세 다이버전스",
+        "divergencia_obv_bear": "📉 OBV 약세 다이버전스",
+        "divergencia_obv_none": "➖ OBV 다이버전스 없음",
+        "alinhamento_mtf": "🔄 멀티TF 정렬",
+        "alinhamento_mtf_sim": "✅ 정렬됨",
+        "alinhamento_mtf_nao": "❌ 정렬 안됨",
+        "filtro_liquidez": "💧 실제 유동성",
+        "liquidez_classificacao": ["⚫ 매우 낮음", "🔴 낮음", "🟠 평균 이하", "🟡 보통", "🟢 높음", "⭐ 우수"],
+        "liquidez_descricao": {
+            0: "거래 회피 - 유동성 없음",
+            1: "고위험 - 큰 슬리피지",
+            2: "중간 위험 - 소액 주문",
+            3: "거래 가능 - 중간 주문",
+            4: "좋은 유동성 - 빠른 체결",
+            5: "우수 - 기관 수준"
+        },
+        "volume_direcional_bull": "📊 강세 방향성 거래량",
+        "volume_direcional_bear": "📊 약세 방향성 거래량",
+        "volume_direcional_neutro": "📊 중립 방향성 거래량",
+        "limiar_dinamico": "동적 임계값",
+        "modulo_mtf": "🔍 멀티TF 모듈",
+        "modulo_estrutura": "🏗️ SMC 구조 모듈",
+        "modulo_obv": "📊 OBV 다이버전스 모듈",
+        "modulo_volume": "📈 방향성 거래량 모듈",
+        "modulo_fg": "😱 공포·탐욕 모듈",
+        "modulo_liquidez": "💧 실제 유동성 모듈",
+        "spread_atual": "스프레드 %",
+        "volume_24h_usdt": "24시간 거래량 (USDT)",
+        "profundidade_livro": "깊이 ±2%",
+        "intervalos": {
+            "1 분": "1m", "5 분": "5m", "15 분": "15m",
+            "30 분": "30m", "1 시간": "1h", "4 시간": "4h",
+            "1 일": "1d", "1 주": "1w"
+        }
+    },
+    "العربية (Árabe)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - محرك SMC",
+        "config_globais": "⚙️  الإعدادات العامة",
+        "selecione_cripto": "اختر أي عملة مشفرة (/USDT):",
+        "tempo_grafico": "الإطار الزمني:",
+        "modo_vivo": "تفعيل المراقبة المباشرة",
+        "intervalo_refresh": "فاصل التحديث (ثواني):",
+        "preco_spot": "السعر الفوري الحقيقي",
+        "variacao_24h": "التغير خلال 24 ساعة",
+        "market_cap": "القيمة السوقية (USD)",
+        "stop_atr": "سعر وقف ATR",
+        "compra_forte": "🟢  شراء قوي",
+        "venda_forte": "🔴  بيع قوي",
+        "neutro": "🟡  محايد",
+        "spike_alta": "🚀  ارتفاع حاد مكتشف",
+        "spike_baixa": "💥  انخفاض حاد مكتشف",
+        "erro_dados": "بيانات تاريخية غير كافية.",
+        "ctx_desconto": "الأصل في منطقة خصم فيبوناتشي.",
+        "ctx_premium": "الأصل في منطقة فيبوناتشي الممتازة.",
+        "ctx_neutro": "السعر في منطقة فيبوناتشي المحايدة.",
+        "ultima_atualizacao": "آخر تحديث",
+        "proximo_refresh": "التحديث التالي خلال",
+        "segundos": "ثانية",
+        "pontos_compra": "نقاط الشراء",
+        "pontos_venda": "نقاط البيع",
+        "sinal_spike": "ارتفاع التقلب",
+        "grafico_titulo": "📈  رسم بياني تفاعلي",
+        "buscando_marketcap": "🔍  جاري جلب القيمة السوقية...",
+        "marketcap_nao_disponivel": "غير متوفر",
+        "idioma_label": "🌐  اللغة / Language",
+        "idioma_selecao": "اختر لغة الواجهة:",
+        "aviso_aquecimento": "⚠️ شموع التسخين",
+        "backtest_titulo": "📊 الاختبار الخلفي — 100 إشارة",
+        "backtest_compra": "شراء",
+        "backtest_venda": "بيع",
+        "backtest_total": "المجموع",
+        "backtest_acertos": "ناجحة",
+        "backtest_taxa": "نسبة النجاح",
+        "backtest_profit_factor": "عامل الربح",
+        "backtest_avg_win": "متوسط الربح",
+        "backtest_avg_loss": "متوسط الخسارة",
+        "backtest_historico": "سجل الإشارات",
+        "backtest_data": "التاريخ/الوقت",
+        "backtest_sinal": "الإشارة",
+        "backtest_preco": "سعر الدخول",
+        "backtest_resultado": "النتيجة",
+        "backtest_acerto": "✅ ناجح",
+        "backtest_erro": "❌ فاشل",
+        "backtest_metricas": "مقاييس الأداء",
+        "poc_label": "POC",
+        "vah_label": "VAH",
+        "val_label": "VAL",
+        "fear_greed_label": "😱 مؤشر الخوف والطمع",
+        "medo_extremo": "خوف شديد",
+        "medo": "خوف",
+        "neutro_fg": "محايد",
+        "ganancia": "طمع",
+        "ganancia_extrema": "طمع شديد",
+        "estrutura_bos": "🏗️ BOS (كسر الهيكل)",
+        "estrutura_choch": "🔄 CHoCH (تغير الطابع)",
+        "estrutura_indefinida": "⏳ هيكل غير محدد",
+        "divergencia_obv_bull": "📈 تباعد OBV صاعد",
+        "divergencia_obv_bear": "📉 تباعد OBV هابط",
+        "divergencia_obv_none": "➖ لا يوجد تباعد OBV",
+        "alinhamento_mtf": "🔄 محاذاة متعددة الأطر",
+        "alinhamento_mtf_sim": "✅ محاذاة",
+        "alinhamento_mtf_nao": "❌ غير محاذاة",
+        "filtro_liquidez": "💧 السيولة الحقيقية",
+        "liquidez_classificacao": ["⚫ منخفضة جداً", "🔴 منخفضة", "🟠 أقل من متوسط", "🟡 متوسطة", "🟢 مرتفعة", "⭐ ممتازة"],
+        "liquidez_descricao": {
+            0: "تجنب - لا توجد سيولة",
+            1: "مخاطر عالية - انزلاق كبير",
+            2: "مخاطر متوسطة - أوامر صغيرة",
+            3: "قابل للتداول - أوامر متوسطة",
+            4: "سيولة جيدة - تنفيذ سريع",
+            5: "ممتازة - مستوى مؤسسي"
+        },
+        "volume_direcional_bull": "📊 حجم اتجاهي صاعد",
+        "volume_direcional_bear": "📊 حجم اتجاهي هابط",
+        "volume_direcional_neutro": "📊 حجم اتجاهي محايد",
+        "limiar_dinamico": "عتبة ديناميكية",
+        "modulo_mtf": "🔍 وحدة متعددة الأطر",
+        "modulo_estrutura": "🏗️ وحدة هيكل SMC",
+        "modulo_obv": "📊 وحدة تباعد OBV",
+        "modulo_volume": "📈 وحدة الحجم الاتجاهي",
+        "modulo_fg": "😱 وحدة الخوف والطمع",
+        "modulo_liquidez": "💧 وحدة السيولة الحقيقية",
+        "spread_atual": "السبريد %",
+        "volume_24h_usdt": "حجم 24 ساعة (USDT)",
+        "profundidade_livro": "العمق ±2%",
+        "intervalos": {
+            "1 دقيقة": "1m", "5 دقائق": "5m", "15 دقيقة": "15m",
+            "30 دقيقة": "30m", "1 ساعة": "1h", "4 ساعات": "4h",
+            "1 يوم": "1d", "1 أسبوع": "1w"
+        }
     }
 }
 
-# Para os outros 15 idiomas, usamos fallback para Português e Inglês
-# (O dicionário completo com 17 idiomas está disponível sob demanda)
-for lang in list(DICIONARIO_LINGUAS.keys()):
-    if lang not in ["Português (BR)", "English (EN)"]:
-        DICIONARIO_LINGUAS[lang] = DICIONARIO_LINGUAS["English (EN)"]
+# ============================================
+# FIM DO DICIONÁRIO DE IDIOMAS (17 LÍNGUAS)
+# NUNCA REMOVER - É PARTE PERMANENTE DO CÓDIGO
+# ============================================
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FORMATAÇÃO
@@ -404,9 +1264,7 @@ def obter_market_cap_coingecko(simbolo):
             "vs_currency": "usd",
             "symbols": simbolo.lower(),
             "order": "market_cap_desc",
-            "per_page": 1,
-            "page": 1,
-            "sparkline": "false"
+            "per_page": 1, "page": 1, "sparkline": "false"
         }
         headers = {"Accept": "application/json"}
         response = requests.get(url, params=params, headers=headers, timeout=10)
@@ -622,47 +1480,27 @@ def calcular_volume_profile(df, num_bins=50, value_area_pct=0.70):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MÓDULO 5 (NOVO): ANÁLISE DE LIQUIDEZ REAL (Escala 0-5)
-# Baseada em dados REAIS da Gate.io: ticker, order book, volume 24h
-
-@st.cache_data(ttl=30)  # Cache de 30 segundos para dados de liquidez
+# MÓDULO: ANÁLISE DE LIQUIDEZ REAL (Escala 0-5)
+@st.cache_data(ttl=30)
 def analisar_liquidez_real(simbolo_id):
-    """
-    Analisa a liquidez REAL do ativo usando dados da Gate.io:
-    1. Spread (diferença bid/ask)
-    2. Volume 24h em USDT
-    3. Profundidade do livro de ordens (±2%)
-    
-    Retorna:
-    - score (0-5): Nota de liquidez
-    - spread_pct: Spread percentual
-    - volume_24h_usdt: Volume 24h em USDT
-    - profundidade_usdt: Profundidade média ±2% em USDT
-    - detalhes: dict com informações detalhadas
-    """
     try:
-        # 1. Obter ticker para spread e volume 24h
         ticker = gateio_client.fetch_ticker(simbolo_id)
         
         bid = ticker.get('bid', 0)
         ask = ticker.get('ask', 0)
         last = ticker.get('last', 0)
-        volume_24h_base = ticker.get('baseVolume', 0)  # Volume em moeda base
-        volume_24h_usdt = ticker.get('quoteVolume', 0)  # Volume em USDT
+        volume_24h_usdt = ticker.get('quoteVolume', 0)
         
-        # Calcular spread percentual
         if bid > 0 and ask > 0:
             spread_pct = ((ask - bid) / bid) * 100
         else:
-            spread_pct = 10.0  # Spread alto se não disponível
+            spread_pct = 10.0
         
-        # 2. Obter profundidade do livro de ordens
         try:
             order_book = gateio_client.fetch_order_book(simbolo_id, limit=50)
             bids = order_book.get('bids', [])
             asks = order_book.get('asks', [])
             
-            # Calcular profundidade ±2% do preço atual
             preco_ref = last if last > 0 else ((bid + ask) / 2 if bid > 0 and ask > 0 else 1)
             limite_superior = preco_ref * 1.02
             limite_inferior = preco_ref * 0.98
@@ -673,62 +1511,31 @@ def analisar_liquidez_real(simbolo_id):
         except Exception:
             profundidade_total = 0
         
-        # 3. Calcular score de liquidez (0-5)
         score = 0
         
-        # Sub-score: Spread (0-2 pontos)
-        if spread_pct < 0.01:      # Spread < 0.01% (excelente)
-            score += 2.0
-        elif spread_pct < 0.05:    # Spread < 0.05% (bom)
-            score += 1.5
-        elif spread_pct < 0.1:     # Spread < 0.1% (moderado)
-            score += 1.0
-        elif spread_pct < 0.5:     # Spread < 0.5% (aceitável)
-            score += 0.5
-        elif spread_pct < 2.0:     # Spread < 2% (ruim)
-            score += 0.25
-        # spread >= 2% não ganha pontos
+        if spread_pct < 0.01: score += 2.0
+        elif spread_pct < 0.05: score += 1.5
+        elif spread_pct < 0.1: score += 1.0
+        elif spread_pct < 0.5: score += 0.5
+        elif spread_pct < 2.0: score += 0.25
         
-        # Sub-score: Volume 24h em USDT (0-2 pontos)
-        if volume_24h_usdt > 100_000_000:     # > $100M
-            score += 2.0
-        elif volume_24h_usdt > 10_000_000:    # > $10M
-            score += 1.5
-        elif volume_24h_usdt > 1_000_000:     # > $1M
-            score += 1.0
-        elif volume_24h_usdt > 100_000:       # > $100K
-            score += 0.5
-        elif volume_24h_usdt > 10_000:        # > $10K
-            score += 0.25
-        # volume < $10K não ganha pontos
+        if volume_24h_usdt > 100_000_000: score += 2.0
+        elif volume_24h_usdt > 10_000_000: score += 1.5
+        elif volume_24h_usdt > 1_000_000: score += 1.0
+        elif volume_24h_usdt > 100_000: score += 0.5
+        elif volume_24h_usdt > 10_000: score += 0.25
         
-        # Sub-score: Profundidade do livro (0-1 ponto)
-        if profundidade_total > 10_000_000:   # > $10M profundidade
-            score += 1.0
-        elif profundidade_total > 1_000_000:  # > $1M
-            score += 0.75
-        elif profundidade_total > 100_000:    # > $100K
-            score += 0.5
-        elif profundidade_total > 10_000:     # > $10K
-            score += 0.25
+        if profundidade_total > 10_000_000: score += 1.0
+        elif profundidade_total > 1_000_000: score += 0.75
+        elif profundidade_total > 100_000: score += 0.5
+        elif profundidade_total > 10_000: score += 0.25
         
-        # Arredondar para inteiro 0-5
         score_final = min(5, max(0, int(round(score))))
         
-        detalhes = {
-            'spread_pct': spread_pct,
-            'volume_24h_usdt': volume_24h_usdt,
-            'profundidade_total': profundidade_total,
-            'bid': bid,
-            'ask': ask,
-            'score_bruto': score
-        }
-        
-        return score_final, spread_pct, volume_24h_usdt, profundidade_total, detalhes
+        return score_final, spread_pct, volume_24h_usdt, profundidade_total
         
     except Exception as e:
-        # Se falhar, retornar liquidez desconhecida (score 2 = média baixa)
-        return 2, 0.5, 0, 0, {'erro': str(e)}
+        return 2, 0.5, 0, 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1101,17 +1908,11 @@ def analisar_confluencia(df_completo, simbolo_id, timeframe, fg_valor, liquidez_
     pontos_alta += peso_fg_compra
     pontos_baixa += peso_fg_venda
 
-    # Ajuste por liquidez REAL (Escala 0-5)
-    # Liquidez baixa REDUZ a confiança nos sinais
-    fator_liquidez = liquidez_score / 5.0  # Normaliza para 0.0 a 1.0
-    # Se liquidez < 2 (muito baixa), reduz significativamente os pontos
-    if liquidez_score <= 1:
-        fator_liquidez = 0.3  # Reduz 70% da força do sinal
-    elif liquidez_score == 2:
-        fator_liquidez = 0.6  # Reduz 40%
-    elif liquidez_score == 3:
-        fator_liquidez = 0.8  # Reduz 20%
-    # liquidez 4-5 mantém os pontos integrais
+    # Ajuste por liquidez REAL
+    fator_liquidez = liquidez_score / 5.0
+    if liquidez_score <= 1: fator_liquidez = 0.3
+    elif liquidez_score == 2: fator_liquidez = 0.6
+    elif liquidez_score == 3: fator_liquidez = 0.8
     
     pontos_alta *= fator_liquidez
     pontos_baixa *= fator_liquidez
@@ -1377,8 +2178,8 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     market_cap = obter_market_cap_robusto(simbolo_id)
     fg_valor, fg_classificacao = obter_fear_greed_index()
 
-    # ANÁLISE DE LIQUIDEZ REAL (NOVO!)
-    liquidez_score, spread_pct, volume_24h_usdt, profundidade_total, detalhes_liq = analisar_liquidez_real(simbolo_id)
+    # ANÁLISE DE LIQUIDEZ REAL
+    liquidez_score, spread_pct, volume_24h_usdt, profundidade_total = analisar_liquidez_real(simbolo_id)
 
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, spike, poc, vah, val, modulos_info = analisar_confluencia(
         df_dados, simbolo_id, timeframe, fg_valor, liquidez_score, txt
@@ -1448,7 +2249,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
             st.metric("OBV Aceleração", "—")
 
     with col4:
-        # LIQUIDEZ REAL - Escala 0-5 com estrelas
+        # LIQUIDEZ REAL - Escala 0-5
         estrelas = "⭐" * liquidez_score + "☆" * (5 - liquidez_score)
         classificacao = txt.get('liquidez_classificacao', ["⚫", "🔴", "🟠", "🟡", "🟢", "⭐"])[liquidez_score]
         st.metric(
@@ -1468,10 +2269,9 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         with dl3:
             st.metric(txt["profundidade_livro"], formatar_volume(profundidade_total))
         
-        # Barra de progresso da liquidez
         st.progress(liquidez_score / 5.0, text=f"Nota de Liquidez: {liquidez_score}/5 — {txt.get('liquidez_descricao', {}).get(liquidez_score, '')}")
 
-    # Módulos Avançados Status
+    # Módulos Avançados
     st.markdown("---")
     st.markdown(f"### 🔬 Módulos de Confluência Avançada")
 
