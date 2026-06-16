@@ -9,6 +9,7 @@ from decimal import Decimal
 import re
 import plotly.graph_objects as go
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -19,16 +20,6 @@ st.set_page_config(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTES DE AQUECIMENTO
-# Os indicadores técnicos precisam de um número mínimo de velas para "aquecer"
-# antes de produzirem valores matematicamente corretos:
-#   RSI(14)       → 14 períodos
-#   MACD(12,26,9) → 26 + 9 = 35 períodos
-#   SSL(20)       → 20 períodos
-#   ATR(14)       → 14 períodos
-#   PPO(12,26,9)  → 26 + 9 = 35 períodos
-#   MFI(14)       → 14 períodos
-# Usamos 100 como margem segura. Carregamos 500 velas e descartamos as
-# primeiras 100 apenas para o cálculo do SINAL (não para o gráfico).
 VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
@@ -39,11 +30,13 @@ DICIONARIO_LINGUAS = {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Configurações Globais",
         "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
+        "selecione_exchange": "Selecione a Exchange de Dados:",
         "tempo_grafico": "Tempo Gráfico:",
         "modo_vivo": "Ativar Monitoramento em Tempo Real",
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
         "preco_spot": "Preço Spot Real",
-        "variacao_24h": "Variação 24h (Exchange)",
+        "variacao_24h": "Variação 24h",
+        "volume_24h": "Volume 24h",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "Preço Stop ATR",
         "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
@@ -64,6 +57,7 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Selecione o idioma da interface:",
         "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
+        "fonte_dados": "Fonte dos Dados",
         "intervalos": {
             "1 Minuto": "1m",
             "5 Minutos": "5m",
@@ -79,11 +73,13 @@ DICIONARIO_LINGUAS = {
         "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
         "config_globais": "⚙️  Global Settings",
         "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
+        "selecione_exchange": "Select Data Exchange:",
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Enable Real-Time Monitoring",
         "intervalo_refresh": "Refresh Interval (Seconds):",
         "preco_spot": "Real Spot Price",
-        "variacao_24h": "24h Variation (Exchange)",
+        "variacao_24h": "24h Variation",
+        "volume_24h": "24h Volume",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "ATR Stop Price",
         "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
@@ -104,6 +100,7 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
         "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
+        "fonte_dados": "Data Source",
         "intervalos": {
             "1 Minute": "1m",
             "5 Minutes": "5m",
@@ -159,94 +156,305 @@ def formatar_market_cap(valor):
     elif valor >= 1_000_000:
         return f"$ {valor / 1_000_000:.2f}M"
     else:
-        # Qualquer valor abaixo de $1M não é market cap real de cripto listada
         return "$ —"
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EXCHANGE
-@st.cache_resource
-def inicializar_exchange():
-    return ccxt.gate({'enableRateLimit': True, 'options': {'defaultType': 'spot'}})
-
-
-gateio_client = inicializar_exchange()
-
-
-@st.cache_data(ttl=3600)
-def obter_todos_pares_usdt():
-    try:
-        mercados = gateio_client.load_markets()
-        return sorted([s for s in mercados.keys() if s.endswith('/USDT')])
-    except Exception:
-        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
-
-
-@st.cache_data(ttl=3600)
-def obter_nome_extenso_cripto(simbolo_id):
-    try:
-        base_currency = simbolo_id.split('/')[0]
-        url = "https://api.gateio.ws/api/v4/spot/currencies"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            dados = response.json()
-            for moeda in dados:
-                if moeda.get('currency', '').upper() == base_currency.upper():
-                    return moeda.get('name', base_currency).upper()
-        return base_currency
-    except Exception:
-        return simbolo_id.split('/')[0]
+def formatar_volume(valor):
+    if valor is None or (isinstance(valor, float) and math.isnan(valor)):
+        return "—"
+    if valor >= 1_000_000_000:
+        return f"{valor / 1_000_000_000:.2f}B"
+    elif valor >= 1_000_000:
+        return f"{valor / 1_000_000:.2f}M"
+    elif valor >= 1_000:
+        return f"{valor / 1_000:.2f}K"
+    else:
+        return f"{valor:.2f}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP — CoinGecko via endpoint /coins/markets
-# Este endpoint retorna dados de mercado diretamente, sem precisar:
-#   1. Baixar a lista completa de 10.000+ moedas (/coins/list)
-#   2. Fazer uma segunda chamada para buscar detalhes (/coins/{id})
-# Uma única chamada retorna price, market_cap, volume para até 250 moedas.
-# Rate limit do plano gratuito: 10-30 chamadas/minuto. Com cache de 10min,
-# isso representa ~6 chamadas/hora por símbolo — bem dentro do limite.
+# GERENCIADOR DE EXCHANGES
+class ExchangeManager:
+    """Gerencia múltiplas exchanges com fallback e cache."""
+    
+    EXCHANGES = {
+        "Gate.io": {
+            "class": ccxt.gate,
+            "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}},
+            "base_url": "https://api.gateio.ws/api/v4",
+            "pair_separator": "/",
+            "ticker_endpoint": "spot/tickers",
+            "has_volume_usd": False
+        },
+        "Kraken": {
+            "class": ccxt.kraken,
+            "config": {"enableRateLimit": True},
+            "base_url": "https://api.kraken.com/0/public",
+            "pair_separator": "/",
+            "ticker_endpoint": "Ticker",
+            "has_volume_usd": False
+        },
+        "MEXC": {
+            "class": ccxt.mexc,
+            "config": {"enableRateLimit": True},
+            "base_url": "https://api.mexc.com/api/v3",
+            "pair_separator": "",
+            "ticker_endpoint": "ticker/24hr",
+            "has_volume_usd": True,  # quoteVolume disponível
+        },
+        "KuCoin": {
+            "class": ccxt.kucoin,
+            "config": {"enableRateLimit": True},
+            "base_url": "https://api.kucoin.com/api/v1",
+            "pair_separator": "-",
+            "ticker_endpoint": "market/stats",
+            "has_volume_usd": True,  # volValue disponível
+        },
+        "Robinhood": {
+            "class": ccxt.robinhood,
+            "config": {"enableRateLimit": True},
+            "base_url": "https://api.robinhood.com/crypto",
+            "pair_separator": "/",
+            "ticker_endpoint": "market/best-price",
+            "has_volume_usd": False
+        }
+    }
+    
+    def __init__(self):
+        self.clients = {}
+        self._init_clients()
+    
+    def _init_clients(self):
+        for name, config in self.EXCHANGES.items():
+            try:
+                self.clients[name] = config["class"](config["config"])
+            except Exception as e:
+                st.warning(f"Erro ao inicializar {name}: {e}")
+    
+    def get_client(self, exchange_name):
+        return self.clients.get(exchange_name)
+    
+    def get_exchange_names(self):
+        return list(self.EXCHANGES.keys())
+    
+    def get_pair_separator(self, exchange_name):
+        return self.EXCHANGES.get(exchange_name, {}).get("pair_separator", "/")
+    
+    def has_volume_usd(self, exchange_name):
+        return self.EXCHANGES.get(exchange_name, {}).get("has_volume_usd", False)
 
-# Mapa de IDs canônicos para os símbolos mais negociados.
-# Necessário porque o CoinGecko usa IDs únicos (ex: "solana"), não símbolos
-# (ex: "sol"), e vários tokens diferentes partilham o mesmo símbolo.
-COINGECKO_ID_MAP = {
-    "BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana",
-    "BNB": "binancecoin", "XRP": "ripple", "ADA": "cardano",
-    "DOGE": "dogecoin", "TRX": "tron", "DOT": "polkadot",
-    "MATIC": "matic-network", "POL": "matic-network", "LTC": "litecoin",
-    "AVAX": "avalanche-2", "LINK": "chainlink", "UNI": "uniswap",
-    "ATOM": "cosmos", "XLM": "stellar", "ETC": "ethereum-classic",
-    "FIL": "filecoin", "NEAR": "near", "APT": "aptos",
-    "ARB": "arbitrum", "OP": "optimism", "SUI": "sui",
-    "INJ": "injective-protocol", "SEI": "sei-network",
-    "TON": "the-open-network", "PEPE": "pepe", "SHIB": "shiba-inu",
-    "WIF": "dogwifcoin", "BONK": "bonk", "FET": "fetch-ai",
-    "RENDER": "render-token", "TAO": "bittensor",
-    "JUP": "jupiter-exchange-solana", "W": "wormhole",
-    "PYTH": "pyth-network", "STRK": "starknet",
-    "MANTA": "manta-network", "LIT": "litentry",
-    "HBAR": "hedera-hashgraph", "VET": "vechain",
-    "ALGO": "algorand", "SAND": "the-sandbox",
-    "MANA": "decentraland", "AXS": "axie-infinity",
-    "CRV": "curve-dao-token", "AAVE": "aave",
-    "MKR": "maker", "SNX": "synthetix-network-token",
-    "GRT": "the-graph", "LDO": "lido-dao",
-    "IMX": "immutable-x", "RUNE": "thorchain",
-    "FLOKI": "floki", "CFX": "conflux-token",
-    "KAVA": "kava", "ZIL": "zilliqa",
-    "BLUR": "blur", "MAGIC": "magic",
-}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FUNÇÕES DE MERCADO POR EXCHANGE
+
+@st.cache_data(ttl=3600)
+def obter_pares_exchange(exchange_name):
+    """Obtém todos os pares USDT de uma exchange específica."""
+    manager = ExchangeManager()
+    client = manager.get_client(exchange_name)
+    if not client:
+        return []
+    try:
+        markets = client.load_markets()
+        separator = manager.get_pair_separator(exchange_name)
+        # Filtra pares que terminam com USDT
+        pairs = [s for s in markets.keys() if s.endswith('/USDT')]
+        if not pairs:
+            # Tenta com separador diferente (ex: MEXC usa BTCUSDT sem "/")
+            pairs = [s for s in markets.keys() if s.endswith('USDT') and '/' not in s]
+        return sorted(pairs)
+    except Exception:
+        return []
 
 
-@st.cache_data(ttl=600)  # Cache de 10 minutos — respeita rate limit gratuito
+@st.cache_data(ttl=60)
+def obter_dados_24h(exchange_name, simbolo):
+    """
+    Obtém dados de 24h (preço, variação, volume) via API REST direta,
+    aproveitando endpoints específicos de cada exchange.
+    """
+    manager = ExchangeManager()
+    client = manager.get_client(exchange_name)
+    if not client:
+        return None
+    
+    try:
+        # Tenta via ccxt primeiro (mais genérico)
+        ticker = client.fetch_ticker(simbolo)
+        if ticker:
+            result = {
+                "last": ticker.get("last"),
+                "change": ticker.get("percentage"),
+                "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
+                "high": ticker.get("high"),
+                "low": ticker.get("low"),
+                "bid": ticker.get("bid"),
+                "ask": ticker.get("ask")
+            }
+            # Se não tem volume em USD, tenta via API específica
+            if not result["volume"] and manager.has_volume_usd(exchange_name):
+                result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
+            return result
+    except Exception:
+        pass
+    
+    # Fallback: chamada REST direta para exchanges que têm endpoints específicos
+    return obter_dados_24h_direto(exchange_name, simbolo)
+
+
+def obter_dados_24h_direto(exchange_name, simbolo):
+    """Chamadas REST diretas para endpoints específicos de cada exchange."""
+    try:
+        if exchange_name == "Gate.io":
+            # /api/v4/spot/tickers?currency_pair=BTC_USDT
+            pair = simbolo.replace("/", "_")
+            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data and len(data) > 0:
+                    d = data[0]
+                    return {
+                        "last": float(d.get("last", 0)),
+                        "change": float(d.get("change_percentage", 0)),
+                        "volume": float(d.get("quote_volume", 0)),
+                        "high": float(d.get("high_24h", 0)),
+                        "low": float(d.get("low_24h", 0)),
+                        "bid": float(d.get("highest_bid", 0)),
+                        "ask": float(d.get("lowest_ask", 0))
+                    }
+        
+        elif exchange_name == "Kraken":
+            # /0/public/Ticker?pair=XXBTZUSD
+            pair_map = {
+                "BTC/USDT": "XXBTZUSD", "ETH/USDT": "XETHZUSD", "SOL/USDT": "SOLUSD",
+                "XRP/USDT": "XXRPZUSD", "BNB/USDT": "BNBUSD", "ADA/USDT": "ADAUSD"
+            }
+            kraken_pair = pair_map.get(simbolo, simbolo.replace("/", ""))
+            url = f"https://api.kraken.com/0/public/Ticker?pair={kraken_pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("error") or not data.get("result"):
+                    return None
+                for key, d in data["result"].items():
+                    return {
+                        "last": float(d.get("c", [0])[0]),
+                        "change": float(d.get("p", [0, 0])[1]) if d.get("p") else 0,
+                        "volume": float(d.get("v", [0, 0])[1]),
+                        "high": float(d.get("h", [0, 0])[1]),
+                        "low": float(d.get("l", [0, 0])[1]),
+                        "bid": float(d.get("b", [0])[0]),
+                        "ask": float(d.get("a", [0])[0])
+                    }
+        
+        elif exchange_name == "MEXC":
+            # /api/v3/ticker/24hr?symbol=BTCUSDT
+            pair = simbolo.replace("/", "")
+            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                d = resp.json()
+                return {
+                    "last": float(d.get("lastPrice", 0)),
+                    "change": float(d.get("priceChangePercent", 0)),
+                    "volume": float(d.get("quoteVolume", 0)) or float(d.get("volume", 0)),
+                    "high": float(d.get("highPrice", 0)),
+                    "low": float(d.get("lowPrice", 0)),
+                    "bid": float(d.get("bidPrice", 0)),
+                    "ask": float(d.get("askPrice", 0))
+                }
+        
+        elif exchange_name == "KuCoin":
+            # /api/v1/market/stats?symbol=BTC-USDT
+            pair = simbolo.replace("/", "-")
+            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("code") == "200000":
+                    d = data.get("data", {})
+                    return {
+                        "last": float(d.get("last", 0)),
+                        "change": float(d.get("changeRate", 0)) * 100,
+                        "volume": float(d.get("volValue", 0)),
+                        "high": float(d.get("high", 0)),
+                        "low": float(d.get("low", 0)),
+                        "bid": float(d.get("buy", 0)),
+                        "ask": float(d.get("sell", 0))
+                    }
+        
+        elif exchange_name == "Robinhood":
+            # /crypto/market/best-price?symbol=BTCUSD
+            pair = simbolo.replace("/", "")
+            url = f"https://api.robinhood.com/crypto/market/best-price?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                d = resp.json()
+                return {
+                    "last": float(d.get("price", 0)),
+                    "change": None,  # Robinhood não fornece variação via este endpoint
+                    "volume": None,
+                    "high": None,
+                    "low": None,
+                    "bid": float(d.get("bid_price", 0)),
+                    "ask": float(d.get("ask_price", 0))
+                }
+    except Exception as e:
+        pass
+    return None
+
+
+def obter_volume_usd_direto(exchange_name, simbolo):
+    """Obtém volume em USD via endpoints específicos."""
+    try:
+        if exchange_name == "MEXC":
+            pair = simbolo.replace("/", "")
+            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                return float(resp.json().get("quoteVolume", 0))
+        elif exchange_name == "KuCoin":
+            pair = simbolo.replace("/", "-")
+            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("code") == "200000":
+                    return float(data.get("data", {}).get("volValue", 0))
+    except:
+        pass
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MARKET CAP — CoinGecko + CoinCap (fallback)
+
+@st.cache_data(ttl=3600)
+def obter_id_coingecko(simbolo):
+    try:
+        url = "https://api.coingecko.com/api/v3/search"
+        params = {"query": simbolo}
+        headers = {"Accept": "application/json"}
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        coins = data.get("coins", [])
+        simbolo_upper = simbolo.upper()
+        for coin in coins:
+            if coin.get("symbol", "").upper() == simbolo_upper:
+                return coin.get("id")
+        if coins:
+            return coins[0].get("id")
+        return None
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=600)
 def obter_market_cap_coingecko(simbolo):
-    """
-    Busca market cap via endpoint /coins/markets do CoinGecko.
-    Vantagem: uma única chamada HTTP retorna dados completos.
-    Sem necessidade de baixar lista de moedas ou fazer duas chamadas.
-    """
-    coin_id = COINGECKO_ID_MAP.get(simbolo.upper())
+    coin_id = obter_id_coingecko(simbolo)
     if not coin_id:
         return None
     try:
@@ -260,40 +468,63 @@ def obter_market_cap_coingecko(simbolo):
             "sparkline": "false"
         }
         headers = {"Accept": "application/json"}
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        if response.status_code == 200:
-            dados = response.json()
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        if resp.status_code == 200:
+            dados = resp.json()
             if dados and len(dados) > 0:
                 mc = dados[0].get("market_cap")
-                # Validação: market cap real de qualquer cripto listada > $1M
                 if mc and float(mc) > 1_000_000:
                     return float(mc)
-        elif response.status_code == 429:
-            # Rate limit atingido — retornar None sem crashar
-            return None
+        return None
+    except Exception:
+        return None
+
+
+@st.cache_data(ttl=600)
+def obter_market_cap_coincap(simbolo):
+    try:
+        asset_id = simbolo.lower()
+        url = f"https://api.coincap.io/v2/assets/{asset_id}"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            mc = data.get("data", {}).get("marketCapUsd")
+            if mc:
+                mc_float = float(mc)
+                if mc_float > 1_000_000:
+                    return mc_float
+        url_list = "https://api.coincap.io/v2/assets"
+        params = {"limit": 2000}
+        resp = requests.get(url_list, params=params, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            for item in data.get("data", []):
+                if item.get("symbol", "").upper() == simbolo.upper():
+                    mc = item.get("marketCapUsd")
+                    if mc:
+                        mc_float = float(mc)
+                        if mc_float > 1_000_000:
+                            return mc_float
         return None
     except Exception:
         return None
 
 
 def obter_market_cap_robusto(simbolo_id):
-    """
-    Tenta obter market cap do CoinGecko.
-    Se o símbolo não estiver no mapa ou a API falhar, exibe 'Não disponível'.
-    Nunca inventa valores — prefere mostrar '—' a mostrar dado errado.
-    """
     simbolo = simbolo_id.split('/')[0]
-    resultado = obter_market_cap_coingecko(simbolo)
-    if resultado and resultado > 1_000_000:
-        return resultado
+    mc = obter_market_cap_coingecko(simbolo)
+    if mc is not None:
+        return mc
+    mc = obter_market_cap_coincap(simbolo)
+    if mc is not None:
+        return mc
     return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS
+# INDICADORES TÉCNICOS (mantidos do código original)
 
 def calcular_rsi(serie, periodo=14):
-    """RSI calculado sobre série pandas. Requer período de aquecimento."""
     delta = serie.diff()
     ganho = delta.clip(lower=0)
     perda = -delta.clip(upper=0)
@@ -303,7 +534,6 @@ def calcular_rsi(serie, periodo=14):
 
 
 def calcular_macd(serie):
-    """MACD(12,26,9). Requer mínimo 35 períodos de aquecimento."""
     ema12 = serie.ewm(span=12, adjust=False).mean()
     ema26 = serie.ewm(span=26, adjust=False).mean()
     macd = ema12 - ema26
@@ -312,7 +542,6 @@ def calcular_macd(serie):
 
 
 def calcular_mfi(df, periodo=14):
-    """Money Flow Index. Requer período de aquecimento."""
     tp = (df['high'] + df['low'] + df['close']) / 3
     rmf = tp * df['volume']
     tp_shift = tp.shift(1)
@@ -324,7 +553,6 @@ def calcular_mfi(df, periodo=14):
 
 
 def calcular_ssl_hybrid(df, periodo=20):
-    """SSL Hybrid Baseline. Requer período de aquecimento."""
     sma_high = df['high'].rolling(window=periodo).mean()
     sma_low = df['low'].rolling(window=periodo).mean()
     close_arr = df['close'].values
@@ -348,7 +576,6 @@ def calcular_ssl_hybrid(df, periodo=20):
 
 
 def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
-    """ATR Trailing Stop. Requer período de aquecimento."""
     high, low, close = df['high'], df['low'], df['close']
     tr = pd.concat(
         [high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()],
@@ -394,7 +621,6 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
 
 
 def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
-    """Percentage Price Oscillator. Requer período de aquecimento."""
     ema_rapida = df[col].ewm(span=rapido, adjust=False).mean()
     ema_lenta = df[col].ewm(span=lento, adjust=False).mean()
     df = df.copy()
@@ -405,13 +631,7 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FIBONACCI
-# Calculado sobre as últimas velas APÓS o período de aquecimento,
-# representando a janela de análise real — não o histórico completo de 500 velas.
 def calcular_retracao_fibonacci(df_analise):
-    """
-    Recebe apenas o DataFrame pós-aquecimento (janela de análise).
-    Máxima e mínima representam o swing da janela analisada.
-    """
     maxima = df_analise['high'].max()
     minima = df_analise['low'].min()
     diff = maxima - minima
@@ -427,32 +647,39 @@ def calcular_retracao_fibonacci(df_analise):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS
+# CARREGAMENTO DE DADOS (multi-exchange)
+
 @st.cache_data(ttl=60)
-def carregar_dados(simbolo_id, timeframe_selecionado):
-    """
-    Carrega VELAS_TOTAL velas para garantir aquecimento adequado dos indicadores.
-    Retorna o DataFrame completo com todos os indicadores calculados.
-    O período de aquecimento (primeiras PERIODO_AQUECIMENTO velas) é usado
-    apenas internamente pelos algoritmos — o sinal final é extraído das velas
-    posteriores, já com indicadores estabilizados.
-    """
+def carregar_dados(exchange_name, simbolo_id, timeframe_selecionado):
+    """Carrega dados históricos da exchange selecionada."""
+    manager = ExchangeManager()
+    client = manager.get_client(exchange_name)
+    if not client:
+        return None
+    
     try:
-        velas = gateio_client.fetch_ohlcv(
-            simbolo_id,
+        # Ajusta o símbolo para o formato esperado pela exchange
+        # Algumas exchanges (MEXC) não usam "/"
+        if exchange_name == "MEXC":
+            simbolo = simbolo_id.replace("/", "")
+        else:
+            simbolo = simbolo_id
+        
+        velas = client.fetch_ohlcv(
+            simbolo,
             timeframe=timeframe_selecionado,
             limit=VELAS_TOTAL
         )
         if not velas or len(velas) < PERIODO_AQUECIMENTO + 50:
             return None
+        
         df = pd.DataFrame(
             velas,
             columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
         )
         df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
 
-        # Calcular todos os indicadores sobre o DataFrame completo (500 velas).
-        # As primeiras PERIODO_AQUECIMENTO velas estabilizam os cálculos EWM/rolling.
+        # Calcular indicadores
         df['RSI_14'] = calcular_rsi(df['close'], 14)
         macd, sinal, hist = calcular_macd(df['close'])
         df['MACD'] = macd
@@ -463,59 +690,30 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
         df = calcular_atr_stop(df)
         df = calcular_ppo(df)
 
-        # Preenchimento de NaN residuais (apenas nas primeiras velas do rolling)
         df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
         df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
 
         return df.dropna(subset=['close']).reset_index(drop=True)
     except Exception as e:
-        st.error(f"Erro ao carregar dados: {e}")
+        st.error(f"Erro ao carregar dados da {exchange_name}: {e}")
         return None
-
-
-def obter_variacao_24h(simbolo_id):
-    """Variação 24h diretamente do ticker da Gate.io — fonte oficial."""
-    try:
-        ticker = gateio_client.fetch_ticker(simbolo_id)
-        if ticker and ticker.get('percentage') is not None:
-            return float(ticker['percentage'])
-    except:
-        pass
-    try:
-        dados_24h = gateio_client.fetch_ohlcv(simbolo_id, timeframe='1d', limit=2)
-        if dados_24h and len(dados_24h) >= 2:
-            return ((dados_24h[-1][4] - dados_24h[-2][4]) / dados_24h[-2][4]) * 100
-    except:
-        pass
-    return 0.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ANÁLISE DE CONFLUÊNCIA SMC
 def analisar_confluencia(df_completo, txt):
-    """
-    Análise de confluência feita sobre a janela pós-aquecimento.
-    df_completo: DataFrame com 500 velas e indicadores calculados.
-    A última linha (iloc[-1]) representa o candle atual com indicadores estáveis.
-    Fibonacci calculado sobre as últimas 200 velas pós-aquecimento.
-    """
-    # Janela de análise: descarta o período de aquecimento
     df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
     if df_analise.empty:
         return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0
 
-    # Última vela com indicadores estabilizados
     u = df_analise.iloc[-1]
     preco_atual = u['close']
-
-    # Fibonacci calculado sobre a janela de análise real
     fib_niveis = calcular_retracao_fibonacci(df_analise)
 
     pontos_alta = 0.0
     pontos_baixa = 0.0
 
-    # RSI(14): sobrevendido < 40 → alta; sobrecomprado > 60 → baixa
     rsi_val = u['RSI_14']
     if not math.isnan(rsi_val):
         if rsi_val < 40:
@@ -523,7 +721,6 @@ def analisar_confluencia(df_completo, txt):
         elif rsi_val > 60:
             pontos_baixa += 2
 
-    # MACD: histograma positivo → momentum de alta
     macd_hist = u['MACD_HIST']
     if not math.isnan(macd_hist):
         if macd_hist > 0:
@@ -531,7 +728,6 @@ def analisar_confluencia(df_completo, txt):
         else:
             pontos_baixa += 2
 
-    # MFI: fluxo de dinheiro > 50 → pressão compradora
     mfi_val = u['MFI']
     if not math.isnan(mfi_val):
         if mfi_val > 50:
@@ -539,19 +735,16 @@ def analisar_confluencia(df_completo, txt):
         else:
             pontos_baixa += 1
 
-    # SSL Hybrid: direção da baseline
     if u['ssl_dir'] == 1:
         pontos_alta += 1
     else:
         pontos_baixa += 1
 
-    # ATR Trailing Stop: tendência do stop
     if u['atr_dir'] == 1:
         pontos_alta += 1
     else:
         pontos_baixa += 1
 
-    # PPO: linha acima do sinal → momentum positivo
     ppo_val = u['PPO']
     ppo_sig = u['PPO_Signal']
     if not (math.isnan(ppo_val) or math.isnan(ppo_sig)):
@@ -560,7 +753,6 @@ def analisar_confluencia(df_completo, txt):
         else:
             pontos_baixa += 1.5
 
-    # Fibonacci: posição do preço na grade de retração
     if preco_atual >= fib_niveis['fib_382']:
         pontos_baixa += 2.0
         contexto_fib = txt["ctx_premium"]
@@ -588,12 +780,7 @@ def analisar_confluencia(df_completo, txt):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GRÁFICO
-def renderizar_grafico_plotly(df_completo, simbolo_id):
-    """
-    Gráfico exibe as últimas 300 velas pós-aquecimento para melhor visualização.
-    O período de aquecimento (primeiras 100 velas) é omitido do gráfico,
-    pois seus valores de indicador ainda estão em estabilização.
-    """
+def renderizar_grafico_plotly(df_completo, simbolo_id, exchange_name):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
     fig = go.Figure()
@@ -604,7 +791,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id):
         high=df_grafico['high'],
         low=df_grafico['low'],
         close=df_grafico['close'],
-        name=simbolo_id,
+        name=f"{simbolo_id} ({exchange_name})",
         increasing_line_color='#10b981',
         decreasing_line_color='#ef4444',
         increasing_fillcolor='#10b981',
@@ -642,7 +829,6 @@ def renderizar_grafico_plotly(df_completo, simbolo_id):
         height=520
     )
 
-    # Corrigido: width='stretch' substitui use_container_width=True (depreciado)
     st.plotly_chart(fig, width='stretch')
 
 
@@ -658,7 +844,23 @@ txt = DICIONARIO_LINGUAS[idioma_selecionado]
 st.title(txt["titulo"])
 st.sidebar.header(txt["config_globais"])
 
-lista_criptos = obter_todos_pares_usdt()
+# Inicializa o gerenciador de exchanges
+exchange_manager = ExchangeManager()
+exchange_options = exchange_manager.get_exchange_names()
+
+# Seleção da exchange
+exchange_selecionada = st.sidebar.selectbox(
+    txt["selecione_exchange"],
+    exchange_options,
+    index=0
+)
+
+# Obtém pares da exchange selecionada
+lista_criptos = obter_pares_exchange(exchange_selecionada)
+if not lista_criptos:
+    st.sidebar.warning(f"Não foi possível carregar pares da {exchange_selecionada}. Usando lista padrão.")
+    lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+
 simbolo_id = st.sidebar.selectbox(
     txt["selecione_cripto"],
     lista_criptos,
@@ -681,14 +883,14 @@ intervalo_refresh = st.sidebar.slider(
 # ─────────────────────────────────────────────────────────────────────────────
 # PAINEL PRINCIPAL
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
-def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
-    df_dados = carregar_dados(simbolo_id, timeframe)
+def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
+    # Carrega dados históricos da exchange selecionada
+    df_dados = carregar_dados(exchange_name, simbolo_id, timeframe)
 
     if df_dados is None or df_dados.empty:
         st.warning(txt["erro_dados"])
         return
 
-    # Dados da última vela estabilizada (pós-aquecimento)
     df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
     if df_analise.empty:
         st.warning(txt["erro_dados"])
@@ -697,10 +899,12 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
 
-    # Variação 24h: fonte oficial Gate.io ticker
-    variacao_24h = obter_variacao_24h(simbolo_id)
-
-    # Market Cap: CoinGecko /coins/markets (uma chamada, cache 10min)
+    # Obtém dados de 24h da exchange
+    dados_24h = obter_dados_24h(exchange_name, simbolo_id)
+    variacao_24h = dados_24h.get("change") if dados_24h else 0.0
+    volume_24h = dados_24h.get("volume") if dados_24h else None
+    
+    # Market Cap
     market_cap = obter_market_cap_robusto(simbolo_id)
 
     # Análise SMC
@@ -708,7 +912,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         df_dados, txt
     )
 
-    # Banner de sinal
     ppo_line = ultimo_reg['PPO']
     ppo_sig = ultimo_reg['PPO_Signal']
     ppo_txt = (
@@ -716,6 +919,10 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         if not (math.isnan(ppo_line) or math.isnan(ppo_sig))
         else "PPO: —"
     )
+    
+    # Exibe a exchange de origem dos dados
+    st.markdown(f"**{txt['fonte_dados']}:** {exchange_name}")
+
     st.markdown(f"""
     <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
                 border:2px solid {cor_sinal};margin-bottom:20px;">
@@ -724,21 +931,22 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     </div>
     """, unsafe_allow_html=True)
 
-    # Métricas
-    nome_completo_ativo = obter_nome_extenso_cripto(simbolo_id)
+    # Métricas - agora com 6 colunas para incluir Volume 24h
+    nome_completo_ativo = simbolo_id.split('/')[0]
     label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
 
-    m1, m2, m3, m4, m5 = st.columns(5)
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric(label_preco, formatar_preco(preco_atual))
-    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%")
+    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
+    m3.metric(txt["volume_24h"], formatar_volume(volume_24h) if volume_24h else "—")
 
     if market_cap is not None:
-        m3.metric(txt["market_cap"], formatar_market_cap(market_cap))
+        m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
     else:
-        m3.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
+        m4.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
 
-    m4.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
-    m5.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
+    m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
+    m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
     # Stop ATR
     atr_stop_val = ultimo_reg['ATR_Stop']
@@ -750,7 +958,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
 
     # Gráfico
     st.markdown(f"### {txt['grafico_titulo']}")
-    renderizar_grafico_plotly(df_dados, simbolo_id)
+    renderizar_grafico_plotly(df_dados, simbolo_id, exchange_name)
 
     # Status
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
@@ -760,14 +968,14 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
             f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
             f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas}"
+            f"Velas analisadas: {n_velas} | Fonte: {exchange_name}"
         )
     else:
         st.info(
             f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas}"
+            f"Velas analisadas: {n_velas} | Fonte: {exchange_name}"
         )
 
 
-painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
+painel_principal(exchange_selecionada, simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
