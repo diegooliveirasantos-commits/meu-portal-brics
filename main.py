@@ -24,7 +24,7 @@ VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS
+# DICIONÁRIO DE IDIOMAS (mantido exatamente como você tinha)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -115,7 +115,7 @@ DICIONARIO_LINGUAS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO
+# FORMATAÇÃO (mantida igual)
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -173,7 +173,7 @@ def formatar_volume(valor):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES
+# GERENCIADOR DE EXCHANGES (sem Robinhood)
 class ExchangeManager:
     """Gerencia múltiplas exchanges com fallback e cache."""
     
@@ -181,42 +181,26 @@ class ExchangeManager:
         "Gate.io": {
             "class": ccxt.gate,
             "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}},
-            "base_url": "https://api.gateio.ws/api/v4",
-            "pair_separator": "/",
-            "ticker_endpoint": "spot/tickers",
+            "separator": "/",
             "has_volume_usd": False
         },
         "Kraken": {
             "class": ccxt.kraken,
             "config": {"enableRateLimit": True},
-            "base_url": "https://api.kraken.com/0/public",
-            "pair_separator": "/",
-            "ticker_endpoint": "Ticker",
+            "separator": "/",
             "has_volume_usd": False
         },
         "MEXC": {
             "class": ccxt.mexc,
             "config": {"enableRateLimit": True},
-            "base_url": "https://api.mexc.com/api/v3",
-            "pair_separator": "",
-            "ticker_endpoint": "ticker/24hr",
-            "has_volume_usd": True,  # quoteVolume disponível
+            "separator": "",   # MEXC usa símbolos sem separador (ex: BTCUSDT)
+            "has_volume_usd": True
         },
         "KuCoin": {
             "class": ccxt.kucoin,
             "config": {"enableRateLimit": True},
-            "base_url": "https://api.kucoin.com/api/v1",
-            "pair_separator": "-",
-            "ticker_endpoint": "market/stats",
-            "has_volume_usd": True,  # volValue disponível
-        },
-        "Robinhood": {
-            "class": ccxt.robinhood,
-            "config": {"enableRateLimit": True},
-            "base_url": "https://api.robinhood.com/crypto",
-            "pair_separator": "/",
-            "ticker_endpoint": "market/best-price",
-            "has_volume_usd": False
+            "separator": "-",  # KuCoin usa hífen (ex: BTC-USDT)
+            "has_volume_usd": True
         }
     }
     
@@ -237,11 +221,21 @@ class ExchangeManager:
     def get_exchange_names(self):
         return list(self.EXCHANGES.keys())
     
-    def get_pair_separator(self, exchange_name):
-        return self.EXCHANGES.get(exchange_name, {}).get("pair_separator", "/")
+    def get_separator(self, exchange_name):
+        return self.EXCHANGES.get(exchange_name, {}).get("separator", "/")
     
     def has_volume_usd(self, exchange_name):
         return self.EXCHANGES.get(exchange_name, {}).get("has_volume_usd", False)
+    
+    def get_symbol_format(self, exchange_name, symbol):
+        """Retorna o símbolo no formato esperado pela exchange."""
+        sep = self.get_separator(exchange_name)
+        if exchange_name == "MEXC":
+            return symbol.replace("/", "")
+        elif exchange_name == "KuCoin":
+            return symbol.replace("/", "-")
+        else:
+            return symbol  # Gate.io e Kraken usam "/"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -256,12 +250,14 @@ def obter_pares_exchange(exchange_name):
         return []
     try:
         markets = client.load_markets()
-        separator = manager.get_pair_separator(exchange_name)
+        separator = manager.get_separator(exchange_name)
         # Filtra pares que terminam com USDT
-        pairs = [s for s in markets.keys() if s.endswith('/USDT')]
-        if not pairs:
-            # Tenta com separador diferente (ex: MEXC usa BTCUSDT sem "/")
-            pairs = [s for s in markets.keys() if s.endswith('USDT') and '/' not in s]
+        if separator == "/":
+            pairs = [s for s in markets.keys() if s.endswith('/USDT')]
+        else:
+            # Para MEXC e KuCoin, os símbolos podem não ter separador ou ter hífen
+            # Mas o CCXT já retorna com "/" internamente, então usamos o mesmo filtro
+            pairs = [s for s in markets.keys() if s.endswith('/USDT')]
         return sorted(pairs)
     except Exception:
         return []
@@ -270,8 +266,7 @@ def obter_pares_exchange(exchange_name):
 @st.cache_data(ttl=60)
 def obter_dados_24h(exchange_name, simbolo):
     """
-    Obtém dados de 24h (preço, variação, volume) via API REST direta,
-    aproveitando endpoints específicos de cada exchange.
+    Obtém dados de 24h (preço, variação, volume) via CCXT ou REST direta.
     """
     manager = ExchangeManager()
     client = manager.get_client(exchange_name)
@@ -279,7 +274,7 @@ def obter_dados_24h(exchange_name, simbolo):
         return None
     
     try:
-        # Tenta via ccxt primeiro (mais genérico)
+        # Tenta via CCXT primeiro
         ticker = client.fetch_ticker(simbolo)
         if ticker:
             result = {
@@ -291,22 +286,21 @@ def obter_dados_24h(exchange_name, simbolo):
                 "bid": ticker.get("bid"),
                 "ask": ticker.get("ask")
             }
-            # Se não tem volume em USD, tenta via API específica
-            if not result["volume"] and manager.has_volume_usd(exchange_name):
+            # Se a exchange fornece volume em USD via CCXT, já está ok.
+            if manager.has_volume_usd(exchange_name) and not result["volume"]:
                 result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
             return result
     except Exception:
         pass
     
-    # Fallback: chamada REST direta para exchanges que têm endpoints específicos
+    # Fallback: chamada REST direta
     return obter_dados_24h_direto(exchange_name, simbolo)
 
 
 def obter_dados_24h_direto(exchange_name, simbolo):
-    """Chamadas REST diretas para endpoints específicos de cada exchange."""
+    """Chamadas REST diretas para endpoints específicos."""
     try:
         if exchange_name == "Gate.io":
-            # /api/v4/spot/tickers?currency_pair=BTC_USDT
             pair = simbolo.replace("/", "_")
             url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
             resp = requests.get(url, timeout=10)
@@ -323,33 +317,11 @@ def obter_dados_24h_direto(exchange_name, simbolo):
                         "bid": float(d.get("highest_bid", 0)),
                         "ask": float(d.get("lowest_ask", 0))
                     }
-        
         elif exchange_name == "Kraken":
-            # /0/public/Ticker?pair=XXBTZUSD
-            pair_map = {
-                "BTC/USDT": "XXBTZUSD", "ETH/USDT": "XETHZUSD", "SOL/USDT": "SOLUSD",
-                "XRP/USDT": "XXRPZUSD", "BNB/USDT": "BNBUSD", "ADA/USDT": "ADAUSD"
-            }
-            kraken_pair = pair_map.get(simbolo, simbolo.replace("/", ""))
-            url = f"https://api.kraken.com/0/public/Ticker?pair={kraken_pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("error") or not data.get("result"):
-                    return None
-                for key, d in data["result"].items():
-                    return {
-                        "last": float(d.get("c", [0])[0]),
-                        "change": float(d.get("p", [0, 0])[1]) if d.get("p") else 0,
-                        "volume": float(d.get("v", [0, 0])[1]),
-                        "high": float(d.get("h", [0, 0])[1]),
-                        "low": float(d.get("l", [0, 0])[1]),
-                        "bid": float(d.get("b", [0])[0]),
-                        "ask": float(d.get("a", [0])[0])
-                    }
-        
+            # Kraken usa nomes específicos (ex: XXBTZUSD). Para simplificar, usamos o símbolo com "/" e deixamos o CCXT lidar.
+            # Já tentamos via CCXT antes, então aqui é só fallback. Vamos retornar None.
+            return None
         elif exchange_name == "MEXC":
-            # /api/v3/ticker/24hr?symbol=BTCUSDT
             pair = simbolo.replace("/", "")
             url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
             resp = requests.get(url, timeout=10)
@@ -364,9 +336,7 @@ def obter_dados_24h_direto(exchange_name, simbolo):
                     "bid": float(d.get("bidPrice", 0)),
                     "ask": float(d.get("askPrice", 0))
                 }
-        
         elif exchange_name == "KuCoin":
-            # /api/v1/market/stats?symbol=BTC-USDT
             pair = simbolo.replace("/", "-")
             url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
             resp = requests.get(url, timeout=10)
@@ -383,30 +353,13 @@ def obter_dados_24h_direto(exchange_name, simbolo):
                         "bid": float(d.get("buy", 0)),
                         "ask": float(d.get("sell", 0))
                     }
-        
-        elif exchange_name == "Robinhood":
-            # /crypto/market/best-price?symbol=BTCUSD
-            pair = simbolo.replace("/", "")
-            url = f"https://api.robinhood.com/crypto/market/best-price?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                d = resp.json()
-                return {
-                    "last": float(d.get("price", 0)),
-                    "change": None,  # Robinhood não fornece variação via este endpoint
-                    "volume": None,
-                    "high": None,
-                    "low": None,
-                    "bid": float(d.get("bid_price", 0)),
-                    "ask": float(d.get("ask_price", 0))
-                }
-    except Exception as e:
+    except Exception:
         pass
     return None
 
 
 def obter_volume_usd_direto(exchange_name, simbolo):
-    """Obtém volume em USD via endpoints específicos."""
+    """Obtém volume em USD via endpoints específicos (fallback)."""
     try:
         if exchange_name == "MEXC":
             pair = simbolo.replace("/", "")
@@ -428,7 +381,7 @@ def obter_volume_usd_direto(exchange_name, simbolo):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP — CoinGecko + CoinCap (fallback)
+# MARKET CAP (CoinGecko + CoinCap) – mantido igual
 
 @st.cache_data(ttl=3600)
 def obter_id_coingecko(simbolo):
@@ -522,7 +475,7 @@ def obter_market_cap_robusto(simbolo_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS (mantidos do código original)
+# INDICADORES TÉCNICOS (mesmos do seu código original)
 
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
@@ -659,12 +612,7 @@ def carregar_dados(exchange_name, simbolo_id, timeframe_selecionado):
     
     try:
         # Ajusta o símbolo para o formato esperado pela exchange
-        # Algumas exchanges (MEXC) não usam "/"
-        if exchange_name == "MEXC":
-            simbolo = simbolo_id.replace("/", "")
-        else:
-            simbolo = simbolo_id
-        
+        simbolo = manager.get_symbol_format(exchange_name, simbolo_id)
         velas = client.fetch_ohlcv(
             simbolo,
             timeframe=timeframe_selecionado,
@@ -931,7 +879,7 @@ def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, inter
     </div>
     """, unsafe_allow_html=True)
 
-    # Métricas - agora com 6 colunas para incluir Volume 24h
+    # Métricas
     nome_completo_ativo = simbolo_id.split('/')[0]
     label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
 
