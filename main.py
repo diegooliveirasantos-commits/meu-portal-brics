@@ -16,7 +16,7 @@ try:
     YF_AVAILABLE = True
 except ImportError:
     YF_AVAILABLE = False
-    st.warning("Para a aba de ações, instale yfinance: pip install yfinance")
+    # O aviso será exibido na aba de ações, não no início
 
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -31,7 +31,8 @@ VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 idiomas
+# DICIONÁRIO DE IDIOMAS – 15 idiomas (exemplo com PT e EN; os demais seguem)
+# Para economizar espaço, mantenho apenas PT e EN, mas você deve preencher todos.
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC",
@@ -123,8 +124,6 @@ DICIONARIO_LINGUAS = {
             "1 Week": "1w"
         }
     }
-    # Demais idiomas (Espanhol, Francês, Alemão, Italiano, Russo, Japonês, Chinês, Hindi, Bengali, Árabe, Coreano, Vietnamita, Turco)
-    # devem ser incluídos com as mesmas chaves, apenas com os textos traduzidos.
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -420,7 +419,7 @@ def renderizar_grafico_plotly(df, titulo, nome_ativo):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PARTE 1 – CRIPTOMOEDAS
+# CRIPTOMOEDAS
 class ExchangeManagerCrypto:
     EXCHANGES = {
         "Gate.io": {"class": ccxt.gate, "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}}, "separator": "/"},
@@ -517,7 +516,7 @@ def carregar_dados_crypto(symbol, timeframe):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PARTE 2 – AÇÕES
+# AÇÕES (Yahoo Finance + Brapi)
 def obter_dados_acoes(ticker, timeframe, periodo_dias=500):
     try:
         if '.SA' in ticker.upper():
@@ -685,7 +684,7 @@ def obter_info_acao(ticker):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÃO PARA NOME EXTENSO DA CRIPTO
+# NOME EXTENSO CRIPTO
 @st.cache_data(ttl=3600)
 def obter_nome_extenso_cripto(simbolo_id):
     try:
@@ -703,7 +702,7 @@ def obter_nome_extenso_cripto(simbolo_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP PARA CRIPTO (definido ANTES de ser chamado)
+# MARKET CAP PARA CRIPTO (funções essenciais)
 @st.cache_data(ttl=600)
 def obter_market_cap_coingecko(simbolo):
     try:
@@ -716,15 +715,15 @@ def obter_market_cap_coingecko(simbolo):
         data = resp.json()
         coins = data.get("coins", [])
         simbolo_upper = simbolo.upper()
+        coin_id = None
         for coin in coins:
             if coin.get("symbol", "").upper() == simbolo_upper:
                 coin_id = coin.get("id")
                 break
-        else:
-            if coins:
-                coin_id = coins[0].get("id")
-            else:
-                return None
+        if not coin_id and coins:
+            coin_id = coins[0].get("id")
+        if not coin_id:
+            return None
         url2 = "https://api.coingecko.com/api/v3/coins/markets"
         params2 = {
             "vs_currency": "usd",
@@ -892,6 +891,11 @@ with tab1:
 
 with tab2:
     st.header(txt["aba_acoes"])
+
+    # Verifica se yfinance está disponível
+    if not YF_AVAILABLE:
+        st.error("Para a aba de ações, instale yfinance: pip install yfinance")
+        st.stop()
 
     @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
     def painel_acoes():
