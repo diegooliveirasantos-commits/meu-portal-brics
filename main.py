@@ -30,7 +30,7 @@ VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (com a correção do rótulo do preço)
+# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (com quebra de linha no título do preço)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC",
@@ -43,7 +43,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Tempo Gráfico:",
         "modo_vivo": "Ativar Monitoramento em Tempo Real",
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
-        "preco_spot": "Preço Atual no Mercado Spot",
+        "preco_spot": "Preço Atual no\nMercado Spot",
         "variacao_24h": "Variação 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Market Cap (USD)",
@@ -88,7 +88,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Enable Real-Time Monitoring",
         "intervalo_refresh": "Refresh Interval (Seconds):",
-        "preco_spot": "Current Spot Market Price",
+        "preco_spot": "Current Spot\nMarket Price",
         "variacao_24h": "24h Change",
         "volume_24h": "24h Volume (USD)",
         "market_cap": "Market Cap (USD)",
@@ -133,7 +133,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Marco temporal:",
         "modo_vivo": "Activar monitoreo en tiempo real",
         "intervalo_refresh": "Intervalo de actualización (segundos):",
-        "preco_spot": "Precio Actual en el Mercado Spot",
+        "preco_spot": "Precio Actual en el\nMercado Spot",
         "variacao_24h": "Variación 24h",
         "volume_24h": "Volumen 24h (USDT)",
         "market_cap": "Capitalización (USD)",
@@ -178,7 +178,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Période:",
         "modo_vivo": "Activer la surveillance en temps réel",
         "intervalo_refresh": "Intervalle de rafraîchissement (secondes):",
-        "preco_spot": "Prix Actuel sur le Marché Spot",
+        "preco_spot": "Prix Actuel sur le\nMarché Spot",
         "variacao_24h": "Variation 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalisation (USD)",
@@ -223,7 +223,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Zeitrahmen:",
         "modo_vivo": "Echtzeit-Überwachung aktivieren",
         "intervalo_refresh": "Aktualisierungsintervall (Sekunden):",
-        "preco_spot": "Aktueller Spot-Marktpreis",
+        "preco_spot": "Aktueller Spot-\nMarktpreis",
         "variacao_24h": "24h-Veränderung",
         "volume_24h": "24h-Volumen (USDT)",
         "market_cap": "Marktkapitalisierung (USD)",
@@ -268,7 +268,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Attiva monitoraggio in tempo reale",
         "intervalo_refresh": "Intervallo di aggiornamento (secondi):",
-        "preco_spot": "Prezzo Corrente sul Mercato Spot",
+        "preco_spot": "Prezzo Corrente sul\nMercato Spot",
         "variacao_24h": "Variazione 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalizzazione (USD)",
@@ -313,7 +313,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Таймфрейм:",
         "modo_vivo": "Включить мониторинг в реальном времени",
         "intervalo_refresh": "Интервал обновления (секунды):",
-        "preco_spot": "Текущая цена на спотовом рынке",
+        "preco_spot": "Текущая цена на\nспотовом рынке",
         "variacao_24h": "Изменение за 24ч",
         "volume_24h": "Объем за 24ч (USDT)",
         "market_cap": "Рыночная капитализация (USD)",
@@ -358,7 +358,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "タイムフレーム:",
         "modo_vivo": "リアルタイム監視を有効にする",
         "intervalo_refresh": "更新間隔（秒）:",
-        "preco_spot": "現在のスポット市場価格",
+        "preco_spot": "現在のスポット\n市場価格",
         "variacao_24h": "24時間変化",
         "volume_24h": "24時間出来高（USDT）",
         "market_cap": "時価総額（USD）",
@@ -403,7 +403,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "时间周期：",
         "modo_vivo": "启用实时监控",
         "intervalo_refresh": "刷新间隔（秒）：",
-        "preco_spot": "当前现货市场价格",
+        "preco_spot": "当前现货\n市场价格",
         "variacao_24h": "24小时变化",
         "volume_24h": "24小时成交量（USDT）",
         "market_cap": "市值（美元）",
@@ -448,7 +448,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "टाइमफ्रेम:",
         "modo_vivo": "रीयल-टाइम मॉनिटरिंग सक्षम करें",
         "intervalo_refresh": "रिफ्रेश अंतराल (सेकंड):",
-        "preco_spot": "वर्तमान स्पॉट बाजार मूल्य",
+        "preco_spot": "वर्तमान स्पॉट\nबाजार मूल्य",
         "variacao_24h": "24 घंटे का बदलाव",
         "volume_24h": "24 घंटे का वॉल्यूम (USDT)",
         "market_cap": "बाजार पूंजीकरण (USD)",
@@ -493,7 +493,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "টাইমফ্রেম:",
         "modo_vivo": "রিয়েল-টাইম মনিটরিং সক্রিয় করুন",
         "intervalo_refresh": "রিফ্রেশ বিরতি (সেকেন্ড):",
-        "preco_spot": "বর্তমান স্পট মার্কেট মূল্য",
+        "preco_spot": "বর্তমান স্পট\nবাজার মূল্য",
         "variacao_24h": "২৪ ঘণ্টার পরিবর্তন",
         "volume_24h": "২৪ ঘণ্টার ভলিউম (USDT)",
         "market_cap": "বাজার মূলধন (USD)",
@@ -538,7 +538,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "الإطار الزمني:",
         "modo_vivo": "تفعيل المراقبة في الوقت الفعلي",
         "intervalo_refresh": "فترة التحديث (ثواني):",
-        "preco_spot": "سعر السوق الفوري الحالي",
+        "preco_spot": "سعر السوق\nالفوري الحالي",
         "variacao_24h": "تغير 24 ساعة",
         "volume_24h": "حجم التداول 24 ساعة (USDT)",
         "market_cap": "القيمة السوقية (USD)",
@@ -583,7 +583,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "시간 프레임:",
         "modo_vivo": "실시간 모니터링 활성화",
         "intervalo_refresh": "새로 고침 간격(초):",
-        "preco_spot": "현재 현물 시장 가격",
+        "preco_spot": "현재 현물\n시장 가격",
         "variacao_24h": "24시간 변동",
         "volume_24h": "24시간 거래량 (USDT)",
         "market_cap": "시가총액 (USD)",
@@ -628,7 +628,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Khung thời gian:",
         "modo_vivo": "Bật giám sát thời gian thực",
         "intervalo_refresh": "Khoảng thời gian làm mới (giây):",
-        "preco_spot": "Giá thị trường giao ngay hiện tại",
+        "preco_spot": "Giá thị trường\ngiao ngay hiện tại",
         "variacao_24h": "Biến động 24h",
         "volume_24h": "Khối lượng 24h (USDT)",
         "market_cap": "Vốn hóa thị trường (USD)",
@@ -673,7 +673,7 @@ DICIONARIO_LINGUAS = {
         "tempo_grafico": "Zaman Dilimi:",
         "modo_vivo": "Gerçek Zamanlı İzlemeyi Etkinleştir",
         "intervalo_refresh": "Yenileme Aralığı (Saniye):",
-        "preco_spot": "Spot Piyasa Güncel Fiyatı",
+        "preco_spot": "Spot Piyasa\nGüncel Fiyatı",
         "variacao_24h": "24 Saatlik Değişim",
         "volume_24h": "24 Saatlik Hacim (USDT)",
         "market_cap": "Piyasa Değeri (USD)",
@@ -710,7 +710,7 @@ DICIONARIO_LINGUAS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO (funções mantidas)
+# FORMATAÇÃO
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -755,7 +755,7 @@ def formatar_market_cap(valor):
 
 
 def formatar_volume_usdt(valor):
-    """Exatamente a mesma lógica do market cap – com símbolo $ e sufixos T, B, M."""
+    """Exibe o volume com duas casas decimais, mesmo formato do market cap."""
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return "—"
     if valor >= 1_000_000_000_000:
@@ -1124,7 +1124,7 @@ def obter_dados_yahoo(ticker, timeframe, periodo_dias):
             '15m': '15m',
             '30m': '30m',
             '1h': '1h',
-            '4h': '1h',  # Yahoo não tem 4h, usamos 1h
+            '4h': '1h',
             '1d': '1d',
             '1w': '1wk'
         }
