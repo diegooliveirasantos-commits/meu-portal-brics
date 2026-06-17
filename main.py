@@ -649,7 +649,7 @@ def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
-        return f"{prefixo}{valor:.2f}"
+        return f"{prefixo}0.00"
     if valor < 0.001:
         d = Decimal(str(valor))
         s = f"{d:.20f}".rstrip("0")
@@ -667,6 +667,10 @@ def formatar_preco(valor, prefixo="$ "):
 
 
 def formatar_market_cap(valor):
+    """
+    Formata valor com duas casas decimais e sufixo (T, B, M) ou apenas número.
+    Utilizado para Market Cap e Volume 24h.
+    """
     if valor is None:
         return "$ —"
     if isinstance(valor, str):
@@ -786,62 +790,6 @@ def obter_dados_24h(simbolo):
                     return result
         except Exception:
             continue
-    return None
-
-
-def obter_dados_24h_direto(exchange_name, simbolo):
-    try:
-        if exchange_name == "Gate.io":
-            pair = simbolo.replace("/", "_")
-            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data and len(data) > 0:
-                    d = data[0]
-                    return {
-                        "last": float(d.get("last", 0)),
-                        "change": float(d.get("change_percentage", 0)),
-                        "volume": float(d.get("quote_volume", 0)),
-                        "high": float(d.get("high_24h", 0)),
-                        "low": float(d.get("low_24h", 0)),
-                        "bid": float(d.get("highest_bid", 0)),
-                        "ask": float(d.get("lowest_ask", 0))
-                    }
-        elif exchange_name == "MEXC":
-            pair = simbolo.replace("/", "")
-            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                d = resp.json()
-                return {
-                    "last": float(d.get("lastPrice", 0)),
-                    "change": float(d.get("priceChangePercent", 0)),
-                    "volume": float(d.get("quoteVolume", 0)) or float(d.get("volume", 0)),
-                    "high": float(d.get("highPrice", 0)),
-                    "low": float(d.get("lowPrice", 0)),
-                    "bid": float(d.get("bidPrice", 0)),
-                    "ask": float(d.get("askPrice", 0))
-                }
-        elif exchange_name == "KuCoin":
-            pair = simbolo.replace("/", "-")
-            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("code") == "200000":
-                    d = data.get("data", {})
-                    return {
-                        "last": float(d.get("last", 0)),
-                        "change": float(d.get("changeRate", 0)) * 100,
-                        "volume": float(d.get("volValue", 0)),
-                        "high": float(d.get("high", 0)),
-                        "low": float(d.get("low", 0)),
-                        "bid": float(d.get("buy", 0)),
-                        "ask": float(d.get("sell", 0))
-                    }
-    except Exception:
-        pass
     return None
 
 
@@ -1372,18 +1320,15 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     nome_extenso = obter_nome_extenso_cripto(simbolo_id)
     label_preco = f"{nome_extenso} | {txt['preco_spot']}"
 
+    # Volume e market cap com duas casas decimais
     volume_formatado = formatar_market_cap(volume_24h)
+    market_cap_formatado = formatar_market_cap(market_cap)
 
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric(label_preco, formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
     m3.metric(txt["volume_24h"], volume_formatado)
-
-    if market_cap is not None:
-        m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
-    else:
-        m4.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
-
+    m4.metric(txt["market_cap"], market_cap_formatado)
     m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
     m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
