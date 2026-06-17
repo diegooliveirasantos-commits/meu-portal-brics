@@ -649,7 +649,7 @@ def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
-        return f"{prefixo}{valor}"
+        return f"{prefixo}{valor:.2f}"
     if valor < 0.001:
         d = Decimal(str(valor))
         s = f"{d:.20f}".rstrip("0")
@@ -661,9 +661,7 @@ def formatar_preco(valor, prefixo="$ "):
         digitos_sig = parte_decimal.lstrip("0")
         return f"{prefixo}0.0{n_zeros}x{digitos_sig}"
     elif valor < 1:
-        return f"{prefixo}{valor:.6f}"
-    elif valor < 10:
-        return f"{prefixo}{valor:.4f}"
+        return f"{prefixo}{valor:.2f}"
     else:
         return f"{prefixo}{valor:,.2f}"
 
@@ -677,7 +675,7 @@ def formatar_market_cap(valor):
         except:
             return "$ —"
     if valor <= 0:
-        return "$ —"
+        return "$ 0.00"
     if valor >= 1_000_000_000_000:
         return f"$ {valor / 1_000_000_000_000:.2f}T"
     elif valor >= 1_000_000_000:
@@ -685,14 +683,12 @@ def formatar_market_cap(valor):
     elif valor >= 1_000_000:
         return f"$ {valor / 1_000_000:.2f}M"
     else:
-        return "$ —"
+        return f"$ {valor:,.2f}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GERENCIADOR DE EXCHANGES (fallback interno)
 class ExchangeManager:
-    """Gerencia múltiplas exchanges com fallback e cache, sem exposição ao usuário."""
-    
     EXCHANGES = {
         "Gate.io": {
             "class": ccxt.gate,
@@ -783,7 +779,8 @@ def obter_dados_24h(simbolo):
                     "bid": ticker.get("bid"),
                     "ask": ticker.get("ask")
                 }
-                if not result["volume"] and manager.EXCHANGES[exchange_name].get("has_volume_usd"):
+                # Se não tiver volume, tenta via REST para todas as exchanges
+                if not result["volume"]:
                     result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
                 if result["last"] is not None:
                     return result
@@ -864,6 +861,14 @@ def obter_volume_usd_direto(exchange_name, simbolo):
                 data = resp.json()
                 if data.get("code") == "200000":
                     return float(data.get("data", {}).get("volValue", 0))
+        elif exchange_name == "Gate.io":
+            pair = simbolo.replace("/", "_")
+            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data and len(data) > 0:
+                    return float(data[0].get("quote_volume", 0))
     except:
         pass
     return None
@@ -1367,8 +1372,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     nome_extenso = obter_nome_extenso_cripto(simbolo_id)
     label_preco = f"{nome_extenso} | {txt['preco_spot']}"
 
-    # Volume agora usa a mesma formatação do Market Cap
-    volume_formatado = formatar_market_cap(volume_24h) if volume_24h is not None else "—"
+    volume_formatado = formatar_market_cap(volume_24h)
 
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric(label_preco, formatar_preco(preco_atual))
