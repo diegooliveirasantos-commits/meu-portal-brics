@@ -48,8 +48,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Última Atualização",
         "proximo_refresh": "Próximo refresh em",
         "segundos": "segundos",
-        "pontos_compra": "Pontos de Compra",
-        "pontos_venda": "Pontos de Venda",
         "grafico_titulo": "📈  Gráfico de Preço Interativo",
         "buscando_marketcap": "🔍  Buscando Market Cap...",
         "marketcap_nao_disponivel": "Não disponível",
@@ -89,8 +87,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Last Update",
         "proximo_refresh": "Next refresh in",
         "segundos": "seconds",
-        "pontos_compra": "Buy Points",
-        "pontos_venda": "Sell Points",
         "grafico_titulo": "📈  Interactive Price Chart",
         "buscando_marketcap": "🔍  Fetching Market Cap...",
         "marketcap_nao_disponivel": "Not available",
@@ -130,8 +126,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Última actualización",
         "proximo_refresh": "Próxima actualización en",
         "segundos": "segundos",
-        "pontos_compra": "Puntos de Compra",
-        "pontos_venda": "Puntos de Venta",
         "grafico_titulo": "📈  Gráfico de Precio Interactivo",
         "buscando_marketcap": "🔍  Buscando Capitalización...",
         "marketcap_nao_disponivel": "No disponible",
@@ -171,8 +165,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Dernière mise à jour",
         "proximo_refresh": "Prochain rafraîchissement dans",
         "segundos": "secondes",
-        "pontos_compra": "Points d'achat",
-        "pontos_venda": "Points de vente",
         "grafico_titulo": "📈  Graphique de prix interactif",
         "buscando_marketcap": "🔍  Recherche de la capitalisation...",
         "marketcap_nao_disponivel": "Indisponible",
@@ -212,8 +204,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Letzte Aktualisierung",
         "proximo_refresh": "Nächste Aktualisierung in",
         "segundos": "Sekunden",
-        "pontos_compra": "Kaufpunkte",
-        "pontos_venda": "Verkaufspunkte",
         "grafico_titulo": "📈  Interaktives Kursdiagramm",
         "buscando_marketcap": "🔍  Marktkapitalisierung wird abgerufen...",
         "marketcap_nao_disponivel": "Nicht verfügbar",
@@ -253,8 +243,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Ultimo aggiornamento",
         "proximo_refresh": "Prossimo aggiornamento tra",
         "segundos": "secondi",
-        "pontos_compra": "Punti di Acquisto",
-        "pontos_venda": "Punti di Vendita",
         "grafico_titulo": "📈  Grafico Prezzo Interattivo",
         "buscando_marketcap": "🔍  Ricerca Capitalizzazione...",
         "marketcap_nao_disponivel": "Non disponibile",
@@ -294,8 +282,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Последнее обновление",
         "proximo_refresh": "Следующее обновление через",
         "segundos": "секунд",
-        "pontos_compra": "Очки покупки",
-        "pontos_venda": "Очки продажи",
         "grafico_titulo": "📈  Интерактивный график цены",
         "buscando_marketcap": "🔍  Получение рыночной капитализации...",
         "marketcap_nao_disponivel": "Недоступно",
@@ -335,8 +321,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "最終更新",
         "proximo_refresh": "次の更新まで",
         "segundos": "秒",
-        "pontos_compra": "買いポイント",
-        "pontos_venda": "売りポイント",
         "grafico_titulo": "📈  インタラクティブ価格チャート",
         "buscando_marketcap": "🔍  時価総額を取得中...",
         "marketcap_nao_disponivel": "利用不可",
@@ -376,8 +360,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "最后更新",
         "proximo_refresh": "下次刷新于",
         "segundos": "秒",
-        "pontos_compra": "买入点",
-        "pontos_venda": "卖出点",
         "grafico_titulo": "📈  交互式价格图表",
         "buscando_marketcap": "🔍  正在获取市值...",
         "marketcap_nao_disponivel": "不可用",
@@ -417,8 +399,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "अंतिम अद्यतन",
         "proximo_refresh": "अगला रिफ्रेश",
         "segundos": "सेकंड",
-        "pontos_compra": "खरीद अंक",
-        "pontos_venda": "बिक्री अंक",
         "grafico_titulo": "📈  इंटरैक्टिव मूल्य चार्ट",
         "buscando_marketcap": "🔍  बाजार पूंजीकरण प्राप्त किया जा रहा है...",
         "marketcap_nao_disponivel": "उपलब्ध नहीं",
@@ -458,8 +438,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "শেষ আপডেট",
         "proximo_refresh": "পরবর্তী রিফ্রেশ",
         "segundos": "সেকেন্ড",
-        "pontos_compra": "ক্রয় পয়েন্ট",
-        "pontos_venda": "বিক্রয় পয়েন্ট",
         "grafico_titulo": "📈  ইন্টারেক্টিভ মূল্য চার্ট",
         "buscando_marketcap": "🔍  বাজার মূলধন সংগ্রহ করা হচ্ছে...",
         "marketcap_nao_disponivel": "উপলব্ধ নয়",
@@ -499,8 +477,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "آخر تحديث",
         "proximo_refresh": "التحديث التالي في",
         "segundos": "ثواني",
-        "pontos_compra": "نقاط الشراء",
-        "pontos_venda": "نقاط البيع",
         "grafico_titulo": "📈  مخطط الأسعار التفاعلي",
         "buscando_marketcap": "🔍  جاري الحصول على القيمة السوقية...",
         "marketcap_nao_disponivel": "غير متاح",
@@ -540,8 +516,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "마지막 업데이트",
         "proximo_refresh": "다음 새로 고침까지",
         "segundos": "초",
-        "pontos_compra": "매수 포인트",
-        "pontos_venda": "매도 포인트",
         "grafico_titulo": "📈  대화형 가격 차트",
         "buscando_marketcap": "🔍  시가총액 가져오는 중...",
         "marketcap_nao_disponivel": "사용 불가",
@@ -581,8 +555,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Cập nhật cuối cùng",
         "proximo_refresh": "Làm mới tiếp theo trong",
         "segundos": "giây",
-        "pontos_compra": "Điểm mua",
-        "pontos_venda": "Điểm bán",
         "grafico_titulo": "📈  Biểu đồ giá tương tác",
         "buscando_marketcap": "🔍  Đang tìm vốn hóa thị trường...",
         "marketcap_nao_disponivel": "Không có sẵn",
@@ -622,8 +594,6 @@ DICIONARIO_LINGUAS = {
         "ultima_atualizacao": "Son Güncelleme",
         "proximo_refresh": "Sonraki yenileme",
         "segundos": "saniye",
-        "pontos_compra": "Alım Noktaları",
-        "pontos_venda": "Satım Noktaları",
         "grafico_titulo": "📈  Etkileşimli Fiyat Grafiği",
         "buscando_marketcap": "🔍  Piyasa Değeri alınıyor...",
         "marketcap_nao_disponivel": "Mevcut değil",
@@ -1297,6 +1267,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
 
     market_cap = obter_market_cap_robusto(simbolo_id)
 
+    # A análise ainda é feita (pontos_alta e pontos_baixa são calculados)
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
         df_dados, txt
     )
@@ -1320,17 +1291,15 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     nome_extenso = obter_nome_extenso_cripto(simbolo_id)
     label_preco = f"{nome_extenso} | {txt['preco_spot']}"
 
-    # Volume e market cap com duas casas decimais
     volume_formatado = formatar_market_cap(volume_24h)
     market_cap_formatado = formatar_market_cap(market_cap)
 
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    # REMOVIDOS os pontos de compra e venda – agora são 4 colunas
+    m1, m2, m3, m4 = st.columns(4)
     m1.metric(label_preco, formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
     m3.metric(txt["volume_24h"], volume_formatado)
     m4.metric(txt["market_cap"], market_cap_formatado)
-    m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
-    m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
     atr_stop_val = ultimo_reg['ATR_Stop']
     st.markdown(
