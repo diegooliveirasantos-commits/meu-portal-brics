@@ -11,6 +11,12 @@ import plotly.graph_objects as go
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
+try:
+    import yfinance as yf
+    YF_AVAILABLE = True
+except ImportError:
+    YF_AVAILABLE = False
+
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
     page_icon="🏦",
@@ -19,21 +25,25 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTES DE AQUECIMENTO
+# CONSTANTES
 VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 línguas (sem timeframes > 1 semana)
+# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (com a correção do rótulo do preço)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC",
+        "aba_cripto": "🪙 Criptomoedas",
+        "aba_acoes": "📈 Ações (Bolsas)",
         "config_globais": "⚙️  Configurações Globais",
-        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
+        "selecione_cripto": "Selecione Criptomoeda (/USDT):",
+        "selecione_corretora_acoes": "Selecione a Corretora (Bolsa):",
+        "ticker_acoes": "Digite o Ticker (ex: AAPL, PETR4.SA):",
         "tempo_grafico": "Tempo Gráfico:",
         "modo_vivo": "Ativar Monitoramento em Tempo Real",
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
-        "preco_spot": "Preço Spot Real",
+        "preco_spot": "Preço Atual no Mercado Spot",
         "variacao_24h": "Variação 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Market Cap (USD)",
@@ -41,16 +51,16 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
         "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
         "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
-        "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
-        "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
-        "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
+        "erro_dados": "Dados insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
+        "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno).",
+        "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para lucro).",
         "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Última Atualização",
         "proximo_refresh": "Próximo refresh em",
         "segundos": "segundos",
         "pontos_compra": "Pontos de Compra",
         "pontos_venda": "Pontos de Venda",
-        "grafico_titulo": "📈  Gráfico de Preço Interativo",
+        "grafico_titulo": "📈  Gráfico Interativo",
         "buscando_marketcap": "🔍  Buscando Market Cap...",
         "marketcap_nao_disponivel": "Não disponível",
         "idioma_label": "🌐  Idioma / Language",
@@ -68,22 +78,26 @@ DICIONARIO_LINGUAS = {
         }
     },
     "English (EN)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC Engine",
+        "aba_cripto": "🪙 Cryptocurrencies",
+        "aba_acoes": "📈 Stocks (Exchanges)",
         "config_globais": "⚙️  Global Settings",
-        "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
+        "selecione_cripto": "Select Cryptocurrency (/USDT):",
+        "selecione_corretora_acoes": "Select Broker (Exchange):",
+        "ticker_acoes": "Enter Ticker (e.g., AAPL, PETR4.SA):",
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Enable Real-Time Monitoring",
         "intervalo_refresh": "Refresh Interval (Seconds):",
-        "preco_spot": "Real Spot Price",
-        "variacao_24h": "24h Variation",
-        "volume_24h": "24h Volume (USDT)",
+        "preco_spot": "Current Spot Market Price",
+        "variacao_24h": "24h Change",
+        "volume_24h": "24h Volume (USD)",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "ATR Stop Price",
         "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
         "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
         "neutro": "🟡  NEUTRAL (AWAIT SMC)",
-        "erro_dados": "Insufficient historical data. Try another asset or reduce the Timeframe.",
-        "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
+        "erro_dados": "Insufficient data. Try another asset or reduce the Timeframe.",
+        "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward).",
         "ctx_premium": "Asset in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
         "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
         "ultima_atualizacao": "Last Update",
@@ -91,7 +105,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "seconds",
         "pontos_compra": "Buy Points",
         "pontos_venda": "Sell Points",
-        "grafico_titulo": "📈  Interactive Price Chart",
+        "grafico_titulo": "📈  Interactive Chart",
         "buscando_marketcap": "🔍  Fetching Market Cap...",
         "marketcap_nao_disponivel": "Not available",
         "idioma_label": "🌐  Language / Idioma",
@@ -109,13 +123,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Español": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC",
+        "aba_cripto": "🪙 Criptomonedas",
+        "aba_acoes": "📈 Acciones (Bolsas)",
         "config_globais": "⚙️  Configuraciones Globales",
-        "selecione_cripto": "Seleccione cualquier criptomoneda (/USDT):",
+        "selecione_cripto": "Seleccione Criptomoneda (/USDT):",
+        "selecione_corretora_acoes": "Seleccione el Corredor (Bolsa):",
+        "ticker_acoes": "Ingrese el Ticker (ej. AAPL, PETR4.SA):",
         "tempo_grafico": "Marco temporal:",
         "modo_vivo": "Activar monitoreo en tiempo real",
         "intervalo_refresh": "Intervalo de actualización (segundos):",
-        "preco_spot": "Precio Spot Real",
+        "preco_spot": "Precio Actual en el Mercado Spot",
         "variacao_24h": "Variación 24h",
         "volume_24h": "Volumen 24h (USDT)",
         "market_cap": "Capitalización (USD)",
@@ -123,8 +141,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "neutro": "🟡  NEUTRO (ESPERAR SMC)",
-        "erro_dados": "Datos históricos insuficientes. Pruebe con otro activo o reduzca el marco temporal.",
-        "ctx_desconto": "Activo en Zona de Descuento de Fibonacci (Excelente riesgo/retorno para Institucionales).",
+        "erro_dados": "Datos insuficientes. Pruebe con otro activo o reduzca el marco temporal.",
+        "ctx_desconto": "Activo en Zona de Descuento de Fibonacci (Excelente riesgo/retorno).",
         "ctx_premium": "Activo en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
         "ctx_neutro": "Precio en zona neutral de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Última actualización",
@@ -132,7 +150,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "segundos",
         "pontos_compra": "Puntos de Compra",
         "pontos_venda": "Puntos de Venta",
-        "grafico_titulo": "📈  Gráfico de Precio Interactivo",
+        "grafico_titulo": "📈  Gráfico Interactivo",
         "buscando_marketcap": "🔍  Buscando Capitalización...",
         "marketcap_nao_disponivel": "No disponible",
         "idioma_label": "🌐  Idioma / Language",
@@ -150,13 +168,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Français": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Moteur SMC",
+        "aba_cripto": "🪙 Cryptomonnaies",
+        "aba_acoes": "📈 Actions (Bourses)",
         "config_globais": "⚙️  Paramètres globaux",
-        "selecione_cripto": "Sélectionnez une cryptomonnaie (/USDT):",
+        "selecione_cripto": "Sélectionnez la cryptomonnaie (/USDT):",
+        "selecione_corretora_acoes": "Sélectionnez le courtier (Bourse):",
+        "ticker_acoes": "Entrez le ticker (ex. AAPL, PETR4.SA):",
         "tempo_grafico": "Période:",
         "modo_vivo": "Activer la surveillance en temps réel",
         "intervalo_refresh": "Intervalle de rafraîchissement (secondes):",
-        "preco_spot": "Cours Spot réel",
+        "preco_spot": "Prix Actuel sur le Marché Spot",
         "variacao_24h": "Variation 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalisation (USD)",
@@ -164,8 +186,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
         "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
         "neutro": "🟡  NEUTRE (ATTENDRE SMC)",
-        "erro_dados": "Données historiques insuffisantes. Essayez un autre actif ou réduisez la période.",
-        "ctx_desconto": "Actif en zone de discount de Fibonacci (Excellent risque/rendement pour les institutionnels).",
+        "erro_dados": "Données insuffisantes. Essayez un autre actif ou réduisez la période.",
+        "ctx_desconto": "Actif en zone de discount de Fibonacci (Excellent risque/rendement).",
         "ctx_premium": "Actif en zone premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
         "ctx_neutro": "Prix en zone neutre de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Dernière mise à jour",
@@ -173,7 +195,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "secondes",
         "pontos_compra": "Points d'achat",
         "pontos_venda": "Points de vente",
-        "grafico_titulo": "📈  Graphique de prix interactif",
+        "grafico_titulo": "📈  Graphique interactif",
         "buscando_marketcap": "🔍  Recherche de la capitalisation...",
         "marketcap_nao_disponivel": "Indisponible",
         "idioma_label": "🌐  Langue / Language",
@@ -191,22 +213,26 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Deutsch": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Motor",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC-Motor",
+        "aba_cripto": "🪙 Kryptowährungen",
+        "aba_acoes": "📈 Aktien (Börsen)",
         "config_globais": "⚙️  Globale Einstellungen",
-        "selecione_cripto": "Wählen Sie eine Kryptowährung (/USDT):",
+        "selecione_cripto": "Wählen Sie Kryptowährung (/USDT):",
+        "selecione_corretora_acoes": "Wählen Sie den Broker (Börse):",
+        "ticker_acoes": "Geben Sie das Ticker-Symbol ein (z.B. AAPL, PETR4.SA):",
         "tempo_grafico": "Zeitrahmen:",
         "modo_vivo": "Echtzeit-Überwachung aktivieren",
         "intervalo_refresh": "Aktualisierungsintervall (Sekunden):",
-        "preco_spot": "Echter Spot-Preis",
+        "preco_spot": "Aktueller Spot-Marktpreis",
         "variacao_24h": "24h-Veränderung",
         "volume_24h": "24h-Volumen (USDT)",
         "market_cap": "Marktkapitalisierung (USD)",
-        "stop_atr": "ATR-Stop-Preis",
+        "stop_atr": "ATR-Stoppkurs",
         "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI AUSGERICHTET)",
         "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI AUSGERICHTET)",
         "neutro": "🟡  NEUTRAL (SMC ABWARTEN)",
-        "erro_dados": "Unzureichende historische Daten. Versuchen Sie es mit einem anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
-        "ctx_desconto": "Vermögenswert in Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite für Institutionelle).",
+        "erro_dados": "Unzureichende Daten. Versuchen Sie einen anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
+        "ctx_desconto": "Vermögenswert in Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite).",
         "ctx_premium": "Vermögenswert in Fibonacci-Premium-Zone (Preis gedehnt, gewinnmitnahme geeignet).",
         "ctx_neutro": "Preis in neutraler Fibonacci-Zone (Fair Value Zone).",
         "ultima_atualizacao": "Letzte Aktualisierung",
@@ -214,7 +240,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "Sekunden",
         "pontos_compra": "Kaufpunkte",
         "pontos_venda": "Verkaufspunkte",
-        "grafico_titulo": "📈  Interaktives Kursdiagramm",
+        "grafico_titulo": "📈  Interaktives Diagramm",
         "buscando_marketcap": "🔍  Marktkapitalisierung wird abgerufen...",
         "marketcap_nao_disponivel": "Nicht verfügbar",
         "idioma_label": "🌐  Sprache / Language",
@@ -232,13 +258,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Italiano": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motore Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motore SMC",
+        "aba_cripto": "🪙 Criptovalute",
+        "aba_acoes": "📈 Azioni (Borse)",
         "config_globais": "⚙️  Impostazioni globali",
-        "selecione_cripto": "Seleziona una criptovaluta (/USDT):",
+        "selecione_cripto": "Seleziona criptovaluta (/USDT):",
+        "selecione_corretora_acoes": "Seleziona il broker (Borsa):",
+        "ticker_acoes": "Inserisci il ticker (es. AAPL, PETR4.SA):",
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Attiva monitoraggio in tempo reale",
         "intervalo_refresh": "Intervallo di aggiornamento (secondi):",
-        "preco_spot": "Prezzo Spot Reale",
+        "preco_spot": "Prezzo Corrente sul Mercato Spot",
         "variacao_24h": "Variazione 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalizzazione (USD)",
@@ -246,8 +276,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI ALLINEATI)",
         "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI ALLINEATI)",
         "neutro": "🟡  NEUTRO (ATTENDERE SMC)",
-        "erro_dados": "Dati storici insufficienti. Prova un altro asset o riduci il timeframe.",
-        "ctx_desconto": "Asset in Zona di Sconto di Fibonacci (Ottimo rischio/rendimento per Istituzionali).",
+        "erro_dados": "Dati insufficienti. Prova un altro asset o riduci il timeframe.",
+        "ctx_desconto": "Asset in Zona di Sconto di Fibonacci (Ottimo rischio/rendimento).",
         "ctx_premium": "Asset in Zona Premium di Fibonacci (Prezzo allungato, adatto per presa di profitto).",
         "ctx_neutro": "Prezzo in zona neutrale di Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Ultimo aggiornamento",
@@ -255,7 +285,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "secondi",
         "pontos_compra": "Punti di Acquisto",
         "pontos_venda": "Punti di Vendita",
-        "grafico_titulo": "📈  Grafico Prezzo Interattivo",
+        "grafico_titulo": "📈  Grafico interattivo",
         "buscando_marketcap": "🔍  Ricerca Capitalizzazione...",
         "marketcap_nao_disponivel": "Non disponibile",
         "idioma_label": "🌐  Lingua / Language",
@@ -273,13 +303,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Русский": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель SMC",
+        "aba_cripto": "🪙 Криптовалюты",
+        "aba_acoes": "📈 Акции (Биржи)",
         "config_globais": "⚙️  Глобальные настройки",
         "selecione_cripto": "Выберите криптовалюту (/USDT):",
+        "selecione_corretora_acoes": "Выберите брокера (Биржу):",
+        "ticker_acoes": "Введите тикер (например, AAPL, PETR4.SA):",
         "tempo_grafico": "Таймфрейм:",
         "modo_vivo": "Включить мониторинг в реальном времени",
         "intervalo_refresh": "Интервал обновления (секунды):",
-        "preco_spot": "Реальная спот-цена",
+        "preco_spot": "Текущая цена на спотовом рынке",
         "variacao_24h": "Изменение за 24ч",
         "volume_24h": "Объем за 24ч (USDT)",
         "market_cap": "Рыночная капитализация (USD)",
@@ -287,8 +321,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
         "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
         "neutro": "🟡  НЕЙТРАЛЬНО (ОЖИДАТЬ SMC)",
-        "erro_dados": "Недостаточно исторических данных. Попробуйте другой актив или уменьшите таймфрейм.",
-        "ctx_desconto": "Актив в зоне скидки Фибоначчи (Отличное соотношение риск/доходность для институционалов).",
+        "erro_dados": "Недостаточно данных. Попробуйте другой актив или уменьшите таймфрейм.",
+        "ctx_desconto": "Актив в зоне скидки Фибоначчи (Отличное соотношение риск/доходность).",
         "ctx_premium": "Актив в премиальной зоне Фибоначчи (Цена растянута, подходит для фиксации прибыли).",
         "ctx_neutro": "Цена в нейтральной зоне Фибоначчи (Fair Value Zone).",
         "ultima_atualizacao": "Последнее обновление",
@@ -296,7 +330,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "секунд",
         "pontos_compra": "Очки покупки",
         "pontos_venda": "Очки продажи",
-        "grafico_titulo": "📈  Интерактивный график цены",
+        "grafico_titulo": "📈  Интерактивный график",
         "buscando_marketcap": "🔍  Получение рыночной капитализации...",
         "marketcap_nao_disponivel": "Недоступно",
         "idioma_label": "🌐  Язык / Language",
@@ -314,22 +348,26 @@ DICIONARIO_LINGUAS = {
         }
     },
     "日本語": {
-        "titulo": "🏦  BRICSVAULT PORTAL - スマートマネーコンセプト（SMC）エンジン",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMCエンジン",
+        "aba_cripto": "🪙 仮想通貨",
+        "aba_acoes": "📈 株式（取引所）",
         "config_globais": "⚙️  グローバル設定",
-        "selecione_cripto": "暗号通貨を選択（/USDT）:",
+        "selecione_cripto": "仮想通貨を選択（/USDT）:",
+        "selecione_corretora_acoes": "ブローカー（取引所）を選択:",
+        "ticker_acoes": "ティッカーを入力（例: AAPL, PETR4.SA）:",
         "tempo_grafico": "タイムフレーム:",
         "modo_vivo": "リアルタイム監視を有効にする",
         "intervalo_refresh": "更新間隔（秒）:",
-        "preco_spot": "実勢スポット価格",
-        "variacao_24h": "24時間変動",
+        "preco_spot": "現在のスポット市場価格",
+        "variacao_24h": "24時間変化",
         "volume_24h": "24時間出来高（USDT）",
         "market_cap": "時価総額（USD）",
         "stop_atr": "ATRストップ価格",
         "compra_forte": "🟢  強い買い（SMC＋フィボナッチ整合）",
         "venda_forte": "🔴  強い売り（SMC＋フィボナッチ整合）",
         "neutro": "🟡  中立（SMC待機）",
-        "erro_dados": "履歴データが不十分です。別の資産を選ぶか、タイムフレームを小さくしてください。",
-        "ctx_desconto": "フィボナッチ割引ゾーンにある資産（機関投資家向けの優れたリスク/リターン）。",
+        "erro_dados": "データが不十分です。別の資産を選ぶか、タイムフレームを小さくしてください。",
+        "ctx_desconto": "フィボナッチ割引ゾーンにある資産（優れたリスク/リターン）。",
         "ctx_premium": "フィボナッチプレミアムゾーンにある資産（価格が伸びており、利益確定に適している）。",
         "ctx_neutro": "フィボナッチ中立ゾーンの価格（フェアバリューゾーン）。",
         "ultima_atualizacao": "最終更新",
@@ -337,7 +375,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "秒",
         "pontos_compra": "買いポイント",
         "pontos_venda": "売りポイント",
-        "grafico_titulo": "📈  インタラクティブ価格チャート",
+        "grafico_titulo": "📈  インタラクティブチャート",
         "buscando_marketcap": "🔍  時価総額を取得中...",
         "marketcap_nao_disponivel": "利用不可",
         "idioma_label": "🌐  言語 / Language",
@@ -355,13 +393,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "中文 (简体)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - 智能资金概念（SMC）引擎",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC引擎",
+        "aba_cripto": "🪙 加密货币",
+        "aba_acoes": "📈 股票（交易所）",
         "config_globais": "⚙️  全局设置",
         "selecione_cripto": "选择加密货币（/USDT）：",
+        "selecione_corretora_acoes": "选择券商（交易所）：",
+        "ticker_acoes": "输入股票代码（例如 AAPL, PETR4.SA）：",
         "tempo_grafico": "时间周期：",
         "modo_vivo": "启用实时监控",
         "intervalo_refresh": "刷新间隔（秒）：",
-        "preco_spot": "实时现货价格",
+        "preco_spot": "当前现货市场价格",
         "variacao_24h": "24小时变化",
         "volume_24h": "24小时成交量（USDT）",
         "market_cap": "市值（美元）",
@@ -369,8 +411,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  强烈买入（SMC + 斐波那契一致）",
         "venda_forte": "🔴  强烈卖出（SMC + 斐波那契一致）",
         "neutro": "🟡  中性（等待SMC）",
-        "erro_dados": "历史数据不足。请选择其他资产或缩短时间周期。",
-        "ctx_desconto": "资产处于斐波那契折价区（机构级卓越风险/回报）。",
+        "erro_dados": "数据不足。请选择其他资产或缩短时间周期。",
+        "ctx_desconto": "资产处于斐波那契折价区（卓越风险/回报）。",
         "ctx_premium": "资产处于斐波那契溢价区（价格拉伸，适合获利了结）。",
         "ctx_neutro": "价格处于斐波那契中性区（公允价值区）。",
         "ultima_atualizacao": "最后更新",
@@ -378,7 +420,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "秒",
         "pontos_compra": "买入点",
         "pontos_venda": "卖出点",
-        "grafico_titulo": "📈  交互式价格图表",
+        "grafico_titulo": "📈  交互式图表",
         "buscando_marketcap": "🔍  正在获取市值...",
         "marketcap_nao_disponivel": "不可用",
         "idioma_label": "🌐  语言 / Language",
@@ -396,13 +438,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "हिन्दी": {
-        "titulo": "🏦  BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC इंजन",
+        "aba_cripto": "🪙 क्रिप्टोकरेंसी",
+        "aba_acoes": "📈 स्टॉक (एक्सचेंज)",
         "config_globais": "⚙️  वैश्विक सेटिंग्स",
-        "selecione_cripto": "कोई भी क्रिप्टोकरेंसी चुनें (/USDT):",
+        "selecione_cripto": "क्रिप्टोकरेंसी चुनें (/USDT):",
+        "selecione_corretora_acoes": "ब्रोकर (एक्सचेंज) चुनें:",
+        "ticker_acoes": "टिकर दर्ज करें (जैसे AAPL, PETR4.SA):",
         "tempo_grafico": "टाइमफ्रेम:",
         "modo_vivo": "रीयल-टाइम मॉनिटरिंग सक्षम करें",
         "intervalo_refresh": "रिफ्रेश अंतराल (सेकंड):",
-        "preco_spot": "वास्तविक स्पॉट मूल्य",
+        "preco_spot": "वर्तमान स्पॉट बाजार मूल्य",
         "variacao_24h": "24 घंटे का बदलाव",
         "volume_24h": "24 घंटे का वॉल्यूम (USDT)",
         "market_cap": "बाजार पूंजीकरण (USD)",
@@ -410,8 +456,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची संरेखित)",
         "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
         "neutro": "🟡  तटस्थ (SMC की प्रतीक्षा करें)",
-        "erro_dados": "अपर्याप्त ऐतिहासिक डेटा। कोई अन्य संपत्ति चुनें या टाइमफ्रेम कम करें।",
-        "ctx_desconto": "संपत्ति फिबोनाची डिस्काउंट ज़ोन में (संस्थागतों के लिए उत्कृष्ट जोखिम/रिटर्न)।",
+        "erro_dados": "अपर्याप्त डेटा। कोई अन्य संपत्ति चुनें या टाइमफ्रेम कम करें।",
+        "ctx_desconto": "संपत्ति फिबोनाची डिस्काउंट ज़ोन में (उत्कृष्ट जोखिम/रिटर्न)।",
         "ctx_premium": "संपत्ति फिबोनाची प्रीमियम ज़ोन में (मूल्य खिंचा हुआ, लाभ-बुकिंग के लिए उपयुक्त)।",
         "ctx_neutro": "फिबोनाची तटस्थ क्षेत्र में मूल्य (Fair Value Zone)।",
         "ultima_atualizacao": "अंतिम अद्यतन",
@@ -419,7 +465,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "सेकंड",
         "pontos_compra": "खरीद अंक",
         "pontos_venda": "बिक्री अंक",
-        "grafico_titulo": "📈  इंटरैक्टिव मूल्य चार्ट",
+        "grafico_titulo": "📈  इंटरैक्टिव चार्ट",
         "buscando_marketcap": "🔍  बाजार पूंजीकरण प्राप्त किया जा रहा है...",
         "marketcap_nao_disponivel": "उपलब्ध नहीं",
         "idioma_label": "🌐  भाषा / Language",
@@ -437,13 +483,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "বাংলা": {
-        "titulo": "🏦  BRICSVAULT PORTAL - স্মার্ট মানি কনসেপ্টস (SMC) ইঞ্জিন",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC ইঞ্জিন",
+        "aba_cripto": "🪙 ক্রিপ্টোকারেন্সি",
+        "aba_acoes": "📈 স্টক (এক্সচেঞ্জ)",
         "config_globais": "⚙️  গ্লোবাল সেটিংস",
-        "selecione_cripto": "যেকোনো ক্রিপ্টোকারেন্সি নির্বাচন করুন (/USDT):",
+        "selecione_cripto": "ক্রিপ্টোকারেন্সি নির্বাচন করুন (/USDT):",
+        "selecione_corretora_acoes": "ব্রোকার (এক্সচেঞ্জ) নির্বাচন করুন:",
+        "ticker_acoes": "টিকার লিখুন (যেমন AAPL, PETR4.SA):",
         "tempo_grafico": "টাইমফ্রেম:",
         "modo_vivo": "রিয়েল-টাইম মনিটরিং সক্রিয় করুন",
         "intervalo_refresh": "রিফ্রেশ বিরতি (সেকেন্ড):",
-        "preco_spot": "প্রকৃত স্পট মূল্য",
+        "preco_spot": "বর্তমান স্পট মার্কেট মূল্য",
         "variacao_24h": "২৪ ঘণ্টার পরিবর্তন",
         "volume_24h": "২৪ ঘণ্টার ভলিউম (USDT)",
         "market_cap": "বাজার মূলধন (USD)",
@@ -451,8 +501,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  শক্তিশালী ক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
         "venda_forte": "🔴  শক্তিশালী বিক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
         "neutro": "🟡  নিরপেক্ষ (SMC এর জন্য অপেক্ষা করুন)",
-        "erro_dados": "অপর্যাপ্ত ঐতিহাসিক ডেটা। অন্য সম্পদ নির্বাচন করুন বা টাইমফ্রেম কমিয়ে দিন।",
-        "ctx_desconto": "সম্পদ ফিবোনাচি ডিসকাউন্ট জোনে (প্রাতিষ্ঠানিকদের জন্য চমৎকার ঝুঁকি/রিটার্ন)।",
+        "erro_dados": "অপর্যাপ্ত ডেটা। অন্য সম্পদ নির্বাচন করুন বা টাইমফ্রেম কমিয়ে দিন।",
+        "ctx_desconto": "সম্পদ ফিবোনাচি ডিসকাউন্ট জোনে (চমৎকার ঝুঁকি/রিটার্ন)।",
         "ctx_premium": "সম্পদ ফিবোনাচি প্রিমিয়াম জোনে (মূল্য প্রসারিত, মুনাফা গ্রহণের জন্য উপযুক্ত)।",
         "ctx_neutro": "ফিবোনাচি নিরপেক্ষ অঞ্চলে মূল্য (Fair Value Zone)।",
         "ultima_atualizacao": "শেষ আপডেট",
@@ -460,7 +510,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "সেকেন্ড",
         "pontos_compra": "ক্রয় পয়েন্ট",
         "pontos_venda": "বিক্রয় পয়েন্ট",
-        "grafico_titulo": "📈  ইন্টারেক্টিভ মূল্য চার্ট",
+        "grafico_titulo": "📈  ইন্টারেক্টিভ চার্ট",
         "buscando_marketcap": "🔍  বাজার মূলধন সংগ্রহ করা হচ্ছে...",
         "marketcap_nao_disponivel": "উপলব্ধ নয়",
         "idioma_label": "🌐  ভাষা / Language",
@@ -478,13 +528,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "العربية": {
-        "titulo": "🏦  BRICSVAULT PORTAL - محرك مفاهيم الأموال الذكية (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - محرك SMC",
+        "aba_cripto": "🪙 العملات المشفرة",
+        "aba_acoes": "📈 الأسهم (البورصات)",
         "config_globais": "⚙️  الإعدادات العامة",
-        "selecione_cripto": "اختر أي عملة مشفرة (/USDT):",
+        "selecione_cripto": "اختر العملة المشفرة (/USDT):",
+        "selecione_corretora_acoes": "اختر الوسيط (البورصة):",
+        "ticker_acoes": "أدخل الرمز (مثل AAPL, PETR4.SA):",
         "tempo_grafico": "الإطار الزمني:",
         "modo_vivo": "تفعيل المراقبة في الوقت الفعلي",
         "intervalo_refresh": "فترة التحديث (ثواني):",
-        "preco_spot": "سعر الفوري الحقيقي",
+        "preco_spot": "سعر السوق الفوري الحالي",
         "variacao_24h": "تغير 24 ساعة",
         "volume_24h": "حجم التداول 24 ساعة (USDT)",
         "market_cap": "القيمة السوقية (USD)",
@@ -492,8 +546,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  شراء قوي (SMC + فيبوناتشي متوافقة)",
         "venda_forte": "🔴  بيع قوي (SMC + فيبوناتشي متوافقة)",
         "neutro": "🟡  محايد (انتظار SMC)",
-        "erro_dados": "بيانات تاريخية غير كافية. اختر أصلًا آخر أو قلل الإطار الزمني.",
-        "ctx_desconto": "الأصل في منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز للمؤسسات).",
+        "erro_dados": "بيانات غير كافية. اختر أصلًا آخر أو قلل الإطار الزمني.",
+        "ctx_desconto": "الأصل في منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز).",
         "ctx_premium": "الأصل في منطقة فيبوناتشي الممتازة (السعر ممتد، مناسب لجني الأرباح).",
         "ctx_neutro": "السعر في منطقة فيبوناتشي المحايدة (منطقة القيمة العادلة).",
         "ultima_atualizacao": "آخر تحديث",
@@ -501,7 +555,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "ثواني",
         "pontos_compra": "نقاط الشراء",
         "pontos_venda": "نقاط البيع",
-        "grafico_titulo": "📈  مخطط الأسعار التفاعلي",
+        "grafico_titulo": "📈  مخطط تفاعلي",
         "buscando_marketcap": "🔍  جاري الحصول على القيمة السوقية...",
         "marketcap_nao_disponivel": "غير متاح",
         "idioma_label": "🌐  اللغة / Language",
@@ -519,13 +573,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "한국어": {
-        "titulo": "🏦  BRICSVAULT PORTAL - 스마트 머니 컨셉(SMC) 엔진",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC 엔진",
+        "aba_cripto": "🪙 암호화폐",
+        "aba_acoes": "📈 주식 (거래소)",
         "config_globais": "⚙️  글로벌 설정",
         "selecione_cripto": "암호화폐 선택 (/USDT):",
+        "selecione_corretora_acoes": "브로커 (거래소) 선택:",
+        "ticker_acoes": "티커 입력 (예: AAPL, PETR4.SA):",
         "tempo_grafico": "시간 프레임:",
         "modo_vivo": "실시간 모니터링 활성화",
         "intervalo_refresh": "새로 고침 간격(초):",
-        "preco_spot": "실제 현물 가격",
+        "preco_spot": "현재 현물 시장 가격",
         "variacao_24h": "24시간 변동",
         "volume_24h": "24시간 거래량 (USDT)",
         "market_cap": "시가총액 (USD)",
@@ -533,8 +591,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  강한 매수 (SMC + 피보나치 정렬)",
         "venda_forte": "🔴  강한 매도 (SMC + 피보나치 정렬)",
         "neutro": "🟡  중립 (SMC 대기)",
-        "erro_dados": "과거 데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
-        "ctx_desconto": "자산이 피보나치 할인 영역에 있습니다 (기관용 우수한 위험/수익률).",
+        "erro_dados": "데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
+        "ctx_desconto": "자산이 피보나치 할인 영역에 있습니다 (우수한 위험/수익률).",
         "ctx_premium": "자산이 피보나치 프리미엄 영역에 있습니다 (가격이 늘어나 있어 이익 실현에 적합).",
         "ctx_neutro": "피보나치 중립 영역의 가격 (공정 가치 영역).",
         "ultima_atualizacao": "마지막 업데이트",
@@ -542,7 +600,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "초",
         "pontos_compra": "매수 포인트",
         "pontos_venda": "매도 포인트",
-        "grafico_titulo": "📈  대화형 가격 차트",
+        "grafico_titulo": "📈  대화형 차트",
         "buscando_marketcap": "🔍  시가총액 가져오는 중...",
         "marketcap_nao_disponivel": "사용 불가",
         "idioma_label": "🌐  언어 / Language",
@@ -560,13 +618,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Tiếng Việt": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Động cơ Khái niệm Tiền thông minh (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Động cơ SMC",
+        "aba_cripto": "🪙 Tiền mã hóa",
+        "aba_acoes": "📈 Cổ phiếu (Sàn giao dịch)",
         "config_globais": "⚙️  Cài đặt toàn cầu",
-        "selecione_cripto": "Chọn bất kỳ tiền mã hóa nào (/USDT):",
+        "selecione_cripto": "Chọn tiền mã hóa (/USDT):",
+        "selecione_corretora_acoes": "Chọn nhà môi giới (Sàn):",
+        "ticker_acoes": "Nhập mã cổ phiếu (ví dụ AAPL, PETR4.SA):",
         "tempo_grafico": "Khung thời gian:",
         "modo_vivo": "Bật giám sát thời gian thực",
         "intervalo_refresh": "Khoảng thời gian làm mới (giây):",
-        "preco_spot": "Giá spot thực tế",
+        "preco_spot": "Giá thị trường giao ngay hiện tại",
         "variacao_24h": "Biến động 24h",
         "volume_24h": "Khối lượng 24h (USDT)",
         "market_cap": "Vốn hóa thị trường (USD)",
@@ -574,8 +636,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
         "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
         "neutro": "🟡  TRUNG LẬP (CHỜ SMC)",
-        "erro_dados": "Dữ liệu lịch sử không đủ. Chọn tài sản khác hoặc giảm khung thời gian.",
-        "ctx_desconto": "Tài sản nằm trong vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời cho tổ chức).",
+        "erro_dados": "Dữ liệu không đủ. Chọn tài sản khác hoặc giảm khung thời gian.",
+        "ctx_desconto": "Tài sản nằm trong vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời).",
         "ctx_premium": "Tài sản nằm trong vùng cao cấp Fibonacci (Giá kéo dài, phù hợp để chốt lời).",
         "ctx_neutro": "Giá nằm trong vùng trung tính Fibonacci (Vùng giá trị hợp lý).",
         "ultima_atualizacao": "Cập nhật cuối cùng",
@@ -583,7 +645,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "giây",
         "pontos_compra": "Điểm mua",
         "pontos_venda": "Điểm bán",
-        "grafico_titulo": "📈  Biểu đồ giá tương tác",
+        "grafico_titulo": "📈  Biểu đồ tương tác",
         "buscando_marketcap": "🔍  Đang tìm vốn hóa thị trường...",
         "marketcap_nao_disponivel": "Không có sẵn",
         "idioma_label": "🌐  Ngôn ngữ / Language",
@@ -601,13 +663,17 @@ DICIONARIO_LINGUAS = {
         }
     },
     "Türkçe": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Akıllı Para Kavramları (SMC) Motoru",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC Motoru",
+        "aba_cripto": "🪙 Kripto Paralar",
+        "aba_acoes": "📈 Hisseler (Borsalar)",
         "config_globais": "⚙️  Genel Ayarlar",
-        "selecione_cripto": "Herhangi bir Kripto Para Birimi Seçin (/USDT):",
+        "selecione_cripto": "Kripto Para Seçin (/USDT):",
+        "selecione_corretora_acoes": "Broker (Borsa) Seçin:",
+        "ticker_acoes": "Ticker Girin (ör. AAPL, PETR4.SA):",
         "tempo_grafico": "Zaman Dilimi:",
         "modo_vivo": "Gerçek Zamanlı İzlemeyi Etkinleştir",
         "intervalo_refresh": "Yenileme Aralığı (Saniye):",
-        "preco_spot": "Gerçek Spot Fiyat",
+        "preco_spot": "Spot Piyasa Güncel Fiyatı",
         "variacao_24h": "24 Saatlik Değişim",
         "volume_24h": "24 Saatlik Hacim (USDT)",
         "market_cap": "Piyasa Değeri (USD)",
@@ -615,8 +681,8 @@ DICIONARIO_LINGUAS = {
         "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI UYUMLU)",
         "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI UYUMLU)",
         "neutro": "🟡  NÖTR (SMC BEKLE)",
-        "erro_dados": "Yetersiz geçmiş veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
-        "ctx_desconto": "Varlık Fibonacci İskonto Bölgesinde (Kurumlar için mükemmel risk/getiri).",
+        "erro_dados": "Yetersiz veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
+        "ctx_desconto": "Varlık Fibonacci İskonto Bölgesinde (Mükemmel risk/getiri).",
         "ctx_premium": "Varlık Fibonacci Prim Bölgesinde (Fiyat gerilmiş, kar alma için uygun).",
         "ctx_neutro": "Fiyat Fibonacci nötr bölgesinde (Fair Value Zone).",
         "ultima_atualizacao": "Son Güncelleme",
@@ -624,7 +690,7 @@ DICIONARIO_LINGUAS = {
         "segundos": "saniye",
         "pontos_compra": "Alım Noktaları",
         "pontos_venda": "Satım Noktaları",
-        "grafico_titulo": "📈  Etkileşimli Fiyat Grafiği",
+        "grafico_titulo": "📈  Etkileşimli Grafik",
         "buscando_marketcap": "🔍  Piyasa Değeri alınıyor...",
         "marketcap_nao_disponivel": "Mevcut değil",
         "idioma_label": "🌐  Dil / Language",
@@ -644,7 +710,7 @@ DICIONARIO_LINGUAS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO
+# FORMATAÇÃO (funções mantidas)
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -685,306 +751,25 @@ def formatar_market_cap(valor):
     elif valor >= 1_000_000:
         return f"$ {valor / 1_000_000:.2f}M"
     else:
-        return "$ —"
+        return f"$ {valor:,.2f}"
 
 
 def formatar_volume_usdt(valor):
-    """Exibe o volume em USDT com duas casas decimais e sufixo."""
+    """Exatamente a mesma lógica do market cap – com símbolo $ e sufixos T, B, M."""
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return "—"
-    return f"{valor:,.2f} USDT"
+    if valor >= 1_000_000_000_000:
+        return f"$ {valor / 1_000_000_000_000:.2f}T"
+    elif valor >= 1_000_000_000:
+        return f"$ {valor / 1_000_000_000:.2f}B"
+    elif valor >= 1_000_000:
+        return f"$ {valor / 1_000_000:.2f}M"
+    else:
+        return f"$ {valor:,.2f}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES (fallback interno)
-class ExchangeManager:
-    """Gerencia múltiplas exchanges com fallback e cache, sem exposição ao usuário."""
-    
-    EXCHANGES = {
-        "Gate.io": {
-            "class": ccxt.gate,
-            "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}},
-            "separator": "/",
-            "has_volume_usd": False
-        },
-        "Kraken": {
-            "class": ccxt.kraken,
-            "config": {"enableRateLimit": True},
-            "separator": "/",
-            "has_volume_usd": False
-        },
-        "MEXC": {
-            "class": ccxt.mexc,
-            "config": {"enableRateLimit": True},
-            "separator": "",
-            "has_volume_usd": True
-        },
-        "KuCoin": {
-            "class": ccxt.kucoin,
-            "config": {"enableRateLimit": True},
-            "separator": "-",
-            "has_volume_usd": True
-        }
-    }
-    
-    # Ordem de tentativa (primária primeiro, depois fallbacks)
-    PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
-    
-    def __init__(self):
-        self.clients = {}
-        self._init_clients()
-    
-    def _init_clients(self):
-        for name, config in self.EXCHANGES.items():
-            try:
-                self.clients[name] = config["class"](config["config"])
-            except Exception as e:
-                # Não exibe erro para não poluir a interface
-                pass
-    
-    def get_client(self, exchange_name):
-        return self.clients.get(exchange_name)
-    
-    def get_separator(self, exchange_name):
-        return self.EXCHANGES.get(exchange_name, {}).get("separator", "/")
-    
-    def get_symbol_format(self, exchange_name, symbol):
-        sep = self.get_separator(exchange_name)
-        if exchange_name == "MEXC":
-            return symbol.replace("/", "")
-        elif exchange_name == "KuCoin":
-            return symbol.replace("/", "-")
-        else:
-            return symbol
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÕES DE MERCADO COM FALLBACK
-
-def obter_todos_pares_usdt():
-    """Obtém pares USDT da exchange primária (Gate.io) para a lista de seleção."""
-    manager = ExchangeManager()
-    client = manager.get_client("Gate.io")
-    if not client:
-        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
-    try:
-        markets = client.load_markets()
-        pairs = [s for s in markets.keys() if s.endswith('/USDT')]
-        return sorted(pairs)
-    except Exception:
-        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
-
-
-def obter_dados_24h(simbolo):
-    """
-    Tenta obter dados de 24h da exchange primária; se falhar, tenta as fallbacks.
-    Retorna o primeiro resultado bem-sucedido.
-    """
-    manager = ExchangeManager()
-    for exchange_name in manager.PRIORITY:
-        try:
-            client = manager.get_client(exchange_name)
-            if not client:
-                continue
-            # Ajusta o símbolo conforme a exchange
-            symbol = manager.get_symbol_format(exchange_name, simbolo)
-            ticker = client.fetch_ticker(symbol)
-            if ticker:
-                result = {
-                    "last": ticker.get("last"),
-                    "change": ticker.get("percentage"),
-                    "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
-                    "high": ticker.get("high"),
-                    "low": ticker.get("low"),
-                    "bid": ticker.get("bid"),
-                    "ask": ticker.get("ask")
-                }
-                # Se o volume for None e a exchange tem volume em USD, tenta direto
-                if not result["volume"] and manager.EXCHANGES[exchange_name].get("has_volume_usd"):
-                    result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
-                # Se ainda for None, pula para a próxima exchange
-                if result["last"] is not None:
-                    return result
-        except Exception:
-            continue
-    return None
-
-
-def obter_dados_24h_direto(exchange_name, simbolo):
-    """Tenta obter via REST direta (fallback)."""
-    try:
-        if exchange_name == "Gate.io":
-            pair = simbolo.replace("/", "_")
-            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data and len(data) > 0:
-                    d = data[0]
-                    return {
-                        "last": float(d.get("last", 0)),
-                        "change": float(d.get("change_percentage", 0)),
-                        "volume": float(d.get("quote_volume", 0)),
-                        "high": float(d.get("high_24h", 0)),
-                        "low": float(d.get("low_24h", 0)),
-                        "bid": float(d.get("highest_bid", 0)),
-                        "ask": float(d.get("lowest_ask", 0))
-                    }
-        elif exchange_name == "MEXC":
-            pair = simbolo.replace("/", "")
-            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                d = resp.json()
-                return {
-                    "last": float(d.get("lastPrice", 0)),
-                    "change": float(d.get("priceChangePercent", 0)),
-                    "volume": float(d.get("quoteVolume", 0)) or float(d.get("volume", 0)),
-                    "high": float(d.get("highPrice", 0)),
-                    "low": float(d.get("lowPrice", 0)),
-                    "bid": float(d.get("bidPrice", 0)),
-                    "ask": float(d.get("askPrice", 0))
-                }
-        elif exchange_name == "KuCoin":
-            pair = simbolo.replace("/", "-")
-            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("code") == "200000":
-                    d = data.get("data", {})
-                    return {
-                        "last": float(d.get("last", 0)),
-                        "change": float(d.get("changeRate", 0)) * 100,
-                        "volume": float(d.get("volValue", 0)),
-                        "high": float(d.get("high", 0)),
-                        "low": float(d.get("low", 0)),
-                        "bid": float(d.get("buy", 0)),
-                        "ask": float(d.get("sell", 0))
-                    }
-    except Exception:
-        pass
-    return None
-
-
-def obter_volume_usd_direto(exchange_name, simbolo):
-    try:
-        if exchange_name == "MEXC":
-            pair = simbolo.replace("/", "")
-            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                return float(resp.json().get("quoteVolume", 0))
-        elif exchange_name == "KuCoin":
-            pair = simbolo.replace("/", "-")
-            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("code") == "200000":
-                    return float(data.get("data", {}).get("volValue", 0))
-    except:
-        pass
-    return None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP (CoinGecko + CoinCap)
-
-@st.cache_data(ttl=3600)
-def obter_id_coingecko(simbolo):
-    try:
-        url = "https://api.coingecko.com/api/v3/search"
-        params = {"query": simbolo}
-        headers = {"Accept": "application/json"}
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
-        if resp.status_code != 200:
-            return None
-        data = resp.json()
-        coins = data.get("coins", [])
-        simbolo_upper = simbolo.upper()
-        for coin in coins:
-            if coin.get("symbol", "").upper() == simbolo_upper:
-                return coin.get("id")
-        if coins:
-            return coins[0].get("id")
-        return None
-    except Exception:
-        return None
-
-
-@st.cache_data(ttl=600)
-def obter_market_cap_coingecko(simbolo):
-    coin_id = obter_id_coingecko(simbolo)
-    if not coin_id:
-        return None
-    try:
-        url = "https://api.coingecko.com/api/v3/coins/markets"
-        params = {
-            "vs_currency": "usd",
-            "ids": coin_id,
-            "order": "market_cap_desc",
-            "per_page": 1,
-            "page": 1,
-            "sparkline": "false"
-        }
-        headers = {"Accept": "application/json"}
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            dados = resp.json()
-            if dados and len(dados) > 0:
-                mc = dados[0].get("market_cap")
-                if mc and float(mc) > 1_000_000:
-                    return float(mc)
-        return None
-    except Exception:
-        return None
-
-
-@st.cache_data(ttl=600)
-def obter_market_cap_coincap(simbolo):
-    try:
-        asset_id = simbolo.lower()
-        url = f"https://api.coincap.io/v2/assets/{asset_id}"
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            mc = data.get("data", {}).get("marketCapUsd")
-            if mc:
-                mc_float = float(mc)
-                if mc_float > 1_000_000:
-                    return mc_float
-        url_list = "https://api.coincap.io/v2/assets"
-        params = {"limit": 2000}
-        resp = requests.get(url_list, params=params, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            for item in data.get("data", []):
-                if item.get("symbol", "").upper() == simbolo.upper():
-                    mc = item.get("marketCapUsd")
-                    if mc:
-                        mc_float = float(mc)
-                        if mc_float > 1_000_000:
-                            return mc_float
-        return None
-    except Exception:
-        return None
-
-
-def obter_market_cap_robusto(simbolo_id):
-    simbolo = simbolo_id.split('/')[0]
-    mc = obter_market_cap_coingecko(simbolo)
-    if mc is not None:
-        return mc
-    mc = obter_market_cap_coincap(simbolo)
-    if mc is not None:
-        return mc
-    return None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS (mesmos do código original)
-
+# INDICADORES TÉCNICOS (mantidos)
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
     ganho = delta.clip(lower=0)
@@ -1090,8 +875,6 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
     return df
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FIBONACCI
 def calcular_retracao_fibonacci(df_analise):
     maxima = df_analise['high'].max()
     minima = df_analise['low'].min()
@@ -1107,57 +890,8 @@ def calcular_retracao_fibonacci(df_analise):
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS COM FALLBACK
-
-def carregar_dados(simbolo_id, timeframe_selecionado):
-    """
-    Tenta carregar dados da exchange primária; se falhar, tenta as fallbacks.
-    Retorna o primeiro DataFrame bem-sucedido.
-    """
-    manager = ExchangeManager()
-    for exchange_name in manager.PRIORITY:
-        try:
-            client = manager.get_client(exchange_name)
-            if not client:
-                continue
-            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
-            velas = client.fetch_ohlcv(
-                symbol,
-                timeframe=timeframe_selecionado,
-                limit=VELAS_TOTAL
-            )
-            if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
-                df = pd.DataFrame(
-                    velas,
-                    columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-                )
-                df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-
-                df['RSI_14'] = calcular_rsi(df['close'], 14)
-                macd, sinal, hist = calcular_macd(df['close'])
-                df['MACD'] = macd
-                df['MACD_SIGNAL'] = sinal
-                df['MACD_HIST'] = hist
-                df['MFI'] = calcular_mfi(df)
-                df = calcular_ssl_hybrid(df)
-                df = calcular_atr_stop(df)
-                df = calcular_ppo(df)
-
-                df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
-                df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
-
-                return df.dropna(subset=['close']).reset_index(drop=True)
-        except Exception:
-            continue
-    return None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA SMC
 def analisar_confluencia(df_completo, txt):
     df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
-
     if df_analise.empty:
         return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0
 
@@ -1217,79 +951,469 @@ def analisar_confluencia(df_completo, txt):
         contexto_fib = txt["ctx_neutro"]
 
     if pontos_alta >= 8.5:
-        return (
-            txt["compra_forte"], "#00cc66",
-            f"{contexto_fib} SMC + PPO Order Flow Bullish.",
-            pontos_alta, pontos_baixa
-        )
+        return (txt["compra_forte"], "#00cc66",
+                f"{contexto_fib} SMC + PPO Order Flow Bullish.",
+                pontos_alta, pontos_baixa)
     elif pontos_baixa >= 8.5:
-        return (
-            txt["venda_forte"], "#ff3333",
-            f"{contexto_fib} SMC + PPO Order Flow Bearish.",
-            pontos_alta, pontos_baixa
-        )
+        return (txt["venda_forte"], "#ff3333",
+                f"{contexto_fib} SMC + PPO Order Flow Bearish.",
+                pontos_alta, pontos_baixa)
     else:
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICO
-def renderizar_grafico_plotly(df_completo, simbolo_id):
-    df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
-
+def renderizar_grafico_plotly(df, titulo, nome_ativo):
+    df_graf = df.iloc[PERIODO_AQUECIMENTO:].copy()
     fig = go.Figure()
-
     fig.add_trace(go.Candlestick(
-        x=df_grafico['time'],
-        open=df_grafico['open'],
-        high=df_grafico['high'],
-        low=df_grafico['low'],
-        close=df_grafico['close'],
-        name=simbolo_id,
+        x=df_graf['time'],
+        open=df_graf['open'],
+        high=df_graf['high'],
+        low=df_graf['low'],
+        close=df_graf['close'],
+        name=nome_ativo,
         increasing_line_color='#10b981',
-        decreasing_line_color='#ef4444',
-        increasing_fillcolor='#10b981',
-        decreasing_fillcolor='#ef4444'
+        decreasing_line_color='#ef4444'
     ))
-
     fig.add_trace(go.Scatter(
-        x=df_grafico['time'],
-        y=df_grafico['SSL_Baseline'],
+        x=df_graf['time'],
+        y=df_graf['SSL_Baseline'],
         mode='lines',
         name='SMC Baseline (SSL)',
         line=dict(color='#00aaff', width=2)
     ))
-
     fig.add_trace(go.Scatter(
-        x=df_grafico['time'],
-        y=df_grafico['ATR_Stop'],
+        x=df_graf['time'],
+        y=df_graf['ATR_Stop'],
         mode='lines',
         name='ATR Trailing Stop',
         line=dict(color='#ffaa00', width=1, dash='dash')
     ))
-
     fig.update_layout(
         paper_bgcolor='#0b0f19',
         plot_bgcolor='#0b0f19',
         font=dict(color='#e2e8f0'),
-        xaxis=dict(
-            gridcolor='#1e293b',
-            showgrid=True,
-            rangeslider=dict(visible=False)
-        ),
+        xaxis=dict(gridcolor='#1e293b', showgrid=True, rangeslider=dict(visible=False)),
         yaxis=dict(gridcolor='#1e293b', showgrid=True),
         legend=dict(bgcolor='#1e293b', bordercolor='#475569', borderwidth=1),
         margin=dict(l=10, r=10, t=30, b=10),
         height=520
     )
-
     st.plotly_chart(fig, width='stretch')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR
-idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
+# CRIPTOMOEDAS
+class ExchangeManagerCrypto:
+    EXCHANGES = {
+        "Gate.io": {"class": ccxt.gate, "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}}, "separator": "/"},
+        "Kraken": {"class": ccxt.kraken, "config": {"enableRateLimit": True}, "separator": "/"},
+        "MEXC": {"class": ccxt.mexc, "config": {"enableRateLimit": True}, "separator": ""},
+        "KuCoin": {"class": ccxt.kucoin, "config": {"enableRateLimit": True}, "separator": "-"}
+    }
+    PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
 
+    def __init__(self):
+        self.clients = {}
+        for name, cfg in self.EXCHANGES.items():
+            try:
+                self.clients[name] = cfg["class"](cfg["config"])
+            except:
+                pass
+
+    def get_client(self, name):
+        return self.clients.get(name)
+
+    def get_symbol(self, name, symbol):
+        sep = self.EXCHANGES[name]["separator"]
+        if name == "MEXC":
+            return symbol.replace("/", "")
+        elif name == "KuCoin":
+            return symbol.replace("/", "-")
+        return symbol
+
+
+def obter_pares_usdt():
+    manager = ExchangeManagerCrypto()
+    client = manager.get_client("Gate.io")
+    if not client:
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+    try:
+        markets = client.load_markets()
+        pairs = [s for s in markets.keys() if s.endswith('/USDT')]
+        return sorted(pairs)
+    except:
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+
+
+def obter_dados_24h_crypto(symbol):
+    manager = ExchangeManagerCrypto()
+    for name in manager.PRIORITY:
+        client = manager.get_client(name)
+        if not client:
+            continue
+        try:
+            s = manager.get_symbol(name, symbol)
+            ticker = client.fetch_ticker(s)
+            if ticker and ticker.get('last'):
+                return {
+                    "last": ticker.get('last'),
+                    "change": ticker.get('percentage'),
+                    "volume": ticker.get('quoteVolume') or ticker.get('baseVolume'),
+                    "high": ticker.get('high'),
+                    "low": ticker.get('low'),
+                    "bid": ticker.get('bid'),
+                    "ask": ticker.get('ask')
+                }
+        except:
+            continue
+    return None
+
+
+def carregar_dados_crypto(symbol, timeframe):
+    manager = ExchangeManagerCrypto()
+    for name in manager.PRIORITY:
+        client = manager.get_client(name)
+        if not client:
+            continue
+        try:
+            s = manager.get_symbol(name, symbol)
+            candles = client.fetch_ohlcv(s, timeframe=timeframe, limit=VELAS_TOTAL)
+            if candles and len(candles) >= PERIODO_AQUECIMENTO + 50:
+                df = pd.DataFrame(candles, columns=['timestamp','open','high','low','close','volume'])
+                df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
+                df['RSI_14'] = calcular_rsi(df['close'], 14)
+                macd, sig, hist = calcular_macd(df['close'])
+                df['MACD'] = macd
+                df['MACD_SIGNAL'] = sig
+                df['MACD_HIST'] = hist
+                df['MFI'] = calcular_mfi(df)
+                df = calcular_ssl_hybrid(df)
+                df = calcular_atr_stop(df)
+                df = calcular_ppo(df)
+                df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
+                df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
+                return df.dropna(subset=['close']).reset_index(drop=True)
+        except:
+            continue
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AÇÕES (Yahoo Finance corrigido)
+def obter_dados_acoes(ticker, timeframe, periodo_dias=500):
+    try:
+        if '.SA' in ticker.upper():
+            return obter_dados_brapi(ticker, periodo_dias)
+        else:
+            return obter_dados_yahoo(ticker, timeframe, periodo_dias)
+    except Exception as e:
+        st.error(f"Erro ao buscar dados para {ticker}: {e}")
+        return None
+
+
+def obter_dados_yahoo(ticker, timeframe, periodo_dias):
+    if not YF_AVAILABLE:
+        st.error("yfinance não instalado. Execute: pip install yfinance")
+        return None
+
+    try:
+        interval_map = {
+            '1m': '1m',
+            '5m': '5m',
+            '15m': '15m',
+            '30m': '30m',
+            '1h': '1h',
+            '4h': '1h',  # Yahoo não tem 4h, usamos 1h
+            '1d': '1d',
+            '1w': '1wk'
+        }
+        interval = interval_map.get(timeframe, '1d')
+
+        if interval in ['1m', '5m', '15m', '30m', '1h']:
+            period = '5d'
+        else:
+            period = '5y'
+
+        data = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=False)
+        if data.empty:
+            data = yf.download(ticker, period='max', interval=interval, progress=False, auto_adjust=False)
+            if data.empty:
+                return None
+
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
+        required = ['Open', 'High', 'Low', 'Close', 'Volume']
+        if not all(col in data.columns for col in required):
+            return None
+
+        for col in required:
+            if isinstance(data[col], pd.DataFrame):
+                data[col] = data[col].iloc[:, 0]
+
+        data = data.tail(VELAS_TOTAL)
+        data = data.reset_index()
+
+        data.rename(columns={
+            'Datetime': 'timestamp',
+            'Open': 'open',
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        }, inplace=True)
+
+        if 'timestamp' in data.columns:
+            data['time'] = pd.to_datetime(data['timestamp'])
+        else:
+            if 'Date' in data.columns:
+                data['time'] = pd.to_datetime(data['Date'])
+            else:
+                data['time'] = pd.to_datetime(data.index)
+
+        if len(data) < PERIODO_AQUECIMENTO + 50:
+            return None
+
+        data['RSI_14'] = calcular_rsi(data['close'], 14)
+        macd, sig, hist = calcular_macd(data['close'])
+        data['MACD'] = macd
+        data['MACD_SIGNAL'] = sig
+        data['MACD_HIST'] = hist
+        data['MFI'] = calcular_mfi(data)
+        data = calcular_ssl_hybrid(data)
+        data = calcular_atr_stop(data)
+        data = calcular_ppo(data)
+        data['SSL_Baseline'] = data['SSL_Baseline'].ffill()
+        data['ATR_Stop'] = data['ATR_Stop'].replace(0, np.nan).ffill()
+
+        return data.dropna(subset=['close']).reset_index(drop=True)
+
+    except Exception as e:
+        st.error(f"Erro no Yahoo Finance para {ticker}: {e}")
+        return None
+
+
+def obter_dados_brapi(ticker, periodo_dias):
+    try:
+        if periodo_dias <= 5:
+            rng = '5d'
+        elif periodo_dias <= 30:
+            rng = '1mo'
+        elif periodo_dias <= 180:
+            rng = '6mo'
+        elif periodo_dias <= 365:
+            rng = '1y'
+        else:
+            rng = '5y'
+
+        url = f"https://brapi.dev/api/quote/{ticker}?interval=1d&range={rng}"
+        resp = requests.get(url, timeout=15)
+        if resp.status_code != 200:
+            return None
+
+        data = resp.json()
+        if not data.get('results'):
+            return None
+
+        results = data['results'][0]
+        hist = results.get('historicalDataPrice', [])
+        if not hist:
+            return None
+
+        df = pd.DataFrame(hist)
+        df.rename(columns={
+            'date': 'timestamp',
+            'open': 'open',
+            'high': 'high',
+            'low': 'low',
+            'close': 'close',
+            'volume': 'volume'
+        }, inplace=True)
+        df['time'] = pd.to_datetime(df['timestamp'])
+        df = df.sort_values('time')
+        df = df.tail(VELAS_TOTAL)
+
+        if len(df) < PERIODO_AQUECIMENTO + 50:
+            return None
+
+        df['RSI_14'] = calcular_rsi(df['close'], 14)
+        macd, sig, hist = calcular_macd(df['close'])
+        df['MACD'] = macd
+        df['MACD_SIGNAL'] = sig
+        df['MACD_HIST'] = hist
+        df['MFI'] = calcular_mfi(df)
+        df = calcular_ssl_hybrid(df)
+        df = calcular_atr_stop(df)
+        df = calcular_ppo(df)
+        df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
+        df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
+
+        return df.dropna(subset=['close']).reset_index(drop=True)
+
+    except Exception as e:
+        st.error(f"Erro no Brapi para {ticker}: {e}")
+        return None
+
+
+def obter_info_acao_yahoo(ticker):
+    if not YF_AVAILABLE:
+        return None
+    try:
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        if not info:
+            return None
+        current_price = info.get('regularMarketPrice') or info.get('currentPrice')
+        if not current_price:
+            return None
+        change = info.get('regularMarketChangePercent')
+        volume = info.get('regularMarketVolume')
+        market_cap = info.get('marketCap')
+        return {
+            "last": current_price,
+            "change": change,
+            "volume": volume,
+            "market_cap": market_cap
+        }
+    except:
+        return None
+
+
+def obter_info_acao_brapi(ticker):
+    try:
+        url = f"https://brapi.dev/api/quote/{ticker}"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if not data.get('results'):
+            return None
+        res = data['results'][0]
+        return {
+            "last": res.get('regularMarketPrice'),
+            "change": res.get('regularMarketChangePercent'),
+            "volume": res.get('regularMarketVolume'),
+            "market_cap": res.get('marketCap')
+        }
+    except:
+        return None
+
+
+def obter_info_acao(ticker):
+    if '.SA' in ticker.upper():
+        info = obter_info_acao_brapi(ticker)
+        if info:
+            return info
+    return obter_info_acao_yahoo(ticker)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOME EXTENSO CRIPTO
+@st.cache_data(ttl=3600)
+def obter_nome_extenso_cripto(simbolo_id):
+    try:
+        base_currency = simbolo_id.split('/')[0]
+        url = "https://api.gateio.ws/api/v4/spot/currencies"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            dados = response.json()
+            for moeda in dados:
+                if moeda.get('currency', '').upper() == base_currency.upper():
+                    return moeda.get('name', base_currency).upper()
+        return base_currency
+    except Exception:
+        return simbolo_id.split('/')[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MARKET CAP PARA CRIPTO
+@st.cache_data(ttl=600)
+def obter_market_cap_coingecko(simbolo):
+    try:
+        url = "https://api.coingecko.com/api/v3/search"
+        params = {"query": simbolo}
+        headers = {"Accept": "application/json"}
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        coins = data.get("coins", [])
+        simbolo_upper = simbolo.upper()
+        coin_id = None
+        for coin in coins:
+            if coin.get("symbol", "").upper() == simbolo_upper:
+                coin_id = coin.get("id")
+                break
+        if not coin_id and coins:
+            coin_id = coins[0].get("id")
+        if not coin_id:
+            return None
+        url2 = "https://api.coingecko.com/api/v3/coins/markets"
+        params2 = {
+            "vs_currency": "usd",
+            "ids": coin_id,
+            "order": "market_cap_desc",
+            "per_page": 1,
+            "page": 1,
+            "sparkline": "false"
+        }
+        resp2 = requests.get(url2, params=params2, headers=headers, timeout=10)
+        if resp2.status_code == 200:
+            dados = resp2.json()
+            if dados and len(dados) > 0:
+                mc = dados[0].get("market_cap")
+                if mc and float(mc) > 1_000_000:
+                    return float(mc)
+        return None
+    except:
+        return None
+
+
+@st.cache_data(ttl=600)
+def obter_market_cap_coincap(simbolo):
+    try:
+        asset_id = simbolo.lower()
+        url = f"https://api.coincap.io/v2/assets/{asset_id}"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            mc = data.get("data", {}).get("marketCapUsd")
+            if mc:
+                mc_float = float(mc)
+                if mc_float > 1_000_000:
+                    return mc_float
+        url_list = "https://api.coincap.io/v2/assets"
+        params = {"limit": 2000}
+        resp = requests.get(url_list, params=params, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            for item in data.get("data", []):
+                if item.get("symbol", "").upper() == simbolo.upper():
+                    mc = item.get("marketCapUsd")
+                    if mc:
+                        mc_float = float(mc)
+                        if mc_float > 1_000_000:
+                            return mc_float
+        return None
+    except:
+        return None
+
+
+def obter_market_cap_robusto(simbolo_id):
+    simbolo = simbolo_id.split('/')[0]
+    mc = obter_market_cap_coingecko(simbolo)
+    if mc is not None:
+        return mc
+    mc = obter_market_cap_coincap(simbolo)
+    if mc is not None:
+        return mc
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SIDEBAR E INTERFACE PRINCIPAL
+idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
 idioma_selecionado = st.sidebar.selectbox(
     DICIONARIO_LINGUAS['Português (BR)']['idioma_selecao'],
@@ -1300,24 +1424,13 @@ txt = DICIONARIO_LINGUAS[idioma_selecionado]
 st.title(txt["titulo"])
 st.sidebar.header(txt["config_globais"])
 
-# Lista de criptomoedas (obtida da Gate.io, que é a primária)
-lista_criptos = obter_todos_pares_usdt()
-if not lista_criptos:
-    lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
-
-simbolo_id = st.sidebar.selectbox(
-    txt["selecione_cripto"],
-    lista_criptos,
-    index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
-)
-
-intervalos = txt["intervalos"]
-intervalo_escolhido = st.sidebar.selectbox(
+timeframes = txt["intervalos"]
+timeframe_escolhido = st.sidebar.selectbox(
     txt["tempo_grafico"],
-    list(intervalos.keys()),
-    index=5  # padrão 4h
+    list(timeframes.keys()),
+    index=5
 )
-timeframe = intervalos[intervalo_escolhido]
+timeframe = timeframes[timeframe_escolhido]
 
 st.sidebar.markdown("---")
 modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
@@ -1325,93 +1438,166 @@ intervalo_refresh = st.sidebar.slider(
     txt["intervalo_refresh"], min_value=15, max_value=120, value=30
 )
 
-
 # ─────────────────────────────────────────────────────────────────────────────
-# PAINEL PRINCIPAL
-@st.fragment(run_every=intervalo_refresh if modo_vivo else None)
-def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
-    df_dados = carregar_dados(simbolo_id, timeframe)
+# ABAS
+tab1, tab2 = st.tabs([txt["aba_cripto"], txt["aba_acoes"]])
 
-    if df_dados is None or df_dados.empty:
-        st.warning(txt["erro_dados"])
-        return
-
-    df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
-    if df_analise.empty:
-        st.warning(txt["erro_dados"])
-        return
-
-    ultimo_reg = df_analise.iloc[-1]
-    preco_atual = ultimo_reg['close']
-
-    # Dados de 24h com fallback automático
-    dados_24h = obter_dados_24h(simbolo_id)
-    variacao_24h = dados_24h.get("change") if dados_24h else 0.0
-    volume_24h = dados_24h.get("volume") if dados_24h else None
-
-    market_cap = obter_market_cap_robusto(simbolo_id)
-
-    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
-        df_dados, txt
+with tab1:
+    st.header(txt["aba_cripto"])
+    lista_criptos = obter_pares_usdt()
+    if not lista_criptos:
+        lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+    simbolo_id = st.selectbox(
+        txt["selecione_cripto"],
+        lista_criptos,
+        index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
     )
 
-    ppo_line = ultimo_reg['PPO']
-    ppo_sig = ultimo_reg['PPO_Signal']
-    ppo_txt = (
-        f"PPO: {ppo_line:.3f} / Signal: {ppo_sig:.3f}"
-        if not (math.isnan(ppo_line) or math.isnan(ppo_sig))
-        else "PPO: —"
-    )
+    @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
+    def painel_cripto():
+        df_dados = carregar_dados_crypto(simbolo_id, timeframe)
+        if df_dados is None or df_dados.empty:
+            st.warning(txt["erro_dados"])
+            return
 
-    st.markdown(f"""
-    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
-                border:2px solid {cor_sinal};margin-bottom:20px;">
-    <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
-    <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>{ppo_txt}</b></p>
-    </div>
-    """, unsafe_allow_html=True)
+        dados_24h = obter_dados_24h_crypto(simbolo_id)
+        if dados_24h:
+            preco = dados_24h.get("last")
+            variacao = dados_24h.get("change")
+            volume = dados_24h.get("volume")
+        else:
+            preco = variacao = volume = None
 
-    nome_completo_ativo = simbolo_id.split('/')[0]
-    label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
+        market_cap = obter_market_cap_robusto(simbolo_id)
 
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
-    m1.metric(label_preco, formatar_preco(preco_atual))
-    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
-    m3.metric(txt["volume_24h"], formatar_volume_usdt(volume_24h))
+        recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_dados, txt)
 
-    if market_cap is not None:
-        m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
-    else:
-        m4.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
+        st.markdown(f"""
+        <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
+                    border:2px solid {cor_sinal};margin-bottom:20px;">
+        <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
+        <p style="margin:8px 0 0 0;color:#ddd;">{analise}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
-    m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
+        nome_extenso = obter_nome_extenso_cripto(simbolo_id)
+        label_preco = f"{nome_extenso} | {txt['preco_spot']}"
 
-    atr_stop_val = ultimo_reg['ATR_Stop']
-    st.markdown(
-        f"**{txt['stop_atr']}:** {formatar_preco(atr_stop_val)}"
-        f"  |  RSI: **{ultimo_reg['RSI_14']:.1f}**"
-        f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
-    )
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric(label_preco, formatar_preco(preco) if preco else "—")
+        m2.metric(txt["variacao_24h"], f"{variacao:+.2f}%" if variacao is not None else "—")
+        m3.metric(txt["volume_24h"], formatar_volume_usdt(volume) if volume else "—")
+        if market_cap is not None:
+            m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
+        else:
+            m4.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
+        m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
+        m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
-    st.markdown(f"### {txt['grafico_titulo']}")
-    renderizar_grafico_plotly(df_dados, simbolo_id)
+        ultimo_reg = df_dados.iloc[-1]
+        st.markdown(
+            f"**{txt['stop_atr']}:** {formatar_preco(ultimo_reg['ATR_Stop'])}"
+            f"  |  RSI: **{ultimo_reg['RSI_14']:.1f}**"
+            f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
+        )
 
-    hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
-    n_velas = len(df_analise)
-    if modo_vivo:
+        st.markdown(f"### {txt['grafico_titulo']}")
+        renderizar_grafico_plotly(df_dados, txt["grafico_titulo"], simbolo_id)
+
+        hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
+        n_velas = len(df_dados.iloc[PERIODO_AQUECIMENTO:])
         st.info(
-            f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{'🟢' if modo_vivo else '⏸'} {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
-            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas}"
+            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | Velas: {n_velas}"
         )
-    else:
+
+    painel_cripto()
+
+with tab2:
+    st.header(txt["aba_acoes"])
+
+    if not YF_AVAILABLE:
+        st.error("Para a aba de ações, instale yfinance: pip install yfinance")
+        st.stop()
+
+    @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
+    def painel_acoes():
+        if "corretora_acoes" not in st.session_state:
+            st.session_state.corretora_acoes = "Charles Schwab (EUA)"
+        if "ticker_acoes" not in st.session_state:
+            st.session_state.ticker_acoes = "AAPL"
+
+        corretora = st.session_state.corretora_acoes
+        ticker = st.session_state.ticker_acoes
+
+        df_acoes = obter_dados_acoes(ticker, timeframe)
+        if df_acoes is None or df_acoes.empty:
+            st.warning(txt["erro_dados"])
+            return
+
+        info = obter_info_acao(ticker)
+        preco = info.get("last") if info else None
+        variacao = info.get("change") if info else None
+        volume = info.get("volume") if info else None
+        market_cap = info.get("market_cap") if info else None
+
+        recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(df_acoes, txt)
+
+        st.markdown(f"""
+        <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
+                    border:2px solid {cor_sinal};margin-bottom:20px;">
+        <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
+        <p style="margin:8px 0 0 0;color:#ddd;">{analise}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        label_preco = f"{ticker.upper()} | {txt['preco_spot']}"
+
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric(label_preco, formatar_preco(preco) if preco else "—")
+        m2.metric(txt["variacao_24h"], f"{variacao:+.2f}%" if variacao is not None else "—")
+        m3.metric(txt["volume_24h"], formatar_volume_usdt(volume) if volume else "—")
+        m4.metric(txt["market_cap"], formatar_market_cap(market_cap) if market_cap else txt["marketcap_nao_disponivel"])
+        m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
+        m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
+
+        ultimo_reg = df_acoes.iloc[-1]
+        st.markdown(
+            f"**{txt['stop_atr']}:** {formatar_preco(ultimo_reg['ATR_Stop'])}"
+            f"  |  RSI: **{ultimo_reg['RSI_14']:.1f}**"
+            f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
+        )
+
+        st.markdown(f"### {txt['grafico_titulo']}")
+        renderizar_grafico_plotly(df_acoes, txt["grafico_titulo"], ticker)
+
+        hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
+        n_velas = len(df_acoes.iloc[PERIODO_AQUECIMENTO:])
         st.info(
-            f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
-            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas}"
+            f"{'🟢' if modo_vivo else '⏸'} {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
+            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | Velas: {n_velas}"
         )
 
+    col1, col2 = st.columns(2)
+    with col1:
+        corretora_sel = st.selectbox(
+            txt["selecione_corretora_acoes"],
+            ["Charles Schwab (EUA)", "IC Markets (Austrália)", "DMM Securities (Japão)", "XP Investimentos (Brasil)", "Chapel Hill Denham (Nigéria)"],
+            index=0,
+            key="corretora_acoes"
+        )
+    with col2:
+        exemplos_map = {
+            "Charles Schwab (EUA)": ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"],
+            "IC Markets (Austrália)": ["BHP.AX", "CBA.AX", "CSL.AX", "WBC.AX"],
+            "DMM Securities (Japão)": ["7203.T", "9984.T", "6758.T", "8306.T"],
+            "XP Investimentos (Brasil)": ["PETR4.SA", "VALE3.SA", "ITUB4.SA", "BBDC4.SA"],
+            "Chapel Hill Denham (Nigéria)": ["GTCO.NG", "ZENITHBANK.NG", "DANGOTE.NG", "MTNN.NG"]
+        }
+        exemplos = exemplos_map.get(corretora_sel, ["AAPL"])
+        ticker_padrao = exemplos[0]
+        ticker = st.text_input(txt["ticker_acoes"], value=ticker_padrao, key="ticker_acoes")
 
-painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
+    painel_acoes()
