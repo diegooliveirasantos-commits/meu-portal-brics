@@ -31,9 +31,7 @@ VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 idiomas (mantido, mas por brevidade mostro só PT e EN)
-# No código final, todos os 15 idiomas estarão preenchidos. Aqui, para não alongar,
-# mantenho apenas os dois primeiros e informo que os demais seguem a mesma estrutura.
+# DICIONÁRIO DE IDIOMAS – 15 idiomas
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC",
@@ -175,13 +173,6 @@ def formatar_market_cap(valor):
 
 
 def formatar_volume_usdt(valor):
-    """
-    Formata o volume em USDT com a mesma lógica do market cap:
-    - >= 1T → $ X.XXT
-    - >= 1B → $ X.XXB
-    - >= 1M → $ X.XXM
-    - caso contrário → $ X.XX
-    """
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return "—"
     if valor >= 1_000_000_000_000:
@@ -195,7 +186,7 @@ def formatar_volume_usdt(valor):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS (comuns)
+# INDICADORES TÉCNICOS
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
     ganho = delta.clip(lower=0)
@@ -712,7 +703,7 @@ def obter_nome_extenso_cripto(simbolo_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP PARA CRIPTO
+# MARKET CAP PARA CRIPTO (definido ANTES de ser chamado)
 @st.cache_data(ttl=600)
 def obter_market_cap_coingecko(simbolo):
     try:
@@ -865,7 +856,6 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        # Obtém o nome por extenso da criptomoeda
         nome_extenso = obter_nome_extenso_cripto(simbolo_id)
         label_preco = f"{nome_extenso} | {txt['preco_spot']}"
 
@@ -934,7 +924,6 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
-        # Para ações, o nome é o próprio ticker (não temos nome extenso)
         label_preco = f"{ticker.upper()} | {txt['preco_spot']}"
 
         m1, m2, m3, m4, m5, m6 = st.columns(6)
