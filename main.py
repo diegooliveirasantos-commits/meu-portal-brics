@@ -24,25 +24,24 @@ VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 línguas mais faladas (Português do Brasil incluso)
+# DICIONÁRIO DE IDIOMAS – 15 línguas (sem timeframes > 1 semana)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Configurações Globais",
         "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
-        "selecione_exchange": "Selecione a Exchange de Dados:",
         "tempo_grafico": "Tempo Gráfico:",
         "modo_vivo": "Ativar Monitoramento em Tempo Real",
         "intervalo_refresh": "Intervalo de Atualização (Segundos):",
         "preco_spot": "Preço Spot Real",
         "variacao_24h": "Variação 24h",
-        "volume_24h": "Volume 24h",
+        "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "Preço Stop ATR",
         "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
         "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
         "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
-        "erro_dados": "Dados históricos insuficientes nesta Exchange. Escolha outro ativo ou reduza o Tempo Gráfico.",
+        "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
         "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
         "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
         "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
@@ -57,7 +56,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Selecione o idioma da interface:",
         "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
-        "fonte_dados": "Fonte dos Dados",
         "intervalos": {
             "1 Minuto": "1m",
             "5 Minutos": "5m",
@@ -66,29 +64,25 @@ DICIONARIO_LINGUAS = {
             "1 Hora": "1h",
             "4 Horas": "4h",
             "1 Dia": "1d",
-            "3 Dias": "3d",
-            "1 Semana": "1w",
-            "1 Mês": "1M",
-            "6 Meses": "6M"
+            "1 Semana": "1w"
         }
     },
     "English (EN)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
         "config_globais": "⚙️  Global Settings",
         "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
-        "selecione_exchange": "Select Data Exchange:",
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Enable Real-Time Monitoring",
         "intervalo_refresh": "Refresh Interval (Seconds):",
         "preco_spot": "Real Spot Price",
         "variacao_24h": "24h Variation",
-        "volume_24h": "24h Volume",
+        "volume_24h": "24h Volume (USDT)",
         "market_cap": "Market Cap (USD)",
         "stop_atr": "ATR Stop Price",
         "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
         "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
         "neutro": "🟡  NEUTRAL (AWAIT SMC)",
-        "erro_dados": "Insufficient historical data on this Exchange. Choose another asset or reduce the Timeframe.",
+        "erro_dados": "Insufficient historical data. Try another asset or reduce the Timeframe.",
         "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
         "ctx_premium": "Asset in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
         "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
@@ -103,7 +97,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
         "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
-        "fonte_dados": "Data Source",
         "intervalos": {
             "1 Minute": "1m",
             "5 Minutes": "5m",
@@ -112,29 +105,25 @@ DICIONARIO_LINGUAS = {
             "1 Hour": "1h",
             "4 Hours": "4h",
             "1 Day": "1d",
-            "3 Days": "3d",
-            "1 Week": "1w",
-            "1 Month": "1M",
-            "6 Months": "6M"
+            "1 Week": "1w"
         }
     },
     "Español": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Configuraciones Globales",
         "selecione_cripto": "Seleccione cualquier criptomoneda (/USDT):",
-        "selecione_exchange": "Seleccione Exchange de datos:",
         "tempo_grafico": "Marco temporal:",
         "modo_vivo": "Activar monitoreo en tiempo real",
         "intervalo_refresh": "Intervalo de actualización (segundos):",
         "preco_spot": "Precio Spot Real",
         "variacao_24h": "Variación 24h",
-        "volume_24h": "Volumen 24h",
+        "volume_24h": "Volumen 24h (USDT)",
         "market_cap": "Capitalización (USD)",
         "stop_atr": "Precio Stop ATR",
         "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "neutro": "🟡  NEUTRO (ESPERAR SMC)",
-        "erro_dados": "Datos históricos insuficientes en este Exchange. Elija otro activo o reduzca el marco temporal.",
+        "erro_dados": "Datos históricos insuficientes. Pruebe con otro activo o reduzca el marco temporal.",
         "ctx_desconto": "Activo en Zona de Descuento de Fibonacci (Excelente riesgo/retorno para Institucionales).",
         "ctx_premium": "Activo en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
         "ctx_neutro": "Precio en zona neutral de Fibonacci (Fair Value Zone).",
@@ -149,7 +138,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Seleccione el idioma de la interfaz:",
         "aviso_aquecimento": "⚠️ Velas de calentamiento usadas en el cálculo",
-        "fonte_dados": "Fuente de datos",
         "intervalos": {
             "1 Minuto": "1m",
             "5 Minutos": "5m",
@@ -158,29 +146,25 @@ DICIONARIO_LINGUAS = {
             "1 Hora": "1h",
             "4 Horas": "4h",
             "1 Día": "1d",
-            "3 Días": "3d",
-            "1 Semana": "1w",
-            "1 Mes": "1M",
-            "6 Meses": "6M"
+            "1 Semana": "1w"
         }
     },
     "Français": {
         "titulo": "🏦  BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Paramètres globaux",
         "selecione_cripto": "Sélectionnez une cryptomonnaie (/USDT):",
-        "selecione_exchange": "Sélectionnez l'Exchange de données:",
         "tempo_grafico": "Période:",
         "modo_vivo": "Activer la surveillance en temps réel",
         "intervalo_refresh": "Intervalle de rafraîchissement (secondes):",
         "preco_spot": "Cours Spot réel",
         "variacao_24h": "Variation 24h",
-        "volume_24h": "Volume 24h",
+        "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalisation (USD)",
         "stop_atr": "Prix Stop ATR",
         "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
         "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
         "neutro": "🟡  NEUTRE (ATTENDRE SMC)",
-        "erro_dados": "Données historiques insuffisantes sur cet Exchange. Choisissez un autre actif ou réduisez la période.",
+        "erro_dados": "Données historiques insuffisantes. Essayez un autre actif ou réduisez la période.",
         "ctx_desconto": "Actif en zone de discount de Fibonacci (Excellent risque/rendement pour les institutionnels).",
         "ctx_premium": "Actif en zone premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
         "ctx_neutro": "Prix en zone neutre de Fibonacci (Fair Value Zone).",
@@ -195,7 +179,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Langue / Language",
         "idioma_selecao": "Sélectionnez la langue de l'interface:",
         "aviso_aquecimento": "⚠️ Bougies de chauffe utilisées dans le calcul",
-        "fonte_dados": "Source des données",
         "intervalos": {
             "1 Minute": "1m",
             "5 Minutes": "5m",
@@ -204,29 +187,25 @@ DICIONARIO_LINGUAS = {
             "1 Heure": "1h",
             "4 Heures": "4h",
             "1 Jour": "1d",
-            "3 Jours": "3d",
-            "1 Semaine": "1w",
-            "1 Mois": "1M",
-            "6 Mois": "6M"
+            "1 Semaine": "1w"
         }
     },
     "Deutsch": {
         "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Motor",
         "config_globais": "⚙️  Globale Einstellungen",
         "selecione_cripto": "Wählen Sie eine Kryptowährung (/USDT):",
-        "selecione_exchange": "Wählen Sie die Daten-Exchange:",
         "tempo_grafico": "Zeitrahmen:",
         "modo_vivo": "Echtzeit-Überwachung aktivieren",
         "intervalo_refresh": "Aktualisierungsintervall (Sekunden):",
         "preco_spot": "Echter Spot-Preis",
         "variacao_24h": "24h-Veränderung",
-        "volume_24h": "24h-Volumen",
+        "volume_24h": "24h-Volumen (USDT)",
         "market_cap": "Marktkapitalisierung (USD)",
         "stop_atr": "ATR-Stop-Preis",
         "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI AUSGERICHTET)",
         "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI AUSGERICHTET)",
         "neutro": "🟡  NEUTRAL (SMC ABWARTEN)",
-        "erro_dados": "Unzureichende historische Daten auf dieser Exchange. Wählen Sie einen anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
+        "erro_dados": "Unzureichende historische Daten. Versuchen Sie es mit einem anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
         "ctx_desconto": "Vermögenswert in Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite für Institutionelle).",
         "ctx_premium": "Vermögenswert in Fibonacci-Premium-Zone (Preis gedehnt, gewinnmitnahme geeignet).",
         "ctx_neutro": "Preis in neutraler Fibonacci-Zone (Fair Value Zone).",
@@ -241,7 +220,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Sprache / Language",
         "idioma_selecao": "Wählen Sie die Oberflächensprache:",
         "aviso_aquecimento": "⚠️ Aufwärm-Kerzen im Rechengang verwendet",
-        "fonte_dados": "Datenquelle",
         "intervalos": {
             "1 Minute": "1m",
             "5 Minuten": "5m",
@@ -250,29 +228,25 @@ DICIONARIO_LINGUAS = {
             "1 Stunde": "1h",
             "4 Stunden": "4h",
             "1 Tag": "1d",
-            "3 Tage": "3d",
-            "1 Woche": "1w",
-            "1 Monat": "1M",
-            "6 Monate": "6M"
+            "1 Woche": "1w"
         }
     },
     "Italiano": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motore Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Impostazioni globali",
         "selecione_cripto": "Seleziona una criptovaluta (/USDT):",
-        "selecione_exchange": "Seleziona Exchange di dati:",
         "tempo_grafico": "Timeframe:",
         "modo_vivo": "Attiva monitoraggio in tempo reale",
         "intervalo_refresh": "Intervallo di aggiornamento (secondi):",
         "preco_spot": "Prezzo Spot Reale",
         "variacao_24h": "Variazione 24h",
-        "volume_24h": "Volume 24h",
+        "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalizzazione (USD)",
         "stop_atr": "Prezzo Stop ATR",
         "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI ALLINEATI)",
         "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI ALLINEATI)",
         "neutro": "🟡  NEUTRO (ATTENDERE SMC)",
-        "erro_dados": "Dati storici insufficienti su questo Exchange. Scegli un altro asset o riduci il timeframe.",
+        "erro_dados": "Dati storici insufficienti. Prova un altro asset o riduci il timeframe.",
         "ctx_desconto": "Asset in Zona di Sconto di Fibonacci (Ottimo rischio/rendimento per Istituzionali).",
         "ctx_premium": "Asset in Zona Premium di Fibonacci (Prezzo allungato, adatto per presa di profitto).",
         "ctx_neutro": "Prezzo in zona neutrale di Fibonacci (Fair Value Zone).",
@@ -287,7 +261,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Lingua / Language",
         "idioma_selecao": "Seleziona la lingua dell'interfaccia:",
         "aviso_aquecimento": "⚠️ Candele di riscaldamento utilizzate nel calcolo",
-        "fonte_dados": "Fonte dati",
         "intervalos": {
             "1 Minuto": "1m",
             "5 Minuti": "5m",
@@ -296,29 +269,25 @@ DICIONARIO_LINGUAS = {
             "1 Ora": "1h",
             "4 Ore": "4h",
             "1 Giorno": "1d",
-            "3 Giorni": "3d",
-            "1 Settimana": "1w",
-            "1 Mese": "1M",
-            "6 Mesi": "6M"
+            "1 Settimana": "1w"
         }
     },
     "Русский": {
         "titulo": "🏦  BRICSVAULT PORTAL - Двигатель Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Глобальные настройки",
         "selecione_cripto": "Выберите криптовалюту (/USDT):",
-        "selecione_exchange": "Выберите биржу данных:",
         "tempo_grafico": "Таймфрейм:",
         "modo_vivo": "Включить мониторинг в реальном времени",
         "intervalo_refresh": "Интервал обновления (секунды):",
         "preco_spot": "Реальная спот-цена",
         "variacao_24h": "Изменение за 24ч",
-        "volume_24h": "Объем за 24ч",
+        "volume_24h": "Объем за 24ч (USDT)",
         "market_cap": "Рыночная капитализация (USD)",
         "stop_atr": "Цена стоп-лосса ATR",
         "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
         "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
         "neutro": "🟡  НЕЙТРАЛЬНО (ОЖИДАТЬ SMC)",
-        "erro_dados": "Недостаточно исторических данных на этой бирже. Выберите другой актив или уменьшите таймфрейм.",
+        "erro_dados": "Недостаточно исторических данных. Попробуйте другой актив или уменьшите таймфрейм.",
         "ctx_desconto": "Актив в зоне скидки Фибоначчи (Отличное соотношение риск/доходность для институционалов).",
         "ctx_premium": "Актив в премиальной зоне Фибоначчи (Цена растянута, подходит для фиксации прибыли).",
         "ctx_neutro": "Цена в нейтральной зоне Фибоначчи (Fair Value Zone).",
@@ -333,7 +302,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Язык / Language",
         "idioma_selecao": "Выберите язык интерфейса:",
         "aviso_aquecimento": "⚠️ Используются свечи разогрева в расчетах",
-        "fonte_dados": "Источник данных",
         "intervalos": {
             "1 Минута": "1m",
             "5 Минут": "5m",
@@ -342,29 +310,25 @@ DICIONARIO_LINGUAS = {
             "1 Час": "1h",
             "4 Часа": "4h",
             "1 День": "1d",
-            "3 Дня": "3d",
-            "1 Неделя": "1w",
-            "1 Месяц": "1M",
-            "6 Месяцев": "6M"
+            "1 Неделя": "1w"
         }
     },
     "日本語": {
         "titulo": "🏦  BRICSVAULT PORTAL - スマートマネーコンセプト（SMC）エンジン",
         "config_globais": "⚙️  グローバル設定",
         "selecione_cripto": "暗号通貨を選択（/USDT）:",
-        "selecione_exchange": "データ取引所を選択:",
         "tempo_grafico": "タイムフレーム:",
         "modo_vivo": "リアルタイム監視を有効にする",
         "intervalo_refresh": "更新間隔（秒）:",
         "preco_spot": "実勢スポット価格",
         "variacao_24h": "24時間変動",
-        "volume_24h": "24時間出来高",
+        "volume_24h": "24時間出来高（USDT）",
         "market_cap": "時価総額（USD）",
         "stop_atr": "ATRストップ価格",
         "compra_forte": "🟢  強い買い（SMC＋フィボナッチ整合）",
         "venda_forte": "🔴  強い売り（SMC＋フィボナッチ整合）",
         "neutro": "🟡  中立（SMC待機）",
-        "erro_dados": "この取引所の履歴データが不十分です。別の資産を選ぶか、タイムフレームを小さくしてください。",
+        "erro_dados": "履歴データが不十分です。別の資産を選ぶか、タイムフレームを小さくしてください。",
         "ctx_desconto": "フィボナッチ割引ゾーンにある資産（機関投資家向けの優れたリスク/リターン）。",
         "ctx_premium": "フィボナッチプレミアムゾーンにある資産（価格が伸びており、利益確定に適している）。",
         "ctx_neutro": "フィボナッチ中立ゾーンの価格（フェアバリューゾーン）。",
@@ -379,7 +343,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  言語 / Language",
         "idioma_selecao": "インターフェース言語を選択:",
         "aviso_aquecimento": "⚠️ 計算にウォームアップローソクを使用",
-        "fonte_dados": "データソース",
         "intervalos": {
             "1分": "1m",
             "5分": "5m",
@@ -388,29 +351,25 @@ DICIONARIO_LINGUAS = {
             "1時間": "1h",
             "4時間": "4h",
             "1日": "1d",
-            "3日": "3d",
-            "1週間": "1w",
-            "1ヶ月": "1M",
-            "6ヶ月": "6M"
+            "1週間": "1w"
         }
     },
     "中文 (简体)": {
         "titulo": "🏦  BRICSVAULT PORTAL - 智能资金概念（SMC）引擎",
         "config_globais": "⚙️  全局设置",
         "selecione_cripto": "选择加密货币（/USDT）：",
-        "selecione_exchange": "选择数据交易所：",
         "tempo_grafico": "时间周期：",
         "modo_vivo": "启用实时监控",
         "intervalo_refresh": "刷新间隔（秒）：",
         "preco_spot": "实时现货价格",
         "variacao_24h": "24小时变化",
-        "volume_24h": "24小时成交量",
+        "volume_24h": "24小时成交量（USDT）",
         "market_cap": "市值（美元）",
         "stop_atr": "ATR止损价",
         "compra_forte": "🟢  强烈买入（SMC + 斐波那契一致）",
         "venda_forte": "🔴  强烈卖出（SMC + 斐波那契一致）",
         "neutro": "🟡  中性（等待SMC）",
-        "erro_dados": "该交易所的历史数据不足。请选择其他资产或缩短时间周期。",
+        "erro_dados": "历史数据不足。请选择其他资产或缩短时间周期。",
         "ctx_desconto": "资产处于斐波那契折价区（机构级卓越风险/回报）。",
         "ctx_premium": "资产处于斐波那契溢价区（价格拉伸，适合获利了结）。",
         "ctx_neutro": "价格处于斐波那契中性区（公允价值区）。",
@@ -425,7 +384,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  语言 / Language",
         "idioma_selecao": "选择界面语言：",
         "aviso_aquecimento": "⚠️ 计算中使用预热K线",
-        "fonte_dados": "数据源",
         "intervalos": {
             "1分钟": "1m",
             "5分钟": "5m",
@@ -434,29 +392,25 @@ DICIONARIO_LINGUAS = {
             "1小时": "1h",
             "4小时": "4h",
             "1天": "1d",
-            "3天": "3d",
-            "1周": "1w",
-            "1个月": "1M",
-            "6个月": "6M"
+            "1周": "1w"
         }
     },
     "हिन्दी": {
         "titulo": "🏦  BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
         "config_globais": "⚙️  वैश्विक सेटिंग्स",
         "selecione_cripto": "कोई भी क्रिप्टोकरेंसी चुनें (/USDT):",
-        "selecione_exchange": "डेटा एक्सचेंज चुनें:",
         "tempo_grafico": "टाइमफ्रेम:",
         "modo_vivo": "रीयल-टाइम मॉनिटरिंग सक्षम करें",
         "intervalo_refresh": "रिफ्रेश अंतराल (सेकंड):",
         "preco_spot": "वास्तविक स्पॉट मूल्य",
         "variacao_24h": "24 घंटे का बदलाव",
-        "volume_24h": "24 घंटे का वॉल्यूम",
+        "volume_24h": "24 घंटे का वॉल्यूम (USDT)",
         "market_cap": "बाजार पूंजीकरण (USD)",
         "stop_atr": "ATR स्टॉप मूल्य",
         "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची संरेखित)",
         "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
         "neutro": "🟡  तटस्थ (SMC की प्रतीक्षा करें)",
-        "erro_dados": "इस एक्सचेंज पर अपर्याप्त ऐतिहासिक डेटा। कोई अन्य संपत्ति चुनें या टाइमफ्रेम कम करें।",
+        "erro_dados": "अपर्याप्त ऐतिहासिक डेटा। कोई अन्य संपत्ति चुनें या टाइमफ्रेम कम करें।",
         "ctx_desconto": "संपत्ति फिबोनाची डिस्काउंट ज़ोन में (संस्थागतों के लिए उत्कृष्ट जोखिम/रिटर्न)।",
         "ctx_premium": "संपत्ति फिबोनाची प्रीमियम ज़ोन में (मूल्य खिंचा हुआ, लाभ-बुकिंग के लिए उपयुक्त)।",
         "ctx_neutro": "फिबोनाची तटस्थ क्षेत्र में मूल्य (Fair Value Zone)।",
@@ -471,7 +425,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  भाषा / Language",
         "idioma_selecao": "इंटरफ़ेस भाषा चुनें:",
         "aviso_aquecimento": "⚠️ गणना में वार्म-अप मोमबत्तियों का उपयोग किया गया",
-        "fonte_dados": "डेटा स्रोत",
         "intervalos": {
             "1 मिनट": "1m",
             "5 मिनट": "5m",
@@ -480,29 +433,25 @@ DICIONARIO_LINGUAS = {
             "1 घंटा": "1h",
             "4 घंटे": "4h",
             "1 दिन": "1d",
-            "3 दिन": "3d",
-            "1 सप्ताह": "1w",
-            "1 महीना": "1M",
-            "6 महीने": "6M"
+            "1 सप्ताह": "1w"
         }
     },
     "বাংলা": {
         "titulo": "🏦  BRICSVAULT PORTAL - স্মার্ট মানি কনসেপ্টস (SMC) ইঞ্জিন",
         "config_globais": "⚙️  গ্লোবাল সেটিংস",
         "selecione_cripto": "যেকোনো ক্রিপ্টোকারেন্সি নির্বাচন করুন (/USDT):",
-        "selecione_exchange": "ডেটা এক্সচেঞ্জ নির্বাচন করুন:",
         "tempo_grafico": "টাইমফ্রেম:",
         "modo_vivo": "রিয়েল-টাইম মনিটরিং সক্রিয় করুন",
         "intervalo_refresh": "রিফ্রেশ বিরতি (সেকেন্ড):",
         "preco_spot": "প্রকৃত স্পট মূল্য",
         "variacao_24h": "২৪ ঘণ্টার পরিবর্তন",
-        "volume_24h": "২৪ ঘণ্টার ভলিউম",
+        "volume_24h": "২৪ ঘণ্টার ভলিউম (USDT)",
         "market_cap": "বাজার মূলধন (USD)",
         "stop_atr": "ATR স্টপ মূল্য",
         "compra_forte": "🟢  শক্তিশালী ক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
         "venda_forte": "🔴  শক্তিশালী বিক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
         "neutro": "🟡  নিরপেক্ষ (SMC এর জন্য অপেক্ষা করুন)",
-        "erro_dados": "এই এক্সচেঞ্জে অপর্যাপ্ত ঐতিহাসিক ডেটা। অন্য সম্পদ নির্বাচন করুন বা টাইমফ্রেম কমিয়ে দিন।",
+        "erro_dados": "অপর্যাপ্ত ঐতিহাসিক ডেটা। অন্য সম্পদ নির্বাচন করুন বা টাইমফ্রেম কমিয়ে দিন।",
         "ctx_desconto": "সম্পদ ফিবোনাচি ডিসকাউন্ট জোনে (প্রাতিষ্ঠানিকদের জন্য চমৎকার ঝুঁকি/রিটার্ন)।",
         "ctx_premium": "সম্পদ ফিবোনাচি প্রিমিয়াম জোনে (মূল্য প্রসারিত, মুনাফা গ্রহণের জন্য উপযুক্ত)।",
         "ctx_neutro": "ফিবোনাচি নিরপেক্ষ অঞ্চলে মূল্য (Fair Value Zone)।",
@@ -517,7 +466,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  ভাষা / Language",
         "idioma_selecao": "ইন্টারফেস ভাষা নির্বাচন করুন:",
         "aviso_aquecimento": "⚠️ গণনায় ওয়ার্ম-আপ মোমবাতি ব্যবহার করা হয়েছে",
-        "fonte_dados": "ডেটা উৎস",
         "intervalos": {
             "১ মিনিট": "1m",
             "৫ মিনিট": "5m",
@@ -526,29 +474,25 @@ DICIONARIO_LINGUAS = {
             "১ ঘন্টা": "1h",
             "৪ ঘন্টা": "4h",
             "১ দিন": "1d",
-            "৩ দিন": "3d",
-            "১ সপ্তাহ": "1w",
-            "১ মাস": "1M",
-            "৬ মাস": "6M"
+            "১ সপ্তাহ": "1w"
         }
     },
     "العربية": {
         "titulo": "🏦  BRICSVAULT PORTAL - محرك مفاهيم الأموال الذكية (SMC)",
         "config_globais": "⚙️  الإعدادات العامة",
         "selecione_cripto": "اختر أي عملة مشفرة (/USDT):",
-        "selecione_exchange": "اختر بورصة البيانات:",
         "tempo_grafico": "الإطار الزمني:",
         "modo_vivo": "تفعيل المراقبة في الوقت الفعلي",
         "intervalo_refresh": "فترة التحديث (ثواني):",
         "preco_spot": "سعر الفوري الحقيقي",
         "variacao_24h": "تغير 24 ساعة",
-        "volume_24h": "حجم التداول 24 ساعة",
+        "volume_24h": "حجم التداول 24 ساعة (USDT)",
         "market_cap": "القيمة السوقية (USD)",
         "stop_atr": "سعر وقف ATR",
         "compra_forte": "🟢  شراء قوي (SMC + فيبوناتشي متوافقة)",
         "venda_forte": "🔴  بيع قوي (SMC + فيبوناتشي متوافقة)",
         "neutro": "🟡  محايد (انتظار SMC)",
-        "erro_dados": "بيانات تاريخية غير كافية في هذه البورصة. اختر أصلًا آخر أو قلل الإطار الزمني.",
+        "erro_dados": "بيانات تاريخية غير كافية. اختر أصلًا آخر أو قلل الإطار الزمني.",
         "ctx_desconto": "الأصل في منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز للمؤسسات).",
         "ctx_premium": "الأصل في منطقة فيبوناتشي الممتازة (السعر ممتد، مناسب لجني الأرباح).",
         "ctx_neutro": "السعر في منطقة فيبوناتشي المحايدة (منطقة القيمة العادلة).",
@@ -563,7 +507,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  اللغة / Language",
         "idioma_selecao": "اختر لغة الواجهة:",
         "aviso_aquecimento": "⚠️ تم استخدام شموع الإحماء في الحساب",
-        "fonte_dados": "مصدر البيانات",
         "intervalos": {
             "دقيقة واحدة": "1m",
             "5 دقائق": "5m",
@@ -572,29 +515,25 @@ DICIONARIO_LINGUAS = {
             "ساعة واحدة": "1h",
             "4 ساعات": "4h",
             "يوم واحد": "1d",
-            "3 أيام": "3d",
-            "أسبوع واحد": "1w",
-            "شهر واحد": "1M",
-            "6 أشهر": "6M"
+            "أسبوع واحد": "1w"
         }
     },
     "한국어": {
         "titulo": "🏦  BRICSVAULT PORTAL - 스마트 머니 컨셉(SMC) 엔진",
         "config_globais": "⚙️  글로벌 설정",
         "selecione_cripto": "암호화폐 선택 (/USDT):",
-        "selecione_exchange": "데이터 거래소 선택:",
         "tempo_grafico": "시간 프레임:",
         "modo_vivo": "실시간 모니터링 활성화",
         "intervalo_refresh": "새로 고침 간격(초):",
         "preco_spot": "실제 현물 가격",
         "variacao_24h": "24시간 변동",
-        "volume_24h": "24시간 거래량",
+        "volume_24h": "24시간 거래량 (USDT)",
         "market_cap": "시가총액 (USD)",
         "stop_atr": "ATR 스탑 가격",
         "compra_forte": "🟢  강한 매수 (SMC + 피보나치 정렬)",
         "venda_forte": "🔴  강한 매도 (SMC + 피보나치 정렬)",
         "neutro": "🟡  중립 (SMC 대기)",
-        "erro_dados": "이 거래소의 과거 데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
+        "erro_dados": "과거 데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
         "ctx_desconto": "자산이 피보나치 할인 영역에 있습니다 (기관용 우수한 위험/수익률).",
         "ctx_premium": "자산이 피보나치 프리미엄 영역에 있습니다 (가격이 늘어나 있어 이익 실현에 적합).",
         "ctx_neutro": "피보나치 중립 영역의 가격 (공정 가치 영역).",
@@ -609,7 +548,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  언어 / Language",
         "idioma_selecao": "인터페이스 언어 선택:",
         "aviso_aquecimento": "⚠️ 계산에 워밍업 캔들 사용됨",
-        "fonte_dados": "데이터 소스",
         "intervalos": {
             "1분": "1m",
             "5분": "5m",
@@ -618,29 +556,25 @@ DICIONARIO_LINGUAS = {
             "1시간": "1h",
             "4시간": "4h",
             "1일": "1d",
-            "3일": "3d",
-            "1주": "1w",
-            "1개월": "1M",
-            "6개월": "6M"
+            "1주": "1w"
         }
     },
     "Tiếng Việt": {
         "titulo": "🏦  BRICSVAULT PORTAL - Động cơ Khái niệm Tiền thông minh (SMC)",
         "config_globais": "⚙️  Cài đặt toàn cầu",
         "selecione_cripto": "Chọn bất kỳ tiền mã hóa nào (/USDT):",
-        "selecione_exchange": "Chọn sàn dữ liệu:",
         "tempo_grafico": "Khung thời gian:",
         "modo_vivo": "Bật giám sát thời gian thực",
         "intervalo_refresh": "Khoảng thời gian làm mới (giây):",
         "preco_spot": "Giá spot thực tế",
         "variacao_24h": "Biến động 24h",
-        "volume_24h": "Khối lượng 24h",
+        "volume_24h": "Khối lượng 24h (USDT)",
         "market_cap": "Vốn hóa thị trường (USD)",
         "stop_atr": "Giá dừng ATR",
         "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
         "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
         "neutro": "🟡  TRUNG LẬP (CHỜ SMC)",
-        "erro_dados": "Dữ liệu lịch sử không đủ trên sàn này. Chọn tài sản khác hoặc giảm khung thời gian.",
+        "erro_dados": "Dữ liệu lịch sử không đủ. Chọn tài sản khác hoặc giảm khung thời gian.",
         "ctx_desconto": "Tài sản nằm trong vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời cho tổ chức).",
         "ctx_premium": "Tài sản nằm trong vùng cao cấp Fibonacci (Giá kéo dài, phù hợp để chốt lời).",
         "ctx_neutro": "Giá nằm trong vùng trung tính Fibonacci (Vùng giá trị hợp lý).",
@@ -655,7 +589,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Ngôn ngữ / Language",
         "idioma_selecao": "Chọn ngôn ngữ giao diện:",
         "aviso_aquecimento": "⚠️ Nến làm nóng được sử dụng trong tính toán",
-        "fonte_dados": "Nguồn dữ liệu",
         "intervalos": {
             "1 Phút": "1m",
             "5 Phút": "5m",
@@ -664,29 +597,25 @@ DICIONARIO_LINGUAS = {
             "1 Giờ": "1h",
             "4 Giờ": "4h",
             "1 Ngày": "1d",
-            "3 Ngày": "3d",
-            "1 Tuần": "1w",
-            "1 Tháng": "1M",
-            "6 Tháng": "6M"
+            "1 Tuần": "1w"
         }
     },
     "Türkçe": {
         "titulo": "🏦  BRICSVAULT PORTAL - Akıllı Para Kavramları (SMC) Motoru",
         "config_globais": "⚙️  Genel Ayarlar",
         "selecione_cripto": "Herhangi bir Kripto Para Birimi Seçin (/USDT):",
-        "selecione_exchange": "Veri Borsasını Seçin:",
         "tempo_grafico": "Zaman Dilimi:",
         "modo_vivo": "Gerçek Zamanlı İzlemeyi Etkinleştir",
         "intervalo_refresh": "Yenileme Aralığı (Saniye):",
         "preco_spot": "Gerçek Spot Fiyat",
         "variacao_24h": "24 Saatlik Değişim",
-        "volume_24h": "24 Saatlik Hacim",
+        "volume_24h": "24 Saatlik Hacim (USDT)",
         "market_cap": "Piyasa Değeri (USD)",
         "stop_atr": "ATR Durdurma Fiyatı",
         "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI UYUMLU)",
         "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI UYUMLU)",
         "neutro": "🟡  NÖTR (SMC BEKLE)",
-        "erro_dados": "Bu Borsada yetersiz geçmiş veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
+        "erro_dados": "Yetersiz geçmiş veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
         "ctx_desconto": "Varlık Fibonacci İskonto Bölgesinde (Kurumlar için mükemmel risk/getiri).",
         "ctx_premium": "Varlık Fibonacci Prim Bölgesinde (Fiyat gerilmiş, kar alma için uygun).",
         "ctx_neutro": "Fiyat Fibonacci nötr bölgesinde (Fair Value Zone).",
@@ -701,7 +630,6 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Dil / Language",
         "idioma_selecao": "Arayüz dilini seçin:",
         "aviso_aquecimento": "⚠️ Hesaplamada ısınma mumları kullanıldı",
-        "fonte_dados": "Veri Kaynağı",
         "intervalos": {
             "1 Dakika": "1m",
             "5 Dakika": "5m",
@@ -710,10 +638,7 @@ DICIONARIO_LINGUAS = {
             "1 Saat": "1h",
             "4 Saat": "4h",
             "1 Gün": "1d",
-            "3 Gün": "3d",
-            "1 Hafta": "1w",
-            "1 Ay": "1M",
-            "6 Ay": "6M"
+            "1 Hafta": "1w"
         }
     }
 }
@@ -763,23 +688,17 @@ def formatar_market_cap(valor):
         return "$ —"
 
 
-def formatar_volume(valor):
+def formatar_volume_usdt(valor):
+    """Exibe o volume em USDT com duas casas decimais e sufixo."""
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return "—"
-    if valor >= 1_000_000_000:
-        return f"{valor / 1_000_000_000:.2f}B"
-    elif valor >= 1_000_000:
-        return f"{valor / 1_000_000:.2f}M"
-    elif valor >= 1_000:
-        return f"{valor / 1_000:.2f}K"
-    else:
-        return f"{valor:.2f}"
+    return f"{valor:,.2f} USDT"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES (sem Robinhood)
+# GERENCIADOR DE EXCHANGES (fallback interno)
 class ExchangeManager:
-    """Gerencia múltiplas exchanges com fallback e cache."""
+    """Gerencia múltiplas exchanges com fallback e cache, sem exposição ao usuário."""
     
     EXCHANGES = {
         "Gate.io": {
@@ -808,6 +727,9 @@ class ExchangeManager:
         }
     }
     
+    # Ordem de tentativa (primária primeiro, depois fallbacks)
+    PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
+    
     def __init__(self):
         self.clients = {}
         self._init_clients()
@@ -817,19 +739,14 @@ class ExchangeManager:
             try:
                 self.clients[name] = config["class"](config["config"])
             except Exception as e:
-                st.warning(f"Erro ao inicializar {name}: {e}")
+                # Não exibe erro para não poluir a interface
+                pass
     
     def get_client(self, exchange_name):
         return self.clients.get(exchange_name)
     
-    def get_exchange_names(self):
-        return list(self.EXCHANGES.keys())
-    
     def get_separator(self, exchange_name):
         return self.EXCHANGES.get(exchange_name, {}).get("separator", "/")
-    
-    def has_volume_usd(self, exchange_name):
-        return self.EXCHANGES.get(exchange_name, {}).get("has_volume_usd", False)
     
     def get_symbol_format(self, exchange_name, symbol):
         sep = self.get_separator(exchange_name)
@@ -842,49 +759,59 @@ class ExchangeManager:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÕES DE MERCADO POR EXCHANGE
+# FUNÇÕES DE MERCADO COM FALLBACK
 
-@st.cache_data(ttl=3600)
-def obter_pares_exchange(exchange_name):
+def obter_todos_pares_usdt():
+    """Obtém pares USDT da exchange primária (Gate.io) para a lista de seleção."""
     manager = ExchangeManager()
-    client = manager.get_client(exchange_name)
+    client = manager.get_client("Gate.io")
     if not client:
-        return []
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     try:
         markets = client.load_markets()
         pairs = [s for s in markets.keys() if s.endswith('/USDT')]
         return sorted(pairs)
     except Exception:
-        return []
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
 
-@st.cache_data(ttl=60)
-def obter_dados_24h(exchange_name, simbolo):
+def obter_dados_24h(simbolo):
+    """
+    Tenta obter dados de 24h da exchange primária; se falhar, tenta as fallbacks.
+    Retorna o primeiro resultado bem-sucedido.
+    """
     manager = ExchangeManager()
-    client = manager.get_client(exchange_name)
-    if not client:
-        return None
-    try:
-        ticker = client.fetch_ticker(simbolo)
-        if ticker:
-            result = {
-                "last": ticker.get("last"),
-                "change": ticker.get("percentage"),
-                "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
-                "high": ticker.get("high"),
-                "low": ticker.get("low"),
-                "bid": ticker.get("bid"),
-                "ask": ticker.get("ask")
-            }
-            if manager.has_volume_usd(exchange_name) and not result["volume"]:
-                result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
-            return result
-    except Exception:
-        pass
-    return obter_dados_24h_direto(exchange_name, simbolo)
+    for exchange_name in manager.PRIORITY:
+        try:
+            client = manager.get_client(exchange_name)
+            if not client:
+                continue
+            # Ajusta o símbolo conforme a exchange
+            symbol = manager.get_symbol_format(exchange_name, simbolo)
+            ticker = client.fetch_ticker(symbol)
+            if ticker:
+                result = {
+                    "last": ticker.get("last"),
+                    "change": ticker.get("percentage"),
+                    "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
+                    "high": ticker.get("high"),
+                    "low": ticker.get("low"),
+                    "bid": ticker.get("bid"),
+                    "ask": ticker.get("ask")
+                }
+                # Se o volume for None e a exchange tem volume em USD, tenta direto
+                if not result["volume"] and manager.EXCHANGES[exchange_name].get("has_volume_usd"):
+                    result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
+                # Se ainda for None, pula para a próxima exchange
+                if result["last"] is not None:
+                    return result
+        except Exception:
+            continue
+    return None
 
 
 def obter_dados_24h_direto(exchange_name, simbolo):
+    """Tenta obter via REST direta (fallback)."""
     try:
         if exchange_name == "Gate.io":
             pair = simbolo.replace("/", "_")
@@ -1181,48 +1108,49 @@ def calcular_retracao_fibonacci(df_analise):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS (multi-exchange)
+# CARREGAMENTO DE DADOS COM FALLBACK
 
-@st.cache_data(ttl=60)
-def carregar_dados(exchange_name, simbolo_id, timeframe_selecionado):
+def carregar_dados(simbolo_id, timeframe_selecionado):
+    """
+    Tenta carregar dados da exchange primária; se falhar, tenta as fallbacks.
+    Retorna o primeiro DataFrame bem-sucedido.
+    """
     manager = ExchangeManager()
-    client = manager.get_client(exchange_name)
-    if not client:
-        return None
-    
-    try:
-        simbolo = manager.get_symbol_format(exchange_name, simbolo_id)
-        velas = client.fetch_ohlcv(
-            simbolo,
-            timeframe=timeframe_selecionado,
-            limit=VELAS_TOTAL
-        )
-        if not velas or len(velas) < PERIODO_AQUECIMENTO + 50:
-            return None
-        
-        df = pd.DataFrame(
-            velas,
-            columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        )
-        df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
+    for exchange_name in manager.PRIORITY:
+        try:
+            client = manager.get_client(exchange_name)
+            if not client:
+                continue
+            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
+            velas = client.fetch_ohlcv(
+                symbol,
+                timeframe=timeframe_selecionado,
+                limit=VELAS_TOTAL
+            )
+            if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
+                df = pd.DataFrame(
+                    velas,
+                    columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+                )
+                df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
 
-        df['RSI_14'] = calcular_rsi(df['close'], 14)
-        macd, sinal, hist = calcular_macd(df['close'])
-        df['MACD'] = macd
-        df['MACD_SIGNAL'] = sinal
-        df['MACD_HIST'] = hist
-        df['MFI'] = calcular_mfi(df)
-        df = calcular_ssl_hybrid(df)
-        df = calcular_atr_stop(df)
-        df = calcular_ppo(df)
+                df['RSI_14'] = calcular_rsi(df['close'], 14)
+                macd, sinal, hist = calcular_macd(df['close'])
+                df['MACD'] = macd
+                df['MACD_SIGNAL'] = sinal
+                df['MACD_HIST'] = hist
+                df['MFI'] = calcular_mfi(df)
+                df = calcular_ssl_hybrid(df)
+                df = calcular_atr_stop(df)
+                df = calcular_ppo(df)
 
-        df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
-        df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
+                df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
+                df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
 
-        return df.dropna(subset=['close']).reset_index(drop=True)
-    except Exception as e:
-        st.error(f"Erro ao carregar dados da {exchange_name}: {e}")
-        return None
+                return df.dropna(subset=['close']).reset_index(drop=True)
+        except Exception:
+            continue
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1306,7 +1234,7 @@ def analisar_confluencia(df_completo, txt):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GRÁFICO
-def renderizar_grafico_plotly(df_completo, simbolo_id, exchange_name):
+def renderizar_grafico_plotly(df_completo, simbolo_id):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
     fig = go.Figure()
@@ -1317,7 +1245,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, exchange_name):
         high=df_grafico['high'],
         low=df_grafico['low'],
         close=df_grafico['close'],
-        name=f"{simbolo_id} ({exchange_name})",
+        name=simbolo_id,
         increasing_line_color='#10b981',
         decreasing_line_color='#ef4444',
         increasing_fillcolor='#10b981',
@@ -1360,7 +1288,6 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, exchange_name):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
-# Lista de idiomas disponíveis – agora com 15 opções
 idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
 
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
@@ -1373,21 +1300,9 @@ txt = DICIONARIO_LINGUAS[idioma_selecionado]
 st.title(txt["titulo"])
 st.sidebar.header(txt["config_globais"])
 
-# Inicializa o gerenciador de exchanges
-exchange_manager = ExchangeManager()
-exchange_options = exchange_manager.get_exchange_names()
-
-# Seleção da exchange
-exchange_selecionada = st.sidebar.selectbox(
-    txt["selecione_exchange"],
-    exchange_options,
-    index=0
-)
-
-# Obtém pares da exchange selecionada
-lista_criptos = obter_pares_exchange(exchange_selecionada)
+# Lista de criptomoedas (obtida da Gate.io, que é a primária)
+lista_criptos = obter_todos_pares_usdt()
 if not lista_criptos:
-    st.sidebar.warning(f"Não foi possível carregar pares da {exchange_selecionada}. Usando lista padrão.")
     lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
 simbolo_id = st.sidebar.selectbox(
@@ -1414,8 +1329,8 @@ intervalo_refresh = st.sidebar.slider(
 # ─────────────────────────────────────────────────────────────────────────────
 # PAINEL PRINCIPAL
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
-def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
-    df_dados = carregar_dados(exchange_name, simbolo_id, timeframe)
+def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
+    df_dados = carregar_dados(simbolo_id, timeframe)
 
     if df_dados is None or df_dados.empty:
         st.warning(txt["erro_dados"])
@@ -1429,10 +1344,11 @@ def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, inter
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
 
-    dados_24h = obter_dados_24h(exchange_name, simbolo_id)
+    # Dados de 24h com fallback automático
+    dados_24h = obter_dados_24h(simbolo_id)
     variacao_24h = dados_24h.get("change") if dados_24h else 0.0
     volume_24h = dados_24h.get("volume") if dados_24h else None
-    
+
     market_cap = obter_market_cap_robusto(simbolo_id)
 
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
@@ -1446,8 +1362,6 @@ def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, inter
         if not (math.isnan(ppo_line) or math.isnan(ppo_sig))
         else "PPO: —"
     )
-    
-    st.markdown(f"**{txt['fonte_dados']}:** {exchange_name}")
 
     st.markdown(f"""
     <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
@@ -1463,7 +1377,7 @@ def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, inter
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric(label_preco, formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
-    m3.metric(txt["volume_24h"], formatar_volume(volume_24h) if volume_24h else "—")
+    m3.metric(txt["volume_24h"], formatar_volume_usdt(volume_24h))
 
     if market_cap is not None:
         m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
@@ -1481,7 +1395,7 @@ def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, inter
     )
 
     st.markdown(f"### {txt['grafico_titulo']}")
-    renderizar_grafico_plotly(df_dados, simbolo_id, exchange_name)
+    renderizar_grafico_plotly(df_dados, simbolo_id)
 
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     n_velas = len(df_analise)
@@ -1490,14 +1404,14 @@ def painel_principal(exchange_name, simbolo_id, timeframe, txt, modo_vivo, inter
             f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
             f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas} | Fonte: {exchange_name}"
+            f"Velas analisadas: {n_velas}"
         )
     else:
         st.info(
             f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas} | Fonte: {exchange_name}"
+            f"Velas analisadas: {n_velas}"
         )
 
 
-painel_principal(exchange_selecionada, simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
+painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
