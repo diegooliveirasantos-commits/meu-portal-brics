@@ -1402,6 +1402,27 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
 
+    # ─── PREÇO ATUAL EM DESTAQUE (CARD CENTRALIZADO) ───
+    st.markdown("---")
+    col_preco1, col_preco2, col_preco3 = st.columns([1, 2, 1])
+    with col_preco2:
+        nome_curto = simbolo_id.split('/')[0]
+        st.markdown(
+            f"""
+            <div style="text-align: center; padding: 15px; background: #1e293b; border-radius: 12px; border: 1px solid #475569;">
+                <span style="font-size: 32px; font-weight: bold; color: #e2e8f0;">
+                    {formatar_preco(preco_atual)}
+                </span>
+                <br>
+                <span style="font-size: 16px; color: #94a3b8;">
+                    {nome_curto} / USDT – {txt['preco_spot']}
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    st.markdown("---")
+
     dados_24h = obter_dados_24h(simbolo_id)
     variacao_24h = dados_24h.get("change") if dados_24h else 0.0
     volume_24h = dados_24h.get("volume") if dados_24h else None
