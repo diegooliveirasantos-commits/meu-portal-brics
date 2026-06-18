@@ -19,15 +19,16 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTES DE AQUECIMENTO
+# CONSTANTES
 VELAS_TOTAL = 500
-PERIODO_AQUECIMENTO = 100
+PERIODO_AQUECIMENTO = 100       # Usado para os indicadores SMC
+PERIODO_SWING = 100             # Período para detectar o Topo e Fundo do swing
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 línguas (com "Preço Atual")
+# DICIONÁRIO DE IDIOMAS – 15 línguas (ATUALIZADO com os novos textos)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci",
         "config_globais": "⚙️  Configurações Globais",
         "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
         "tempo_grafico": "Tempo Gráfico:",
@@ -37,14 +38,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Variação 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Market Cap (USD)",
-        "stop_atr": "Preço Stop ATR",
-        "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "stop_atr": "Stop ATR",
+        "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI)",
+        "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI)",
         "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
         "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
-        "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
-        "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
-        "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
+        "ctx_desconto": "Zona de Desconto de Fibonacci (Excelente risco/retorno).",
+        "ctx_premium": "Zona Premium de Fibonacci (Preço esticado, propício para realização).",
+        "ctx_neutro": "Zona neutra de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Última Atualização",
         "proximo_refresh": "Próximo refresh em",
         "segundos": "segundos",
@@ -54,19 +55,28 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Selecione o idioma da interface:",
         "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
+        # NOVOS TEXTOS PARA ALVOS
+        "alvo_swing_title": "🎯 Projeção de Alvos (Fibonacci / Smart Money)",
+        "direcao_operacao": "Direção",
+        "entrada_projetada": "Entrada Projetada",
+        "stop_projetado": "Stop Loss Projetado",
+        "swing_alto": "Topo do Swing (High)",
+        "swing_baixo": "Fundo do Swing (Low)",
+        "range_label": "Oscilação (Range)",
+        "alvo_prefix": "ALVO {n}",
+        "sem_alvos": "Nenhum alvo projetado para este movimento.",
+        "contexto_smc": "Contexto SMC",
+        "trend_ascendente": "Tendência de Alta 🟢",
+        "trend_descendente": "Tendência de Baixa 🔴",
+        "trend_neutra": "Tendência Neutra 🟡",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minutos": "5m",
-            "15 Minutos": "15m",
-            "30 Minutos": "30m",
-            "1 Hora": "1h",
-            "4 Horas": "4h",
-            "1 Dia": "1d",
-            "1 Semana": "1w"
+            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
+            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
+            "1 Dia": "1d", "1 Semana": "1w"
         }
     },
     "English (EN)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + Fibonacci Engine",
         "config_globais": "⚙️  Global Settings",
         "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
         "tempo_grafico": "Timeframe:",
@@ -76,14 +86,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24h Variation",
         "volume_24h": "24h Volume (USDT)",
         "market_cap": "Market Cap (USD)",
-        "stop_atr": "ATR Stop Price",
-        "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
-        "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
+        "stop_atr": "ATR Stop",
+        "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI)",
+        "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI)",
         "neutro": "🟡  NEUTRAL (AWAIT SMC)",
         "erro_dados": "Insufficient historical data. Try another asset or reduce the Timeframe.",
-        "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
-        "ctx_premium": "Asset in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
-        "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
+        "ctx_desconto": "Fibonacci Discount Zone (Excellent risk/reward).",
+        "ctx_premium": "Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
+        "ctx_neutro": "Neutral Fibonacci zone (Fair Value Zone).",
         "ultima_atualizacao": "Last Update",
         "proximo_refresh": "Next refresh in",
         "segundos": "seconds",
@@ -93,19 +103,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
         "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
+        "alvo_swing_title": "🎯 Target Projection (Fibonacci / Smart Money)",
+        "direcao_operacao": "Direction",
+        "entrada_projetada": "Projected Entry",
+        "stop_projetado": "Projected Stop Loss",
+        "swing_alto": "Swing High",
+        "swing_baixo": "Swing Low",
+        "range_label": "Range",
+        "alvo_prefix": "TARGET {n}",
+        "sem_alvos": "No targets projected for this move.",
+        "contexto_smc": "SMC Context",
+        "trend_ascendente": "Uptrend 🟢",
+        "trend_descendente": "Downtrend 🔴",
+        "trend_neutra": "Neutral Trend 🟡",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minutes": "5m",
-            "15 Minutes": "15m",
-            "30 Minutes": "30m",
-            "1 Hour": "1h",
-            "4 Hours": "4h",
-            "1 Day": "1d",
-            "1 Week": "1w"
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
+            "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
+            "1 Day": "1d", "1 Week": "1w"
         }
     },
     "Español": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci",
         "config_globais": "⚙️  Configuraciones Globales",
         "selecione_cripto": "Seleccione cualquier criptomoneda (/USDT):",
         "tempo_grafico": "Marco temporal:",
@@ -115,14 +133,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Variación 24h",
         "volume_24h": "Volumen 24h (USDT)",
         "market_cap": "Capitalización (USD)",
-        "stop_atr": "Precio Stop ATR",
-        "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
-        "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "stop_atr": "Stop ATR",
+        "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI)",
+        "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI)",
         "neutro": "🟡  NEUTRO (ESPERAR SMC)",
         "erro_dados": "Datos históricos insuficientes. Pruebe con otro activo o reduzca el marco temporal.",
-        "ctx_desconto": "Activo en Zona de Descuento de Fibonacci (Excelente riesgo/retorno para Institucionales).",
-        "ctx_premium": "Activo en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
-        "ctx_neutro": "Precio en zona neutral de Fibonacci (Fair Value Zone).",
+        "ctx_desconto": "Zona de Descuento de Fibonacci (Excelente riesgo/retorno).",
+        "ctx_premium": "Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
+        "ctx_neutro": "Zona neutral de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Última actualización",
         "proximo_refresh": "Próxima actualización en",
         "segundos": "segundos",
@@ -132,19 +150,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Idioma / Language",
         "idioma_selecao": "Seleccione el idioma de la interfaz:",
         "aviso_aquecimento": "⚠️ Velas de calentamiento usadas en el cálculo",
+        "alvo_swing_title": "🎯 Proyección de Objetivos (Fibonacci / Smart Money)",
+        "direcao_operacao": "Dirección",
+        "entrada_projetada": "Entrada Proyectada",
+        "stop_projetado": "Stop Loss Proyectado",
+        "swing_alto": "Máximo del Swing",
+        "swing_baixo": "Mínimo del Swing",
+        "range_label": "Rango",
+        "alvo_prefix": "OBJETIVO {n}",
+        "sem_alvos": "No hay objetivos proyectados para este movimiento.",
+        "contexto_smc": "Contexto SMC",
+        "trend_ascendente": "Tendencia Alcista 🟢",
+        "trend_descendente": "Tendencia Bajista 🔴",
+        "trend_neutra": "Tendencia Neutral 🟡",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minutos": "5m",
-            "15 Minutos": "15m",
-            "30 Minutos": "30m",
-            "1 Hora": "1h",
-            "4 Horas": "4h",
-            "1 Día": "1d",
-            "1 Semana": "1w"
+            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
+            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
+            "1 Día": "1d", "1 Semana": "1w"
         }
     },
     "Français": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Moteur SMC + Fibonacci",
         "config_globais": "⚙️  Paramètres globaux",
         "selecione_cripto": "Sélectionnez une cryptomonnaie (/USDT):",
         "tempo_grafico": "Période:",
@@ -154,14 +180,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Variation 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalisation (USD)",
-        "stop_atr": "Prix Stop ATR",
-        "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
-        "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
+        "stop_atr": "Stop ATR",
+        "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI)",
+        "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI)",
         "neutro": "🟡  NEUTRE (ATTENDRE SMC)",
         "erro_dados": "Données historiques insuffisantes. Essayez un autre actif ou réduisez la période.",
-        "ctx_desconto": "Actif en zone de discount de Fibonacci (Excellent risque/rendement pour les institutionnels).",
-        "ctx_premium": "Actif en zone premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
-        "ctx_neutro": "Prix en zone neutre de Fibonacci (Fair Value Zone).",
+        "ctx_desconto": "Zone de discount de Fibonacci (Excellent risque/rendement).",
+        "ctx_premium": "Zone premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
+        "ctx_neutro": "Zone neutre de Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Dernière mise à jour",
         "proximo_refresh": "Prochain rafraîchissement dans",
         "segundos": "secondes",
@@ -171,19 +197,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Langue / Language",
         "idioma_selecao": "Sélectionnez la langue de l'interface:",
         "aviso_aquecimento": "⚠️ Bougies de chauffe utilisées dans le calcul",
+        "alvo_swing_title": "🎯 Projection d'Objectifs (Fibonacci / Smart Money)",
+        "direcao_operacao": "Direction",
+        "entrada_projetada": "Entrée Projetée",
+        "stop_projetado": "Stop Loss Projeté",
+        "swing_alto": "Haut du Swing",
+        "swing_baixo": "Bas du Swing",
+        "range_label": "Plage",
+        "alvo_prefix": "OBJECTIF {n}",
+        "sem_alvos": "Aucun objectif projeté pour ce mouvement.",
+        "contexto_smc": "Contexte SMC",
+        "trend_ascendente": "Tendance Haussière 🟢",
+        "trend_descendente": "Tendance Baissière 🔴",
+        "trend_neutra": "Tendance Neutre 🟡",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minutes": "5m",
-            "15 Minutes": "15m",
-            "30 Minutes": "30m",
-            "1 Heure": "1h",
-            "4 Heures": "4h",
-            "1 Jour": "1d",
-            "1 Semaine": "1w"
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
+            "30 Minutes": "30m", "1 Heure": "1h", "4 Heures": "4h",
+            "1 Jour": "1d", "1 Semaine": "1w"
         }
     },
     "Deutsch": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Motor",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + Fibonacci Motor",
         "config_globais": "⚙️  Globale Einstellungen",
         "selecione_cripto": "Wählen Sie eine Kryptowährung (/USDT):",
         "tempo_grafico": "Zeitrahmen:",
@@ -193,14 +227,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24h-Veränderung",
         "volume_24h": "24h-Volumen (USDT)",
         "market_cap": "Marktkapitalisierung (USD)",
-        "stop_atr": "ATR-Stop-Preis",
-        "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI AUSGERICHTET)",
-        "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI AUSGERICHTET)",
+        "stop_atr": "ATR-Stop",
+        "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI)",
+        "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI)",
         "neutro": "🟡  NEUTRAL (SMC ABWARTEN)",
         "erro_dados": "Unzureichende historische Daten. Versuchen Sie es mit einem anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
-        "ctx_desconto": "Vermögenswert in Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite für Institutionelle).",
-        "ctx_premium": "Vermögenswert in Fibonacci-Premium-Zone (Preis gedehnt, gewinnmitnahme geeignet).",
-        "ctx_neutro": "Preis in neutraler Fibonacci-Zone (Fair Value Zone).",
+        "ctx_desconto": "Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite).",
+        "ctx_premium": "Fibonacci-Premium-Zone (Preis gedehnt, gewinnmitnahme geeignet).",
+        "ctx_neutro": "Neutrale Fibonacci-Zone (Fair Value Zone).",
         "ultima_atualizacao": "Letzte Aktualisierung",
         "proximo_refresh": "Nächste Aktualisierung in",
         "segundos": "Sekunden",
@@ -210,19 +244,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Sprache / Language",
         "idioma_selecao": "Wählen Sie die Oberflächensprache:",
         "aviso_aquecimento": "⚠️ Aufwärm-Kerzen im Rechengang verwendet",
+        "alvo_swing_title": "🎯 Zielprojektion (Fibonacci / Smart Money)",
+        "direcao_operacao": "Richtung",
+        "entrada_projetada": "Projizierter Einstieg",
+        "stop_projetado": "Projizierter Stop Loss",
+        "swing_alto": "Swing-Hoch",
+        "swing_baixo": "Swing-Tief",
+        "range_label": "Bereich",
+        "alvo_prefix": "ZIEL {n}",
+        "sem_alvos": "Für diese Bewegung wurden keine Ziele projiziert.",
+        "contexto_smc": "SMC-Kontext",
+        "trend_ascendente": "Aufwärtstrend 🟢",
+        "trend_descendente": "Abwärtstrend 🔴",
+        "trend_neutra": "Neutraler Trend 🟡",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minuten": "5m",
-            "15 Minuten": "15m",
-            "30 Minuten": "30m",
-            "1 Stunde": "1h",
-            "4 Stunden": "4h",
-            "1 Tag": "1d",
-            "1 Woche": "1w"
+            "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m",
+            "30 Minuten": "30m", "1 Stunde": "1h", "4 Stunden": "4h",
+            "1 Tag": "1d", "1 Woche": "1w"
         }
     },
     "Italiano": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motore Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motore SMC + Fibonacci",
         "config_globais": "⚙️  Impostazioni globali",
         "selecione_cripto": "Seleziona una criptovaluta (/USDT):",
         "tempo_grafico": "Timeframe:",
@@ -232,14 +274,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Variazione 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Capitalizzazione (USD)",
-        "stop_atr": "Prezzo Stop ATR",
-        "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI ALLINEATI)",
-        "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI ALLINEATI)",
+        "stop_atr": "Stop ATR",
+        "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI)",
+        "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI)",
         "neutro": "🟡  NEUTRO (ATTENDERE SMC)",
         "erro_dados": "Dati storici insufficienti. Prova un altro asset o riduci il timeframe.",
-        "ctx_desconto": "Asset in Zona di Sconto di Fibonacci (Ottimo rischio/rendimento per Istituzionali).",
-        "ctx_premium": "Asset in Zona Premium di Fibonacci (Prezzo allungato, adatto per presa di profitto).",
-        "ctx_neutro": "Prezzo in zona neutrale di Fibonacci (Fair Value Zone).",
+        "ctx_desconto": "Zona di Sconto di Fibonacci (Ottimo rischio/rendimento).",
+        "ctx_premium": "Zona Premium di Fibonacci (Prezzo allungato, adatto per presa di profitto).",
+        "ctx_neutro": "Zona neutrale di Fibonacci (Fair Value Zone).",
         "ultima_atualizacao": "Ultimo aggiornamento",
         "proximo_refresh": "Prossimo aggiornamento tra",
         "segundos": "secondi",
@@ -249,19 +291,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Lingua / Language",
         "idioma_selecao": "Seleziona la lingua dell'interfaccia:",
         "aviso_aquecimento": "⚠️ Candele di riscaldamento utilizzate nel calcolo",
+        "alvo_swing_title": "🎯 Proiezione Obiettivi (Fibonacci / Smart Money)",
+        "direcao_operacao": "Direzione",
+        "entrada_projetada": "Ingresso Proiettato",
+        "stop_projetado": "Stop Loss Proiettato",
+        "swing_alto": "Massimo dello Swing",
+        "swing_baixo": "Minimo dello Swing",
+        "range_label": "Intervallo",
+        "alvo_prefix": "OBIETTIVO {n}",
+        "sem_alvos": "Nessun obiettivo proiettato per questo movimento.",
+        "contexto_smc": "Contesto SMC",
+        "trend_ascendente": "Tendenza Rialzista 🟢",
+        "trend_descendente": "Tendenza Ribassista 🔴",
+        "trend_neutra": "Tendenza Neutra 🟡",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minuti": "5m",
-            "15 Minuti": "15m",
-            "30 Minuti": "30m",
-            "1 Ora": "1h",
-            "4 Ore": "4h",
-            "1 Giorno": "1d",
-            "1 Settimana": "1w"
+            "1 Minuto": "1m", "5 Minuti": "5m", "15 Minuti": "15m",
+            "30 Minuti": "30m", "1 Ora": "1h", "4 Ore": "4h",
+            "1 Giorno": "1d", "1 Settimana": "1w"
         }
     },
     "Русский": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель Smart Money Concepts (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель SMC + Fibonacci",
         "config_globais": "⚙️  Глобальные настройки",
         "selecione_cripto": "Выберите криптовалюту (/USDT):",
         "tempo_grafico": "Таймфрейм:",
@@ -271,14 +321,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Изменение за 24ч",
         "volume_24h": "Объем за 24ч (USDT)",
         "market_cap": "Рыночная капитализация (USD)",
-        "stop_atr": "Цена стоп-лосса ATR",
-        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
-        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
+        "stop_atr": "Стоп-лосс ATR",
+        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ)",
+        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ)",
         "neutro": "🟡  НЕЙТРАЛЬНО (ОЖИДАТЬ SMC)",
         "erro_dados": "Недостаточно исторических данных. Попробуйте другой актив или уменьшите таймфрейм.",
-        "ctx_desconto": "Актив в зоне скидки Фибоначчи (Отличное соотношение риск/доходность для институционалов).",
-        "ctx_premium": "Актив в премиальной зоне Фибоначчи (Цена растянута, подходит для фиксации прибыли).",
-        "ctx_neutro": "Цена в нейтральной зоне Фибоначчи (Fair Value Zone).",
+        "ctx_desconto": "Зона скидки Фибоначчи (Отличное соотношение риск/доходность).",
+        "ctx_premium": "Премиальная зона Фибоначчи (Цена растянута, подходит для фиксации прибыли).",
+        "ctx_neutro": "Нейтральная зона Фибоначчи (Fair Value Zone).",
         "ultima_atualizacao": "Последнее обновление",
         "proximo_refresh": "Следующее обновление через",
         "segundos": "секунд",
@@ -288,19 +338,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Язык / Language",
         "idioma_selecao": "Выберите язык интерфейса:",
         "aviso_aquecimento": "⚠️ Используются свечи разогрева в расчетах",
+        "alvo_swing_title": "🎯 Проекция целей (Fibonacci / Smart Money)",
+        "direcao_operacao": "Направление",
+        "entrada_projetada": "Прогнозируемый вход",
+        "stop_projetado": "Прогнозируемый стоп-лосс",
+        "swing_alto": "Максимум свинга",
+        "swing_baixo": "Минимум свинга",
+        "range_label": "Диапазон",
+        "alvo_prefix": "ЦЕЛЬ {n}",
+        "sem_alvos": "Для этого движения цели не спроецированы.",
+        "contexto_smc": "Контекст SMC",
+        "trend_ascendente": "Восходящий тренд 🟢",
+        "trend_descendente": "Нисходящий тренд 🔴",
+        "trend_neutra": "Нейтральный тренд 🟡",
         "intervalos": {
-            "1 Минута": "1m",
-            "5 Минут": "5m",
-            "15 Минут": "15m",
-            "30 Минут": "30m",
-            "1 Час": "1h",
-            "4 Часа": "4h",
-            "1 День": "1d",
-            "1 Неделя": "1w"
+            "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m",
+            "30 Минут": "30m", "1 Час": "1h", "4 Часа": "4h",
+            "1 День": "1d", "1 Неделя": "1w"
         }
     },
     "日本語": {
-        "titulo": "🏦  BRICSVAULT PORTAL - スマートマネーコンセプト（SMC）エンジン",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + フィボナッチエンジン",
         "config_globais": "⚙️  グローバル設定",
         "selecione_cripto": "暗号通貨を選択（/USDT）:",
         "tempo_grafico": "タイムフレーム:",
@@ -310,14 +368,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24時間変動",
         "volume_24h": "24時間出来高（USDT）",
         "market_cap": "時価総額（USD）",
-        "stop_atr": "ATRストップ価格",
-        "compra_forte": "🟢  強い買い（SMC＋フィボナッチ整合）",
-        "venda_forte": "🔴  強い売り（SMC＋フィボナッチ整合）",
+        "stop_atr": "ATRストップ",
+        "compra_forte": "🟢  強い買い（SMC＋フィボナッチ）",
+        "venda_forte": "🔴  強い売り（SMC＋フィボナッチ）",
         "neutro": "🟡  中立（SMC待機）",
         "erro_dados": "履歴データが不十分です。別の資産を選ぶか、タイムフレームを小さくしてください。",
-        "ctx_desconto": "フィボナッチ割引ゾーンにある資産（機関投資家向けの優れたリスク/リターン）。",
-        "ctx_premium": "フィボナッチプレミアムゾーンにある資産（価格が伸びており、利益確定に適している）。",
-        "ctx_neutro": "フィボナッチ中立ゾーンの価格（フェアバリューゾーン）。",
+        "ctx_desconto": "フィボナッチ割引ゾーン（優れたリスク/リターン）。",
+        "ctx_premium": "フィボナッチプレミアムゾーン（価格が伸びており、利益確定に適している）。",
+        "ctx_neutro": "フィボナッチ中立ゾーン（フェアバリューゾーン）。",
         "ultima_atualizacao": "最終更新",
         "proximo_refresh": "次の更新まで",
         "segundos": "秒",
@@ -327,19 +385,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  言語 / Language",
         "idioma_selecao": "インターフェース言語を選択:",
         "aviso_aquecimento": "⚠️ 計算にウォームアップローソクを使用",
+        "alvo_swing_title": "🎯 ターゲット投影（フィボナッチ / スマートマネー）",
+        "direcao_operacao": "方向",
+        "entrada_projetada": "投影エントリー",
+        "stop_projetado": "投影ストップロス",
+        "swing_alto": "スイング高値",
+        "swing_baixo": "スイング安値",
+        "range_label": "レンジ",
+        "alvo_prefix": "ターゲット {n}",
+        "sem_alvos": "この動きに対するターゲットはありません。",
+        "contexto_smc": "SMCコンテキスト",
+        "trend_ascendente": "上昇トレンド 🟢",
+        "trend_descendente": "下降トレンド 🔴",
+        "trend_neutra": "中立トレンド 🟡",
         "intervalos": {
-            "1分": "1m",
-            "5分": "5m",
-            "15分": "15m",
-            "30分": "30m",
-            "1時間": "1h",
-            "4時間": "4h",
-            "1日": "1d",
-            "1週間": "1w"
+            "1分": "1m", "5分": "5m", "15分": "15m",
+            "30分": "30m", "1時間": "1h", "4時間": "4h",
+            "1日": "1d", "1週間": "1w"
         }
     },
     "中文 (简体)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - 智能资金概念（SMC）引擎",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + 斐波那契引擎",
         "config_globais": "⚙️  全局设置",
         "selecione_cripto": "选择加密货币（/USDT）：",
         "tempo_grafico": "时间周期：",
@@ -349,14 +415,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24小时变化",
         "volume_24h": "24小时成交量（USDT）",
         "market_cap": "市值（美元）",
-        "stop_atr": "ATR止损价",
-        "compra_forte": "🟢  强烈买入（SMC + 斐波那契一致）",
-        "venda_forte": "🔴  强烈卖出（SMC + 斐波那契一致）",
+        "stop_atr": "ATR止损",
+        "compra_forte": "🟢  强烈买入（SMC + 斐波那契）",
+        "venda_forte": "🔴  强烈卖出（SMC + 斐波那契）",
         "neutro": "🟡  中性（等待SMC）",
         "erro_dados": "历史数据不足。请选择其他资产或缩短时间周期。",
-        "ctx_desconto": "资产处于斐波那契折价区（机构级卓越风险/回报）。",
-        "ctx_premium": "资产处于斐波那契溢价区（价格拉伸，适合获利了结）。",
-        "ctx_neutro": "价格处于斐波那契中性区（公允价值区）。",
+        "ctx_desconto": "斐波那契折价区（卓越风险/回报）。",
+        "ctx_premium": "斐波那契溢价区（价格拉伸，适合获利了结）。",
+        "ctx_neutro": "斐波那契中性区（公允价值区）。",
         "ultima_atualizacao": "最后更新",
         "proximo_refresh": "下次刷新于",
         "segundos": "秒",
@@ -366,19 +432,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  语言 / Language",
         "idioma_selecao": "选择界面语言：",
         "aviso_aquecimento": "⚠️ 计算中使用预热K线",
+        "alvo_swing_title": "🎯 目标投影（斐波那契 / 智能资金）",
+        "direcao_operacao": "方向",
+        "entrada_projetada": "投影进场",
+        "stop_projetado": "投影止损",
+        "swing_alto": "摆动高点",
+        "swing_baixo": "摆动低点",
+        "range_label": "范围",
+        "alvo_prefix": "目标 {n}",
+        "sem_alvos": "此运动未投影目标。",
+        "contexto_smc": "SMC 背景",
+        "trend_ascendente": "上升趋势 🟢",
+        "trend_descendente": "下降趋势 🔴",
+        "trend_neutra": "中性趋势 🟡",
         "intervalos": {
-            "1分钟": "1m",
-            "5分钟": "5m",
-            "15分钟": "15m",
-            "30分钟": "30m",
-            "1小时": "1h",
-            "4小时": "4h",
-            "1天": "1d",
-            "1周": "1w"
+            "1分钟": "1m", "5分钟": "5m", "15分钟": "15m",
+            "30分钟": "30m", "1小时": "1h", "4小时": "4h",
+            "1天": "1d", "1周": "1w"
         }
     },
     "हिन्दी": {
-        "titulo": "🏦  BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + फिबोनाची इंजन",
         "config_globais": "⚙️  वैश्विक सेटिंग्स",
         "selecione_cripto": "कोई भी क्रिप्टोकरेंसी चुनें (/USDT):",
         "tempo_grafico": "टाइमफ्रेम:",
@@ -388,14 +462,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24 घंटे का बदलाव",
         "volume_24h": "24 घंटे का वॉल्यूम (USDT)",
         "market_cap": "बाजार पूंजीकरण (USD)",
-        "stop_atr": "ATR स्टॉप मूल्य",
-        "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची संरेखित)",
-        "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
+        "stop_atr": "ATR स्टॉप",
+        "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची)",
+        "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची)",
         "neutro": "🟡  तटस्थ (SMC की प्रतीक्षा करें)",
         "erro_dados": "अपर्याप्त ऐतिहासिक डेटा। कोई अन्य संपत्ति चुनें या टाइमफ्रेम कम करें।",
-        "ctx_desconto": "संपत्ति फिबोनाची डिस्काउंट ज़ोन में (संस्थागतों के लिए उत्कृष्ट जोखिम/रिटर्न)।",
-        "ctx_premium": "संपत्ति फिबोनाची प्रीमियम ज़ोन में (मूल्य खिंचा हुआ, लाभ-बुकिंग के लिए उपयुक्त)।",
-        "ctx_neutro": "फिबोनाची तटस्थ क्षेत्र में मूल्य (Fair Value Zone)।",
+        "ctx_desconto": "फिबोनाची डिस्काउंट ज़ोन (उत्कृष्ट जोखिम/रिटर्न)।",
+        "ctx_premium": "फिबोनाची प्रीमियम ज़ोन (मूल्य खिंचा हुआ, लाभ-बुकिंग के लिए उपयुक्त)।",
+        "ctx_neutro": "फिबोनाची तटस्थ क्षेत्र (Fair Value Zone)।",
         "ultima_atualizacao": "अंतिम अद्यतन",
         "proximo_refresh": "अगला रिफ्रेश",
         "segundos": "सेकंड",
@@ -405,19 +479,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  भाषा / Language",
         "idioma_selecao": "इंटरफ़ेस भाषा चुनें:",
         "aviso_aquecimento": "⚠️ गणना में वार्म-अप मोमबत्तियों का उपयोग किया गया",
+        "alvo_swing_title": "🎯 लक्ष्य प्रक्षेपण (फिबोनाची / स्मार्ट मनी)",
+        "direcao_operacao": "दिशा",
+        "entrada_projetada": "अनुमानित प्रवेश",
+        "stop_projetado": "अनुमानित स्टॉप लॉस",
+        "swing_alto": "स्विंग उच्च",
+        "swing_baixo": "स्विंग निम्न",
+        "range_label": "सीमा",
+        "alvo_prefix": "लक्ष्य {n}",
+        "sem_alvos": "इस आंदोलन के लिए कोई लक्ष्य नहीं।",
+        "contexto_smc": "SMC संदर्भ",
+        "trend_ascendente": "उपरि प्रवृत्ति 🟢",
+        "trend_descendente": "अधोमुखी प्रवृत्ति 🔴",
+        "trend_neutra": "तटस्थ प्रवृत्ति 🟡",
         "intervalos": {
-            "1 मिनट": "1m",
-            "5 मिनट": "5m",
-            "15 मिनट": "15m",
-            "30 मिनट": "30m",
-            "1 घंटा": "1h",
-            "4 घंटे": "4h",
-            "1 दिन": "1d",
-            "1 सप्ताह": "1w"
+            "1 मिनट": "1m", "5 मिनट": "5m", "15 मिनट": "15m",
+            "30 मिनट": "30m", "1 घंटा": "1h", "4 घंटे": "4h",
+            "1 दिन": "1d", "1 सप्ताह": "1w"
         }
     },
     "বাংলা": {
-        "titulo": "🏦  BRICSVAULT PORTAL - স্মার্ট মানি কনসেপ্টস (SMC) ইঞ্জিন",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + ফিবোনাচি ইঞ্জিন",
         "config_globais": "⚙️  গ্লোবাল সেটিংস",
         "selecione_cripto": "যেকোনো ক্রিপ্টোকারেন্সি নির্বাচন করুন (/USDT):",
         "tempo_grafico": "টাইমফ্রেম:",
@@ -427,14 +509,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "২৪ ঘণ্টার পরিবর্তন",
         "volume_24h": "২৪ ঘণ্টার ভলিউম (USDT)",
         "market_cap": "বাজার মূলধন (USD)",
-        "stop_atr": "ATR স্টপ মূল্য",
-        "compra_forte": "🟢  শক্তিশালী ক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
-        "venda_forte": "🔴  শক্তিশালী বিক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
+        "stop_atr": "ATR স্টপ",
+        "compra_forte": "🟢  শক্তিশালী ক্রয় (SMC + ফিবোনাচি)",
+        "venda_forte": "🔴  শক্তিশালী বিক্রয় (SMC + ফিবোনাচি)",
         "neutro": "🟡  নিরপেক্ষ (SMC এর জন্য অপেক্ষা করুন)",
         "erro_dados": "অপর্যাপ্ত ঐতিহাসিক ডেটা। অন্য সম্পদ নির্বাচন করুন বা টাইমফ্রেম কমিয়ে দিন।",
-        "ctx_desconto": "সম্পদ ফিবোনাচি ডিসকাউন্ট জোনে (প্রাতিষ্ঠানিকদের জন্য চমৎকার ঝুঁকি/রিটার্ন)।",
-        "ctx_premium": "সম্পদ ফিবোনাচি প্রিমিয়াম জোনে (মূল্য প্রসারিত, মুনাফা গ্রহণের জন্য উপযুক্ত)।",
-        "ctx_neutro": "ফিবোনাচি নিরপেক্ষ অঞ্চলে মূল্য (Fair Value Zone)।",
+        "ctx_desconto": "ফিবোনাচি ডিসকাউন্ট জোন (চমৎকার ঝুঁকি/রিটার্ন)।",
+        "ctx_premium": "ফিবোনাচি প্রিমিয়াম জোন (মূল্য প্রসারিত, মুনাফা গ্রহণের জন্য উপযুক্ত)।",
+        "ctx_neutro": "ফিবোনাচি নিরপেক্ষ অঞ্চল (Fair Value Zone)।",
         "ultima_atualizacao": "শেষ আপডেট",
         "proximo_refresh": "পরবর্তী রিফ্রেশ",
         "segundos": "সেকেন্ড",
@@ -444,19 +526,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  ভাষা / Language",
         "idioma_selecao": "ইন্টারফেস ভাষা নির্বাচন করুন:",
         "aviso_aquecimento": "⚠️ গণনায় ওয়ার্ম-আপ মোমবাতি ব্যবহার করা হয়েছে",
+        "alvo_swing_title": "🎯 লক্ষ্য প্রক্ষেপণ (ফিবোনাচি / স্মার্ট মানি)",
+        "direcao_operacao": "দিকনির্দেশ",
+        "entrada_projetada": "অনুমানিত প্রবেশ",
+        "stop_projetado": "অনুমানিত স্টপ লস",
+        "swing_alto": "সুইং উচ্চ",
+        "swing_baixo": "সুইং নিম্ন",
+        "range_label": "পরিসীমা",
+        "alvo_prefix": "লক্ষ্য {n}",
+        "sem_alvos": "এই আন্দোলনের জন্য কোন লক্ষ্য নেই।",
+        "contexto_smc": "SMC প্রসঙ্গ",
+        "trend_ascendente": "উর্ধ্বগামী প্রবণতা 🟢",
+        "trend_descendente": "নিম্নগামী প্রবণতা 🔴",
+        "trend_neutra": "নিরপেক্ষ প্রবণতা 🟡",
         "intervalos": {
-            "১ মিনিট": "1m",
-            "৫ মিনিট": "5m",
-            "১৫ মিনিট": "15m",
-            "৩০ মিনিট": "30m",
-            "১ ঘন্টা": "1h",
-            "৪ ঘন্টা": "4h",
-            "১ দিন": "1d",
-            "১ সপ্তাহ": "1w"
+            "১ মিনিট": "1m", "৫ মিনিট": "5m", "১৫ মিনিট": "15m",
+            "৩০ মিনিট": "30m", "১ ঘন্টা": "1h", "৪ ঘন্টা": "4h",
+            "১ দিন": "1d", "১ সপ্তাহ": "1w"
         }
     },
     "العربية": {
-        "titulo": "🏦  BRICSVAULT PORTAL - محرك مفاهيم الأموال الذكية (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - محرك SMC + فيبوناتشي",
         "config_globais": "⚙️  الإعدادات العامة",
         "selecione_cripto": "اختر أي عملة مشفرة (/USDT):",
         "tempo_grafico": "الإطار الزمني:",
@@ -466,14 +556,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "تغير 24 ساعة",
         "volume_24h": "حجم التداول 24 ساعة (USDT)",
         "market_cap": "القيمة السوقية (USD)",
-        "stop_atr": "سعر وقف ATR",
-        "compra_forte": "🟢  شراء قوي (SMC + فيبوناتشي متوافقة)",
-        "venda_forte": "🔴  بيع قوي (SMC + فيبوناتشي متوافقة)",
+        "stop_atr": "وقف ATR",
+        "compra_forte": "🟢  شراء قوي (SMC + فيبوناتشي)",
+        "venda_forte": "🔴  بيع قوي (SMC + فيبوناتشي)",
         "neutro": "🟡  محايد (انتظار SMC)",
         "erro_dados": "بيانات تاريخية غير كافية. اختر أصلًا آخر أو قلل الإطار الزمني.",
-        "ctx_desconto": "الأصل في منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز للمؤسسات).",
-        "ctx_premium": "الأصل في منطقة فيبوناتشي الممتازة (السعر ممتد، مناسب لجني الأرباح).",
-        "ctx_neutro": "السعر في منطقة فيبوناتشي المحايدة (منطقة القيمة العادلة).",
+        "ctx_desconto": "منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز).",
+        "ctx_premium": "منطقة فيبوناتشي الممتازة (السعر ممتد، مناسب لجني الأرباح).",
+        "ctx_neutro": "منطقة فيبوناتشي المحايدة (منطقة القيمة العادلة).",
         "ultima_atualizacao": "آخر تحديث",
         "proximo_refresh": "التحديث التالي في",
         "segundos": "ثواني",
@@ -483,19 +573,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  اللغة / Language",
         "idioma_selecao": "اختر لغة الواجهة:",
         "aviso_aquecimento": "⚠️ تم استخدام شموع الإحماء في الحساب",
+        "alvo_swing_title": "🎯 إسقاط الأهداف (فيبوناتشي / الأموال الذكية)",
+        "direcao_operacao": "اتجاه",
+        "entrada_projetada": "الدخول المتوقع",
+        "stop_projetado": "وقف الخسارة المتوقع",
+        "swing_alto": "قمة التذبذب",
+        "swing_baixo": "قاع التذبذب",
+        "range_label": "النطاق",
+        "alvo_prefix": "الهدف {n}",
+        "sem_alvos": "لا توجد أهداف متوقعة لهذه الحركة.",
+        "contexto_smc": "سياق SMC",
+        "trend_ascendente": "اتجاه صاعد 🟢",
+        "trend_descendente": "اتجاه هابط 🔴",
+        "trend_neutra": "اتجاه محايد 🟡",
         "intervalos": {
-            "دقيقة واحدة": "1m",
-            "5 دقائق": "5m",
-            "15 دقيقة": "15m",
-            "30 دقيقة": "30m",
-            "ساعة واحدة": "1h",
-            "4 ساعات": "4h",
-            "يوم واحد": "1d",
-            "أسبوع واحد": "1w"
+            "دقيقة واحدة": "1m", "5 دقائق": "5m", "15 دقيقة": "15m",
+            "30 دقيقة": "30m", "ساعة واحدة": "1h", "4 ساعات": "4h",
+            "يوم واحد": "1d", "أسبوع واحد": "1w"
         }
     },
     "한국어": {
-        "titulo": "🏦  BRICSVAULT PORTAL - 스마트 머니 컨셉(SMC) 엔진",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + 피보나치 엔진",
         "config_globais": "⚙️  글로벌 설정",
         "selecione_cripto": "암호화폐 선택 (/USDT):",
         "tempo_grafico": "시간 프레임:",
@@ -505,14 +603,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24시간 변동",
         "volume_24h": "24시간 거래량 (USDT)",
         "market_cap": "시가총액 (USD)",
-        "stop_atr": "ATR 스탑 가격",
-        "compra_forte": "🟢  강한 매수 (SMC + 피보나치 정렬)",
-        "venda_forte": "🔴  강한 매도 (SMC + 피보나치 정렬)",
+        "stop_atr": "ATR 스탑",
+        "compra_forte": "🟢  강한 매수 (SMC + 피보나치)",
+        "venda_forte": "🔴  강한 매도 (SMC + 피보나치)",
         "neutro": "🟡  중립 (SMC 대기)",
         "erro_dados": "과거 데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
-        "ctx_desconto": "자산이 피보나치 할인 영역에 있습니다 (기관용 우수한 위험/수익률).",
-        "ctx_premium": "자산이 피보나치 프리미엄 영역에 있습니다 (가격이 늘어나 있어 이익 실현에 적합).",
-        "ctx_neutro": "피보나치 중립 영역의 가격 (공정 가치 영역).",
+        "ctx_desconto": "피보나치 할인 영역 (우수한 위험/수익률).",
+        "ctx_premium": "피보나치 프리미엄 영역 (가격이 늘어나 있어 이익 실현에 적합).",
+        "ctx_neutro": "피보나치 중립 영역 (공정 가치 영역).",
         "ultima_atualizacao": "마지막 업데이트",
         "proximo_refresh": "다음 새로 고침까지",
         "segundos": "초",
@@ -522,19 +620,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  언어 / Language",
         "idioma_selecao": "인터페이스 언어 선택:",
         "aviso_aquecimento": "⚠️ 계산에 워밍업 캔들 사용됨",
+        "alvo_swing_title": "🎯 목표 투영 (피보나치 / 스마트 머니)",
+        "direcao_operacao": "방향",
+        "entrada_projetada": "예상 진입",
+        "stop_projetado": "예상 스탑로스",
+        "swing_alto": "스윙 고점",
+        "swing_baixo": "스윙 저점",
+        "range_label": "범위",
+        "alvo_prefix": "목표 {n}",
+        "sem_alvos": "이 움직임에 대한 목표가 없습니다.",
+        "contexto_smc": "SMC 컨텍스트",
+        "trend_ascendente": "상승 추세 🟢",
+        "trend_descendente": "하락 추세 🔴",
+        "trend_neutra": "중립 추세 🟡",
         "intervalos": {
-            "1분": "1m",
-            "5분": "5m",
-            "15분": "15m",
-            "30분": "30m",
-            "1시간": "1h",
-            "4시간": "4h",
-            "1일": "1d",
-            "1주": "1w"
+            "1분": "1m", "5분": "5m", "15분": "15m",
+            "30분": "30m", "1시간": "1h", "4시간": "4h",
+            "1일": "1d", "1주": "1w"
         }
     },
     "Tiếng Việt": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Động cơ Khái niệm Tiền thông minh (SMC)",
+        "titulo": "🏦  BRICSVAULT PORTAL - Động cơ SMC + Fibonacci",
         "config_globais": "⚙️  Cài đặt toàn cầu",
         "selecione_cripto": "Chọn bất kỳ tiền mã hóa nào (/USDT):",
         "tempo_grafico": "Khung thời gian:",
@@ -544,14 +650,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "Biến động 24h",
         "volume_24h": "Khối lượng 24h (USDT)",
         "market_cap": "Vốn hóa thị trường (USD)",
-        "stop_atr": "Giá dừng ATR",
-        "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
-        "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
+        "stop_atr": "Dừng ATR",
+        "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI)",
+        "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI)",
         "neutro": "🟡  TRUNG LẬP (CHỜ SMC)",
         "erro_dados": "Dữ liệu lịch sử không đủ. Chọn tài sản khác hoặc giảm khung thời gian.",
-        "ctx_desconto": "Tài sản nằm trong vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời cho tổ chức).",
-        "ctx_premium": "Tài sản nằm trong vùng cao cấp Fibonacci (Giá kéo dài, phù hợp để chốt lời).",
-        "ctx_neutro": "Giá nằm trong vùng trung tính Fibonacci (Vùng giá trị hợp lý).",
+        "ctx_desconto": "Vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời).",
+        "ctx_premium": "Vùng cao cấp Fibonacci (Giá kéo dài, phù hợp để chốt lời).",
+        "ctx_neutro": "Vùng trung tính Fibonacci (Vùng giá trị hợp lý).",
         "ultima_atualizacao": "Cập nhật cuối cùng",
         "proximo_refresh": "Làm mới tiếp theo trong",
         "segundos": "giây",
@@ -561,19 +667,27 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Ngôn ngữ / Language",
         "idioma_selecao": "Chọn ngôn ngữ giao diện:",
         "aviso_aquecimento": "⚠️ Nến làm nóng được sử dụng trong tính toán",
+        "alvo_swing_title": "🎯 Dự báo Mục tiêu (Fibonacci / Smart Money)",
+        "direcao_operacao": "Hướng",
+        "entrada_projetada": "Điểm vào dự kiến",
+        "stop_projetado": "Dừng lỗ dự kiến",
+        "swing_alto": "Đỉnh dao động",
+        "swing_baixo": "Đáy dao động",
+        "range_label": "Phạm vi",
+        "alvo_prefix": "MỤC TIÊU {n}",
+        "sem_alvos": "Không có mục tiêu nào cho chuyển động này.",
+        "contexto_smc": "Bối cảnh SMC",
+        "trend_ascendente": "Xu hướng tăng 🟢",
+        "trend_descendente": "Xu hướng giảm 🔴",
+        "trend_neutra": "Xu hướng trung lập 🟡",
         "intervalos": {
-            "1 Phút": "1m",
-            "5 Phút": "5m",
-            "15 Phút": "15m",
-            "30 Phút": "30m",
-            "1 Giờ": "1h",
-            "4 Giờ": "4h",
-            "1 Ngày": "1d",
-            "1 Tuần": "1w"
+            "1 Phút": "1m", "5 Phút": "5m", "15 Phút": "15m",
+            "30 Phút": "30m", "1 Giờ": "1h", "4 Giờ": "4h",
+            "1 Ngày": "1d", "1 Tuần": "1w"
         }
     },
     "Türkçe": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Akıllı Para Kavramları (SMC) Motoru",
+        "titulo": "🏦  BRICSVAULT PORTAL - SMC + Fibonacci Motoru",
         "config_globais": "⚙️  Genel Ayarlar",
         "selecione_cripto": "Herhangi bir Kripto Para Birimi Seçin (/USDT):",
         "tempo_grafico": "Zaman Dilimi:",
@@ -583,14 +697,14 @@ DICIONARIO_LINGUAS = {
         "variacao_24h": "24 Saatlik Değişim",
         "volume_24h": "24 Saatlik Hacim (USDT)",
         "market_cap": "Piyasa Değeri (USD)",
-        "stop_atr": "ATR Durdurma Fiyatı",
-        "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI UYUMLU)",
-        "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI UYUMLU)",
+        "stop_atr": "ATR Durdurma",
+        "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI)",
+        "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI)",
         "neutro": "🟡  NÖTR (SMC BEKLE)",
         "erro_dados": "Yetersiz geçmiş veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
-        "ctx_desconto": "Varlık Fibonacci İskonto Bölgesinde (Kurumlar için mükemmel risk/getiri).",
-        "ctx_premium": "Varlık Fibonacci Prim Bölgesinde (Fiyat gerilmiş, kar alma için uygun).",
-        "ctx_neutro": "Fiyat Fibonacci nötr bölgesinde (Fair Value Zone).",
+        "ctx_desconto": "Fibonacci İskonto Bölgesi (Mükemmel risk/getiri).",
+        "ctx_premium": "Fibonacci Prim Bölgesi (Fiyat gerilmiş, kar alma için uygun).",
+        "ctx_neutro": "Fibonacci nötr bölgesi (Fair Value Zone).",
         "ultima_atualizacao": "Son Güncelleme",
         "proximo_refresh": "Sonraki yenileme",
         "segundos": "saniye",
@@ -600,15 +714,23 @@ DICIONARIO_LINGUAS = {
         "idioma_label": "🌐  Dil / Language",
         "idioma_selecao": "Arayüz dilini seçin:",
         "aviso_aquecimento": "⚠️ Hesaplamada ısınma mumları kullanıldı",
+        "alvo_swing_title": "🎯 Hedef Projeksiyonu (Fibonacci / Smart Money)",
+        "direcao_operacao": "Yön",
+        "entrada_projetada": "Projeksiyon Giriş",
+        "stop_projetado": "Projeksiyon Durdurma",
+        "swing_alto": "Swing Yüksek",
+        "swing_baixo": "Swing Düşük",
+        "range_label": "Aralık",
+        "alvo_prefix": "HEDEF {n}",
+        "sem_alvos": "Bu hareket için hedef yok.",
+        "contexto_smc": "SMC Bağlamı",
+        "trend_ascendente": "Yükseliş Trendi 🟢",
+        "trend_descendente": "Düşüş Trendi 🔴",
+        "trend_neutra": "Nötr Trend 🟡",
         "intervalos": {
-            "1 Dakika": "1m",
-            "5 Dakika": "5m",
-            "15 Dakika": "15m",
-            "30 Dakika": "30m",
-            "1 Saat": "1h",
-            "4 Saat": "4h",
-            "1 Gün": "1d",
-            "1 Hafta": "1w"
+            "1 Dakika": "1m", "5 Dakika": "5m", "15 Dakika": "15m",
+            "30 Dakika": "30m", "1 Saat": "1h", "4 Saat": "4h",
+            "1 Gün": "1d", "1 Hafta": "1w"
         }
     }
 }
@@ -631,16 +753,12 @@ def formatar_preco(valor, prefixo="$ "):
         digitos_sig = parte_decimal.lstrip("0")
         return f"{prefixo}0.0{n_zeros}x{digitos_sig}"
     elif valor < 1:
-        return f"{prefixo}{valor:.2f}"
+        return f"{prefixo}{valor:.6f}"
     else:
         return f"{prefixo}{valor:,.2f}"
 
 
 def formatar_market_cap(valor):
-    """
-    Formata valor com duas casas decimais e sufixo (T, B, M) ou apenas número.
-    Utilizado para Market Cap e Volume 24h.
-    """
     if valor is None:
         return "$ —"
     if isinstance(valor, str):
@@ -661,7 +779,7 @@ def formatar_market_cap(valor):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES (fallback interno)
+# GERENCIADOR DE EXCHANGES
 class ExchangeManager:
     EXCHANGES = {
         "Gate.io": {
@@ -720,7 +838,6 @@ class ExchangeManager:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNÇÕES DE MERCADO COM FALLBACK
-
 def obter_todos_pares_usdt():
     manager = ExchangeManager()
     client = manager.get_client("Gate.io")
@@ -753,7 +870,6 @@ def obter_dados_24h(simbolo):
                     "bid": ticker.get("bid"),
                     "ask": ticker.get("ask")
                 }
-                # Se não tiver volume, tenta via REST para todas as exchanges
                 if not result["volume"]:
                     result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
                 if result["last"] is not None:
@@ -811,8 +927,7 @@ def obter_nome_extenso_cripto(simbolo_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP (CoinGecko + CoinCap)
-
+# MARKET CAP
 @st.cache_data(ttl=3600)
 def obter_id_coingecko(simbolo):
     try:
@@ -905,8 +1020,7 @@ def obter_market_cap_robusto(simbolo_id):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS
-
+# INDICADORES TÉCNICOS (ORIGINAIS)
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
     ganho = delta.clip(lower=0)
@@ -1013,7 +1127,7 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FIBONACCI
+# FIBONACCI RETRAÇÃO (ORIGINAL)
 def calcular_retracao_fibonacci(df_analise):
     maxima = df_analise['high'].max()
     minima = df_analise['low'].min()
@@ -1030,54 +1144,71 @@ def calcular_retracao_fibonacci(df_analise):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS COM FALLBACK
+# ⭐ NOVA FUNÇÃO: DETECTOR DE SWING (TOPO E FUNDO)
+def detectar_swing(df, periodo=PERIODO_SWING):
+    """Retorna o topo (high) e o fundo (low) do período especificado."""
+    if len(df) < periodo:
+        periodo = len(df)
+    df_swing = df.iloc[-periodo:].copy()
+    swing_high = df_swing['high'].max()
+    swing_low = df_swing['low'].min()
+    return swing_high, swing_low
 
-def carregar_dados(simbolo_id, timeframe_selecionado):
-    manager = ExchangeManager()
-    for exchange_name in manager.PRIORITY:
-        try:
-            client = manager.get_client(exchange_name)
-            if not client:
-                continue
-            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
-            velas = client.fetch_ohlcv(
-                symbol,
-                timeframe=timeframe_selecionado,
-                limit=VELAS_TOTAL
-            )
-            if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
-                df = pd.DataFrame(
-                    velas,
-                    columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-                )
-                df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
 
-                df['RSI_14'] = calcular_rsi(df['close'], 14)
-                macd, sinal, hist = calcular_macd(df['close'])
-                df['MACD'] = macd
-                df['MACD_SIGNAL'] = sinal
-                df['MACD_HIST'] = hist
-                df['MFI'] = calcular_mfi(df)
-                df = calcular_ssl_hybrid(df)
-                df = calcular_atr_stop(df)
-                df = calcular_ppo(df)
+# ⭐ NOVA FUNÇÃO: GERADOR DE SINAL FIBONACCI (ALVOS 1 a 8)
+def gerar_sinal_fibonacci(df, direcao):
+    """
+    Gera entrada, stop loss e alvos baseados no Swing High/Low.
+    direcao: 'LONG' ou 'SHORT'
+    """
+    swing_high, swing_low = detectar_swing(df)
+    range_swing = swing_high - swing_low
 
-                df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
-                df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
+    # Multiplicadores de Fibonacci para extensão (descobertos na análise)
+    multiplicadores = [
+        0.236, 0.382, 0.5, 0.618, 0.786, 1.0,
+        1.272, 1.618, 2.0, 2.618, 3.618, 4.236,
+        5.0, 6.0, 8.0, 13.0, 21.0
+    ]
 
-                return df.dropna(subset=['close']).reset_index(drop=True)
-        except Exception:
-            continue
-    return None
+    if direcao == "LONG":
+        entrada = swing_low + (0.382 * range_swing)
+        stop = swing_low
+        alvos = [swing_low + (mult * range_swing) for mult in multiplicadores]
+        # Filtra apenas alvos acima da entrada
+        alvos_validos = [a for a in alvos if a > entrada]
+    else:  # SHORT
+        entrada = swing_high - (0.382 * range_swing)
+        stop = swing_high
+        alvos = [swing_high - (mult * range_swing) for mult in multiplicadores]
+        # Filtra apenas alvos abaixo da entrada
+        alvos_validos = [a for a in alvos if a < entrada]
+
+    # Pega os primeiros 8 alvos (ou menos se não houver)
+    alvos_finais = alvos_validos[:8]
+    
+    # Retorna também os multiplicadores correspondentes para exibição
+    mult_utilizados = multiplicadores[:len(alvos_finais)]
+    
+    return {
+        "direcao": direcao,
+        "swing_high": swing_high,
+        "swing_low": swing_low,
+        "range": range_swing,
+        "entrada": entrada,
+        "stop": stop,
+        "alvos": alvos_finais,
+        "multiplicadores": mult_utilizados
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA SMC
+# ANÁLISE DE CONFLUÊNCIA SMC (MODIFICADA PARA RETORNAR DIREÇÃO)
 def analisar_confluencia(df_completo, txt):
     df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
     if df_analise.empty:
-        return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0
+        return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0, "NEUTRO"
 
     u = df_analise.iloc[-1]
     preco_atual = u['close']
@@ -1134,24 +1265,74 @@ def analisar_confluencia(df_completo, txt):
     else:
         contexto_fib = txt["ctx_neutro"]
 
+    # Define a direção baseada na pontuação
     if pontos_alta >= 8.5:
+        direcao = "LONG"
         return (
             txt["compra_forte"], "#00cc66",
             f"{contexto_fib} SMC + PPO Order Flow Bullish.",
-            pontos_alta, pontos_baixa
+            pontos_alta, pontos_baixa, direcao
         )
     elif pontos_baixa >= 8.5:
+        direcao = "SHORT"
         return (
             txt["venda_forte"], "#ff3333",
             f"{contexto_fib} SMC + PPO Order Flow Bearish.",
-            pontos_alta, pontos_baixa
+            pontos_alta, pontos_baixa, direcao
         )
     else:
-        return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
+        # Se neutro, decide pela inclinação da média móvel simples de 50 períodos
+        media_50 = df_analise['close'].rolling(50).mean().iloc[-1]
+        if preco_atual > media_50:
+            direcao = "LONG"
+        else:
+            direcao = "SHORT"
+        return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa, direcao
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICO
+# CARREGAMENTO DE DADOS COM FALLBACK
+def carregar_dados(simbolo_id, timeframe_selecionado):
+    manager = ExchangeManager()
+    for exchange_name in manager.PRIORITY:
+        try:
+            client = manager.get_client(exchange_name)
+            if not client:
+                continue
+            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
+            velas = client.fetch_ohlcv(
+                symbol,
+                timeframe=timeframe_selecionado,
+                limit=VELAS_TOTAL
+            )
+            if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
+                df = pd.DataFrame(
+                    velas,
+                    columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+                )
+                df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+                df['RSI_14'] = calcular_rsi(df['close'], 14)
+                macd, sinal, hist = calcular_macd(df['close'])
+                df['MACD'] = macd
+                df['MACD_SIGNAL'] = sinal
+                df['MACD_HIST'] = hist
+                df['MFI'] = calcular_mfi(df)
+                df = calcular_ssl_hybrid(df)
+                df = calcular_atr_stop(df)
+                df = calcular_ppo(df)
+
+                df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
+                df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
+
+                return df.dropna(subset=['close']).reset_index(drop=True)
+        except Exception:
+            continue
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GRÁFICO (ORIGINAL)
 def renderizar_grafico_plotly(df_completo, simbolo_id):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
@@ -1261,14 +1442,14 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
 
+    # 1. Dados de 24h
     dados_24h = obter_dados_24h(simbolo_id)
     variacao_24h = dados_24h.get("change") if dados_24h else 0.0
     volume_24h = dados_24h.get("volume") if dados_24h else None
-
     market_cap = obter_market_cap_robusto(simbolo_id)
 
-    # A análise ainda é feita (pontos_alta e pontos_baixa são calculados)
-    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
+    # 2. Análise de Confluência SMC (retorna direção)
+    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
         df_dados, txt
     )
 
@@ -1280,6 +1461,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         else "PPO: —"
     )
 
+    # Exibe a recomendação SMC
     st.markdown(f"""
     <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
                 border:2px solid {cor_sinal};margin-bottom:20px;">
@@ -1288,19 +1470,68 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     </div>
     """, unsafe_allow_html=True)
 
+    # 3. ⭐ NOVO: GERAR SINAL FIBONACCI (ALVOS)
+    sinal_fib = gerar_sinal_fibonacci(df_dados, direcao)
+
+    # Exibe o card com os dados do Swing e a tabela de alvos
+    st.markdown(f"### {txt['alvo_swing_title']}")
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric(txt["direcao_operacao"], f"{sinal_fib['direcao']} 🚀")
+    col2.metric(txt["entrada_projetada"], formatar_preco(sinal_fib['entrada']))
+    col3.metric(txt["stop_projetado"], formatar_preco(sinal_fib['stop']), delta=f"{((sinal_fib['stop'] - sinal_fib['entrada'])/sinal_fib['entrada']*100):+.2f}%")
+    col4.metric(txt["swing_alto"], formatar_preco(sinal_fib['swing_high']))
+    col5.metric(txt["swing_baixo"], formatar_preco(sinal_fib['swing_low']))
+
+    # Tabela de Alvos 1 a 8
+    if sinal_fib['alvos']:
+        alvos = sinal_fib['alvos']
+        mults = sinal_fib['multiplicadores']
+        
+        # Divide em duas linhas para ficar mais clean
+        st.markdown("**🎯 Projeção dos Alvos:**")
+        
+        # Linha 1: Alvos 1 a 4
+        cols1 = st.columns(4)
+        for i in range(min(4, len(alvos))):
+            label = txt["alvo_prefix"].format(n=i+1)
+            preco_alvo = alvos[i]
+            # Calcula a distância percentual do alvo até a entrada
+            if sinal_fib['direcao'] == "LONG":
+                pct = ((preco_alvo - sinal_fib['entrada']) / sinal_fib['entrada']) * 100
+            else:
+                pct = ((sinal_fib['entrada'] - preco_alvo) / sinal_fib['entrada']) * 100
+            cols1[i].metric(label, formatar_preco(preco_alvo), delta=f"{pct:+.2f}%")
+        
+        # Linha 2: Alvos 5 a 8 (se existirem)
+        if len(alvos) > 4:
+            cols2 = st.columns(4)
+            for i in range(4, min(8, len(alvos))):
+                label = txt["alvo_prefix"].format(n=i+1)
+                preco_alvo = alvos[i]
+                if sinal_fib['direcao'] == "LONG":
+                    pct = ((preco_alvo - sinal_fib['entrada']) / sinal_fib['entrada']) * 100
+                else:
+                    pct = ((sinal_fib['entrada'] - preco_alvo) / sinal_fib['entrada']) * 100
+                cols2[i-4].metric(label, formatar_preco(preco_alvo), delta=f"{pct:+.2f}%")
+    else:
+        st.info(txt["sem_alvos"])
+
+    st.divider()
+
+    # 4. MÉTRICAS PRINCIPAIS (Preço, Variação, Volume, Market Cap)
     nome_extenso = obter_nome_extenso_cripto(simbolo_id)
     label_preco = f"{nome_extenso} | {txt['preco_spot']}"
-
     volume_formatado = formatar_market_cap(volume_24h)
     market_cap_formatado = formatar_market_cap(market_cap)
 
-    # REMOVIDOS os pontos de compra e venda – agora são 4 colunas
     m1, m2, m3, m4 = st.columns(4)
     m1.metric(label_preco, formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
     m3.metric(txt["volume_24h"], volume_formatado)
     m4.metric(txt["market_cap"], market_cap_formatado)
 
+    # 5. INDICADORES ADICIONAIS
     atr_stop_val = ultimo_reg['ATR_Stop']
     st.markdown(
         f"**{txt['stop_atr']}:** {formatar_preco(atr_stop_val)}"
@@ -1308,9 +1539,11 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
     )
 
+    # 6. GRÁFICO
     st.markdown(f"### {txt['grafico_titulo']}")
     renderizar_grafico_plotly(df_dados, simbolo_id)
 
+    # 7. RODAPÉ DE ATUALIZAÇÃO
     hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
     n_velas = len(df_analise)
     if modo_vivo:
