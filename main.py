@@ -21,11 +21,11 @@ st.set_page_config(
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTES
 VELAS_TOTAL = 500
-PERIODO_AQUECIMENTO = 100
+PERIODO_AQUECIMENTO = 100          # será sobrescrito pelo slider, mas mantido como fallback
 PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (COMPLETO)
+# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (COMPLETO) – MANTIDO INTEGRALMENTE
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci",
@@ -1163,9 +1163,10 @@ def gerar_sinal_fibonacci(df, direcao, multiplicadores, periodo_swing):
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA SMC (retorna direção)
-def analisar_confluencia(df_completo, txt):
-    df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
+# ANÁLISE DE CONFLUÊNCIA SMC (com parâmetros dinâmicos para assertividade)
+def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento=100):
+    # Usa o período de aquecimento passado como parâmetro (dinâmico)
+    df_analise = df_completo.iloc[periodo_aquecimento:].copy()
 
     if df_analise.empty:
         return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0, "NEUTRO"
@@ -1225,12 +1226,13 @@ def analisar_confluencia(df_completo, txt):
     else:
         contexto_fib = txt["ctx_neutro"]
 
-    if pontos_alta >= 8.5:
+    # Usa o limiar dinâmico para decidir o sinal forte
+    if pontos_alta >= limiar_sinal:
         direcao = "LONG"
         return (txt["compra_forte"], "#00cc66",
                 f"{contexto_fib} SMC + PPO Order Flow Bullish.",
                 pontos_alta, pontos_baixa, direcao)
-    elif pontos_baixa >= 8.5:
+    elif pontos_baixa >= limiar_sinal:
         direcao = "SHORT"
         return (txt["venda_forte"], "#ff3333",
                 f"{contexto_fib} SMC + PPO Order Flow Bearish.",
@@ -1242,6 +1244,50 @@ def analisar_confluencia(df_completo, txt):
         else:
             direcao = "SHORT"
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa, direcao
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FUNÇÃO PARA CALCULAR ASSERTIVIDADE HISTÓRICA (BACKTEST RÁPIDO)
+def calcular_assertividade_historica(df, limiar, periodo_aquecimento, txt):
+    """
+    Avalia quantos sinais fortes (acima do limiar) teriam acertado um alvo de 1%
+    nos 5 candles seguintes. Isso dá uma noção da assertividade da configuração atual.
+    """
+    acertos = 0
+    total = 0
+    if len(df) < periodo_aquecimento + 50:
+        return "Dados históricos insuficientes para testar a assertividade."
+    
+    df_back = df.iloc[periodo_aquecimento:].copy()
+    if len(df_back) < 50:
+        return "Dados insuficientes após o aquecimento."
+    
+    # Testa apenas os últimos 100 pontos para não pesar o processamento
+    inicio = max(30, len(df_back) - 100)
+    for i in range(inicio, len(df_back) - 5):
+        fatia = df_back.iloc[:i+1]
+        # Reconstrói o contexto completo (aquecimento + fatia atual)
+        df_contexto = pd.concat([df.iloc[:periodo_aquecimento], fatia])
+        try:
+            _, _, _, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
+                df_contexto, txt, limiar, periodo_aquecimento
+            )
+        except Exception:
+            continue
+        
+        # Verifica se é um sinal forte (compra ou venda)
+        if (pontos_alta >= limiar and direcao == "LONG") or (pontos_baixa >= limiar and direcao == "SHORT"):
+            total += 1
+            preco_atual = fatia['close'].iloc[-1]
+            futuros = df_back.iloc[i+1:i+6]  # próximos 5 candles
+            if not futuros.empty:
+                if direcao == "LONG" and (futuros['high'].max() >= preco_atual * 1.01):
+                    acertos += 1
+                elif direcao == "SHORT" and (futuros['low'].min() <= preco_atual * 0.99):
+                    acertos += 1
+    
+    if total == 0:
+        return "Nenhum sinal forte gerado no histórico recente. Tente reduzir a nota de corte."
+    return f"Assertividade (acertou alvo de 1% nos próximos 5 candles): {acertos}/{total} ({acertos/total*100:.1f}%)"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CARREGAMENTO DE DADOS
@@ -1383,18 +1429,31 @@ periodo_swing = st.sidebar.slider(
     min_value=10, max_value=200, value=PERIODO_SWING_DEFAULT
 )
 
+# ─── NOVOS SLIDERS PARA ASSERTIVIDADE ───
+st.sidebar.markdown("### ⚙️ Ajuste de Assertividade")
+limiar_sinal = st.sidebar.slider(
+    "Nota de corte para sinal forte (padrão 9.0):",
+    min_value=5.0, max_value=12.0, value=9.0, step=0.5,
+    help="Quanto maior, mais rigoroso. Para 1h, 9.0 é um bom equilíbrio entre filtro e oportunidades."
+)
+periodo_aquecimento_ui = st.sidebar.slider(
+    "Velas de aquecimento (padrão 100):",
+    min_value=50, max_value=300, value=100, step=10,
+    help="Define quantas velas iniciais são ignoradas no cálculo. Para 1h, 100 velas = 4 dias."
+)
+
 # ─────────────────────────────────────────────────────────────────────────────
-# PAINEL PRINCIPAL
+# PAINEL PRINCIPAL (com os novos parâmetros)
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
 def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
-                     multiplicadores, periodo_swing):
+                     multiplicadores, periodo_swing, limiar_sinal, periodo_aquecimento_ui):
     df_dados = carregar_dados(simbolo_id, timeframe)
 
     if df_dados is None or df_dados.empty:
         st.warning(txt["erro_dados"])
         return
 
-    df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
+    df_analise = df_dados.iloc[periodo_aquecimento_ui:]
     if df_analise.empty:
         st.warning(txt["erro_dados"])
         return
@@ -1428,8 +1487,9 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
     volume_24h = dados_24h.get("volume") if dados_24h else None
     market_cap = obter_market_cap_robusto(simbolo_id)
 
+    # Chama a análise com os parâmetros dinâmicos
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
-        df_dados, txt
+        df_dados, txt, limiar_sinal, periodo_aquecimento_ui
     )
 
     ppo_line = ultimo_reg['PPO']
@@ -1487,6 +1547,12 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
 
     st.divider()
 
+    # ─── PAINEL DE ASSERTIVIDADE (EXPANDIDO) ───
+    with st.expander("📊 Ver Assertividade nos Últimos Dados"):
+        resultado = calcular_assertividade_historica(df_dados, limiar_sinal, periodo_aquecimento_ui, txt)
+        st.write(resultado)
+        st.caption("💡 Quanto maior a porcentagem, mais confiável a configuração atual para o ativo e timeframe escolhidos.")
+
     nome_extenso = obter_nome_extenso_cripto(simbolo_id)
     label_preco = f"{nome_extenso} | {txt['preco_spot']}"
     volume_formatado = formatar_market_cap(volume_24h)
@@ -1514,23 +1580,24 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
         st.info(
             f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
             f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
-            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+            f"{txt['aviso_aquecimento']}: {periodo_aquecimento_ui} | "
             f"Velas analisadas: {n_velas}"
         )
     else:
         st.info(
             f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
-            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+            f"{txt['aviso_aquecimento']}: {periodo_aquecimento_ui} | "
             f"Velas analisadas: {n_velas}"
         )
 
-    # ─── RODAPÉ COM A FRASE SOLICITADA ───
+    # ─── RODAPÉ ───
     st.markdown("---")
     st.caption(
-        "💡 **Aceita uma sugestão?** Configure seu app para **15m**, período do swing **50**, "
-        "e veja a mágica acontecer! 🚀  \n"
+        "💡 **Aceita uma sugestão?** Configure seu app para **1 Hora**, período do swing **50**, "
+        "nota de corte **9.0** e veja a mágica acontecer! 🚀  \n"
         "⚠️ **Não é dica de investimento – faça a sua própria análise.**"
     )
 
+# ─── CHAMADA FINAL COM OS NOVOS PARÂMETROS ───
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
-                 multiplicadores, periodo_swing)
+                 multiplicadores, periodo_swing, limiar_sinal, periodo_aquecimento_ui)
