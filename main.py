@@ -22,7 +22,7 @@ st.set_page_config(
 # CONSTANTES
 VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
-PERIODO_SWING_DEFAULT = 50   # Período para detectar o swing
+PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (COMPLETO)
@@ -1132,7 +1132,7 @@ def detectar_swing(df, periodo=PERIODO_SWING_DEFAULT):
     return df_swing['high'].max(), df_swing['low'].min()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERADOR DE SINAL FIBONACCI (com multiplicadores)
+# GERADOR DE SINAL FIBONACCI
 def gerar_sinal_fibonacci(df, direcao, multiplicadores, periodo_swing):
     swing_high, swing_low = detectar_swing(df, periodo_swing)
     preco_atual = df['close'].iloc[-1]
@@ -1328,7 +1328,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id):
     st.plotly_chart(fig, width='stretch')
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR – com novos controles
+# SIDEBAR
 idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
 
 st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
@@ -1427,7 +1427,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
     </div>
     """, unsafe_allow_html=True)
 
-    # ⭐ GERAR SINAL FIBONACCI
     sinal_fib = gerar_sinal_fibonacci(df_dados, direcao, multiplicadores, periodo_swing)
 
     st.markdown(f"### {txt['alvo_swing_title']}")
@@ -1503,6 +1502,14 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
             f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
             f"Velas analisadas: {n_velas}"
         )
+
+    # ─── RODAPÉ COM A FRASE SOLICITADA ───
+    st.markdown("---")
+    st.caption(
+        "💡 **Aceita uma sugestão?** Configure seu app para **15m**, período do swing **50**, "
+        "e veja a mágica acontecer! 🚀  \n"
+        "⚠️ **Não é dica de investimento – faça a sua própria análise.**"
+    )
 
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
                  multiplicadores, periodo_swing)
