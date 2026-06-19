@@ -21,11 +21,11 @@ st.set_page_config(
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTES
 VELAS_TOTAL = 500
-PERIODO_AQUECIMENTO = 100          # será sobrescrito pelo slider, mas mantido como fallback
+PERIODO_AQUECIMENTO = 100
 PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (COMPLETO) – MANTIDO INTEGRALMENTE
+# DICIONÁRIO DE IDIOMAS – 15 LÍNGUAS (COMPLETO)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci",
@@ -918,7 +918,7 @@ def obter_nome_extenso_cripto(simbolo_id):
         return simbolo_id.split('/')[0]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP – VERSÃO ROBUSTA (CONSULTA DUAS FONTES)
+# MARKET CAP – CORRIGIDA (SEM THREADPOOL, CHAMADAS SEQUENCIAIS)
 @st.cache_data(ttl=3600)
 def obter_id_coingecko(simbolo):
     try:
@@ -996,31 +996,33 @@ def obter_market_cap_coincap(simbolo):
     except Exception:
         return None
 
-# ⭐ FUNÇÃO MODIFICADA: SÓ RETORNA O MARKET CAP SE FOR CONSULTADO EM PELO MENOS 2 FONTES
 def obter_market_cap_robusto(simbolo_id):
+    """
+    Busca o market cap em duas fontes (CoinGecko e CoinCap) de forma sequencial.
+    Retorna a média se ambas retornarem, o valor da única que retornar, ou None.
+    """
     simbolo = simbolo_id.split('/')[0]
-    resultados = []
-    
-    # Busca simultânea nas duas fontes
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        future_cg = executor.submit(obter_market_cap_coingecko, simbolo)
-        future_cc = executor.submit(obter_market_cap_coincap, simbolo)
-        
-        for future in as_completed([future_cg, future_cc]):
-            try:
-                val = future.result(timeout=15)
-                if val is not None and val > 0:
-                    resultados.append(val)
-            except Exception:
-                pass
+    mc_cg = None
+    mc_cc = None
 
-    # Só exibe se tiver sido consultado em mais de uma fonte (pelo menos 2)
-    if len(resultados) >= 2:
-        # Retorna a média das duas fontes para maior precisão e confiabilidade
-        return sum(resultados) / len(resultados)
-    
-    # Se apenas uma fonte ou nenhuma respondeu, retorna None (exibirá "$ —")
-    return None
+    try:
+        mc_cg = obter_market_cap_coingecko(simbolo)
+    except Exception:
+        pass
+
+    try:
+        mc_cc = obter_market_cap_coincap(simbolo)
+    except Exception:
+        pass
+
+    valores = [v for v in (mc_cg, mc_cc) if v is not None and v > 0]
+
+    if len(valores) == 2:
+        return sum(valores) / len(valores)
+    elif len(valores) == 1:
+        return valores[0]
+    else:
+        return None
 
 # ─────────────────────────────────────────────────────────────────────────────
 # INDICADORES TÉCNICOS
@@ -1179,7 +1181,7 @@ def gerar_sinal_fibonacci(df, direcao, multiplicadores, periodo_swing):
     }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA SMC (com parâmetros dinâmicos para assertividade)
+# ANÁLISE DE CONFLUÊNCIA SMC (com parâmetros dinâmicos)
 def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento=100):
     df_analise = df_completo.iloc[periodo_aquecimento:].copy()
 
@@ -1490,7 +1492,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
     dados_24h = obter_dados_24h(simbolo_id)
     variacao_24h = dados_24h.get("change") if dados_24h else 0.0
     volume_24h = dados_24h.get("volume") if dados_24h else None
-    market_cap = obter_market_cap_robusto(simbolo_id)  # <-- AGORA SÓ RETORNA SE TIVER 2 FONTES
+    market_cap = obter_market_cap_robusto(simbolo_id)
 
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
         df_dados, txt, limiar_sinal, periodo_aquecimento_ui
