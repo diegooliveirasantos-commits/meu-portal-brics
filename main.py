@@ -918,7 +918,7 @@ def obter_nome_extenso_cripto(simbolo_id):
         return simbolo_id.split('/')[0]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP
+# MARKET CAP – VERSÃO ROBUSTA (CONSULTA DUAS FONTES)
 @st.cache_data(ttl=3600)
 def obter_id_coingecko(simbolo):
     try:
@@ -996,14 +996,30 @@ def obter_market_cap_coincap(simbolo):
     except Exception:
         return None
 
+# ⭐ FUNÇÃO MODIFICADA: SÓ RETORNA O MARKET CAP SE FOR CONSULTADO EM PELO MENOS 2 FONTES
 def obter_market_cap_robusto(simbolo_id):
     simbolo = simbolo_id.split('/')[0]
-    mc = obter_market_cap_coingecko(simbolo)
-    if mc is not None:
-        return mc
-    mc = obter_market_cap_coincap(simbolo)
-    if mc is not None:
-        return mc
+    resultados = []
+    
+    # Busca simultânea nas duas fontes
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_cg = executor.submit(obter_market_cap_coingecko, simbolo)
+        future_cc = executor.submit(obter_market_cap_coincap, simbolo)
+        
+        for future in as_completed([future_cg, future_cc]):
+            try:
+                val = future.result(timeout=15)
+                if val is not None and val > 0:
+                    resultados.append(val)
+            except Exception:
+                pass
+
+    # Só exibe se tiver sido consultado em mais de uma fonte (pelo menos 2)
+    if len(resultados) >= 2:
+        # Retorna a média das duas fontes para maior precisão e confiabilidade
+        return sum(resultados) / len(resultados)
+    
+    # Se apenas uma fonte ou nenhuma respondeu, retorna None (exibirá "$ —")
     return None
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1165,7 +1181,6 @@ def gerar_sinal_fibonacci(df, direcao, multiplicadores, periodo_swing):
 # ─────────────────────────────────────────────────────────────────────────────
 # ANÁLISE DE CONFLUÊNCIA SMC (com parâmetros dinâmicos para assertividade)
 def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento=100):
-    # Usa o período de aquecimento passado como parâmetro (dinâmico)
     df_analise = df_completo.iloc[periodo_aquecimento:].copy()
 
     if df_analise.empty:
@@ -1226,7 +1241,6 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
     else:
         contexto_fib = txt["ctx_neutro"]
 
-    # Usa o limiar dinâmico para decidir o sinal forte
     if pontos_alta >= limiar_sinal:
         direcao = "LONG"
         return (txt["compra_forte"], "#00cc66",
@@ -1248,10 +1262,6 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNÇÃO PARA CALCULAR ASSERTIVIDADE HISTÓRICA (BACKTEST RÁPIDO)
 def calcular_assertividade_historica(df, limiar, periodo_aquecimento, txt):
-    """
-    Avalia quantos sinais fortes (acima do limiar) teriam acertado um alvo de 1%
-    nos 5 candles seguintes. Isso dá uma noção da assertividade da configuração atual.
-    """
     acertos = 0
     total = 0
     if len(df) < periodo_aquecimento + 50:
@@ -1261,11 +1271,9 @@ def calcular_assertividade_historica(df, limiar, periodo_aquecimento, txt):
     if len(df_back) < 50:
         return "Dados insuficientes após o aquecimento."
     
-    # Testa apenas os últimos 100 pontos para não pesar o processamento
     inicio = max(30, len(df_back) - 100)
     for i in range(inicio, len(df_back) - 5):
         fatia = df_back.iloc[:i+1]
-        # Reconstrói o contexto completo (aquecimento + fatia atual)
         df_contexto = pd.concat([df.iloc[:periodo_aquecimento], fatia])
         try:
             _, _, _, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
@@ -1274,11 +1282,10 @@ def calcular_assertividade_historica(df, limiar, periodo_aquecimento, txt):
         except Exception:
             continue
         
-        # Verifica se é um sinal forte (compra ou venda)
         if (pontos_alta >= limiar and direcao == "LONG") or (pontos_baixa >= limiar and direcao == "SHORT"):
             total += 1
             preco_atual = fatia['close'].iloc[-1]
-            futuros = df_back.iloc[i+1:i+6]  # próximos 5 candles
+            futuros = df_back.iloc[i+1:i+6]
             if not futuros.empty:
                 if direcao == "LONG" and (futuros['high'].max() >= preco_atual * 1.01):
                     acertos += 1
@@ -1429,7 +1436,6 @@ periodo_swing = st.sidebar.slider(
     min_value=10, max_value=200, value=PERIODO_SWING_DEFAULT
 )
 
-# ─── NOVOS SLIDERS PARA ASSERTIVIDADE ───
 st.sidebar.markdown("### ⚙️ Ajuste de Assertividade")
 limiar_sinal = st.sidebar.slider(
     "Nota de corte para sinal forte (padrão 9.0):",
@@ -1443,7 +1449,7 @@ periodo_aquecimento_ui = st.sidebar.slider(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PAINEL PRINCIPAL (com os novos parâmetros)
+# PAINEL PRINCIPAL
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
 def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
                      multiplicadores, periodo_swing, limiar_sinal, periodo_aquecimento_ui):
@@ -1461,7 +1467,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
 
-    # ─── PREÇO ATUAL EM DESTAQUE (CARD CENTRALIZADO) ───
     st.markdown("---")
     col_preco1, col_preco2, col_preco3 = st.columns([1, 2, 1])
     with col_preco2:
@@ -1485,9 +1490,8 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
     dados_24h = obter_dados_24h(simbolo_id)
     variacao_24h = dados_24h.get("change") if dados_24h else 0.0
     volume_24h = dados_24h.get("volume") if dados_24h else None
-    market_cap = obter_market_cap_robusto(simbolo_id)
+    market_cap = obter_market_cap_robusto(simbolo_id)  # <-- AGORA SÓ RETORNA SE TIVER 2 FONTES
 
-    # Chama a análise com os parâmetros dinâmicos
     recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
         df_dados, txt, limiar_sinal, periodo_aquecimento_ui
     )
@@ -1547,7 +1551,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
 
     st.divider()
 
-    # ─── PAINEL DE ASSERTIVIDADE (EXPANDIDO) ───
     with st.expander("📊 Ver Assertividade nos Últimos Dados"):
         resultado = calcular_assertividade_historica(df_dados, limiar_sinal, periodo_aquecimento_ui, txt)
         st.write(resultado)
@@ -1590,7 +1593,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
             f"Velas analisadas: {n_velas}"
         )
 
-    # ─── RODAPÉ ───
     st.markdown("---")
     st.caption(
         "💡 **Aceita uma sugestão?** Configure seu app para **1 Hora**, período do swing **50**, "
@@ -1598,6 +1600,5 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
         "⚠️ **Não é dica de investimento – faça a sua própria análise.**"
     )
 
-# ─── CHAMADA FINAL COM OS NOVOS PARÂMETROS ───
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
                  multiplicadores, periodo_swing, limiar_sinal, periodo_aquecimento_ui)
