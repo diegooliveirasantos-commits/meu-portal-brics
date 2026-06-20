@@ -17,12 +17,12 @@ st.set_page_config(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # CONSTANTES
-VELAS_TOTAL = 500
+VELAS_TOTAL = 1000  # Aumentado para dar mais dados ao backtest
 PERIODO_AQUECIMENTO = 100
 PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (completo)
+# DICIONÁRIO DE IDIOMAS (completo – Português, Inglês, Espanhol)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci PRO",
@@ -69,7 +69,7 @@ DICIONARIO_LINGUAS = {
         "aguardado": "⏳ Aguardado",
         "tempo_status": "Tempo decorrido: {tempo}",
         "backtest_titulo": "📊 Ver Assertividade nos Últimos Dados (Backtest Robusto)",
-        "backtest_sem_dados": "⚠️ Dados históricos insuficientes para o backtest. Aumente o número de velas ou reduza os parâmetros.",
+        "backtest_sem_dados": "⚠️ Dados históricos insuficientes para o backtest. Aumente o número de velas (VELAS_TOTAL) ou reduza os parâmetros (período de swing, aquecimento ou lookahead).",
         "backtest_sem_sinais": "⚠️ Nenhum sinal forte gerado no histórico recente. Reduza a nota de corte ou ajuste o período de swing.",
         "backtest_resultados": "**Resultados do Backtest:**",
         "backtest_sinais": "Sinais Gerados",
@@ -81,6 +81,7 @@ DICIONARIO_LINGUAS = {
         "backtest_drawdown": "Drawdown Máximo",
         "backtest_rr": "Relação Risco/Retorno Média",
         "backtest_curva_capital": "Curva de Capital (Equity Curve)",
+        "backtest_carregando": "⏳ Calculando assertividade... aguarde.",
         "intervalos": {
             "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
             "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
@@ -132,7 +133,7 @@ DICIONARIO_LINGUAS = {
         "aguardado": "⏳ Pending",
         "tempo_status": "Elapsed: {tempo}",
         "backtest_titulo": "📊 Check Assertiveness in Recent Data (Robust Backtest)",
-        "backtest_sem_dados": "⚠️ Insufficient historical data for backtest. Increase the number of candles or reduce parameters.",
+        "backtest_sem_dados": "⚠️ Insufficient historical data for backtest. Increase VELAS_TOTAL or reduce parameters (swing period, warm-up, or lookahead).",
         "backtest_sem_sinais": "⚠️ No strong signals generated in recent history. Reduce the cutoff score or adjust the swing period.",
         "backtest_resultados": "**Backtest Results:**",
         "backtest_sinais": "Signals Generated",
@@ -144,6 +145,7 @@ DICIONARIO_LINGUAS = {
         "backtest_drawdown": "Max Drawdown",
         "backtest_rr": "Average Risk/Reward Ratio",
         "backtest_curva_capital": "Equity Curve",
+        "backtest_carregando": "⏳ Calculating assertiveness... please wait.",
         "intervalos": {
             "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
             "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
@@ -195,7 +197,7 @@ DICIONARIO_LINGUAS = {
         "aguardado": "⏳ Pendiente",
         "tempo_status": "Tiempo transcurrido: {tempo}",
         "backtest_titulo": "📊 Ver Assertividad en Datos Recientes (Backtest Robusto)",
-        "backtest_sem_dados": "⚠️ Datos históricos insuficientes para el backtest. Aumente el número de velas o reduzca los parámetros.",
+        "backtest_sem_dados": "⚠️ Datos históricos insuficientes para el backtest. Aumente VELAS_TOTAL o reduzca los parámetros (período de swing, calentamiento o lookahead).",
         "backtest_sem_sinais": "⚠️ No se generaron señales fuertes en el historial reciente. Reduzca el puntaje de corte o ajuste el período de swing.",
         "backtest_resultados": "**Resultados del Backtest:**",
         "backtest_sinais": "Señales Generadas",
@@ -207,6 +209,7 @@ DICIONARIO_LINGUAS = {
         "backtest_drawdown": "Drawdown Máximo",
         "backtest_rr": "Relación Riesgo/Beneficio Media",
         "backtest_curva_capital": "Curva de Capital",
+        "backtest_carregando": "⏳ Calculando assertividad... espere.",
         "intervalos": {
             "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
             "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
@@ -851,18 +854,22 @@ def calcular_status_alvo(df, idx_sinal, timestamp_sinal, preco_alvo, direcao, te
     return "aguardado", formatar_tempo(delta), None
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BACKTEST
+# BACKTEST – CORRIGIDO E GARANTIDO QUE SEMPRE RETORNA UMA MENSAGEM
 def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, txt,
                                             periodo_swing, target_profit_pct=1.0,
                                             look_ahead_candles=5):
+    # Verifica se há dados suficientes
     if len(df) < periodo_aquecimento + periodo_swing + look_ahead_candles:
         return txt["backtest_sem_dados"], {}
+
     acertos = 0
     total_sinais = 0
     total_lucro_pct = 0.0
     total_risco_pct = 0.0
     operacoes_registradas = []
+
     inicio_backtest = periodo_aquecimento + periodo_swing
+
     for i in range(inicio_backtest, len(df) - look_ahead_candles):
         df_contexto = df.iloc[:i+1].copy()
         try:
@@ -920,8 +927,10 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
                     })
         except Exception:
             continue
+
     if total_sinais == 0:
         return txt["backtest_sem_sinais"], {}
+
     assertividade = (acertos / total_sinais) * 100
     lucro_medio_por_operacao = total_lucro_pct / total_sinais if total_sinais > 0 else 0
     risco_medio_por_operacao = total_risco_pct / total_sinais if total_sinais > 0 else 0
@@ -938,6 +947,7 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
         drawdown = (peak - equity_curve[-1]) / peak * 100
         if drawdown > max_drawdown:
             max_drawdown = drawdown
+
     resultado_str = f"""
     **{txt['backtest_resultados']}**
     - {txt['backtest_sinais']}: {total_sinais}
@@ -1051,7 +1061,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
         margin=dict(l=10, r=10, t=30, b=10),
         height=520
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN
@@ -1236,14 +1246,15 @@ def main():
 
         st.divider()
 
-        # ─── BACKTEST ──────────────────────────────────────────────────
-        with st.expander(txt["backtest_titulo"]):
-            resultado_backtest, backtest_metrics = calcular_assertividade_historica_robusta(
-                df, limiar_sinal, periodo_aquecimento_ui, txt,
-                periodo_swing=periodo_swing,
-                target_profit_pct=target_profit_pct_ui,
-                look_ahead_candles=look_ahead_candles_ui
-            )
+        # ─── BACKTEST – SEMPRE ATIVO ────────────────────────────────────
+        with st.expander(txt["backtest_titulo"], expanded=True):
+            with st.spinner(txt["backtest_carregando"]):
+                resultado_backtest, backtest_metrics = calcular_assertividade_historica_robusta(
+                    df, limiar_sinal, periodo_aquecimento_ui, txt,
+                    periodo_swing=periodo_swing,
+                    target_profit_pct=target_profit_pct_ui,
+                    look_ahead_candles=look_ahead_candles_ui
+                )
             st.markdown(resultado_backtest)
             if backtest_metrics and 'equity_curve' in backtest_metrics and len(backtest_metrics['equity_curve']) > 1:
                 st.subheader(txt["backtest_curva_capital"])
@@ -1256,7 +1267,7 @@ def main():
                     plot_bgcolor='#0b0f19',
                     font=dict(color='#e2e8f0')
                 )
-                st.plotly_chart(fig_equity, use_container_width=True)
+                st.plotly_chart(fig_equity, width='stretch')
 
         st.markdown(f"### {txt['grafico_titulo']}")
         renderizar_grafico_plotly(df, simbolo, look_ahead_candles_ui,
@@ -1267,7 +1278,6 @@ def main():
         with col_info1:
             st.metric(txt["preco_spot"], formatar_preco(preco_atual))
         with col_info2:
-            # Tratar variacao_24h None
             if variacao_24h is not None and not math.isnan(variacao_24h):
                 st.metric(txt["variacao_24h"], f"{variacao_24h:.2f}%", delta=f"{variacao_24h:.2f}%")
             else:
