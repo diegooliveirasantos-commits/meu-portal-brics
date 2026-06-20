@@ -5,7 +5,7 @@ import numpy as np
 import math
 from decimal import Decimal
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 import time
 
@@ -68,6 +68,7 @@ DICIONARIO_LINGUAS = {
         "trend_neutra": "Tendência Neutra 🟡",
         "batido": "✅ Batido",
         "aguardado": "⏳ Aguardado",
+        "tempo_status": "Tempo decorrido: {tempo}",
         "backtest_titulo": "📊 Ver Assertividade nos Últimos Dados (Backtest Robusto)",
         "backtest_sem_dados": "⚠️ Dados históricos insuficientes para o backtest. Aumente o número de velas ou reduza os parâmetros.",
         "backtest_sem_sinais": "⚠️ Nenhum sinal forte gerado no histórico recente. Reduza a nota de corte ou ajuste o período de swing.",
@@ -130,6 +131,7 @@ DICIONARIO_LINGUAS = {
         "trend_neutra": "Neutral Trend 🟡",
         "batido": "✅ Hit",
         "aguardado": "⏳ Pending",
+        "tempo_status": "Elapsed: {tempo}",
         "backtest_titulo": "📊 Check Assertiveness in Recent Data (Robust Backtest)",
         "backtest_sem_dados": "⚠️ Insufficient historical data for backtest. Increase the number of candles or reduce parameters.",
         "backtest_sem_sinais": "⚠️ No strong signals generated in recent history. Reduce the cutoff score or adjust the swing period.",
@@ -192,6 +194,7 @@ DICIONARIO_LINGUAS = {
         "trend_neutra": "Tendencia Neutral 🟡",
         "batido": "✅ Alcanzado",
         "aguardado": "⏳ Pendiente",
+        "tempo_status": "Tiempo transcurrido: {tempo}",
         "backtest_titulo": "📊 Ver Assertividad en Datos Recientes (Backtest Robusto)",
         "backtest_sem_dados": "⚠️ Datos históricos insuficientes para el backtest. Aumente el número de velas o reduzca los parámetros.",
         "backtest_sem_sinais": "⚠️ No se generaron señales fuertes en el historial reciente. Reduzca el puntaje de corte o ajuste el período de swing.",
@@ -211,13 +214,11 @@ DICIONARIO_LINGUAS = {
             "1 Día": "1d", "1 Semana": "1w"
         }
     },
-    # (Français, Deutsch, Italiano, Русский, 简体中文, 繁體中文, 日本語, 한국어, Tiếng Việt, Türkçe)
-    # Para manter o código enxuto, incluí apenas os três primeiros. No arquivo final,
-    # você pode copiar os demais do código original. Eles seguem a mesma estrutura.
+    # (Demais idiomas – mantenha a estrutura completa do original)
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO
+# FORMATAÇÃO E UTILITÁRIOS
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -256,6 +257,22 @@ def formatar_market_cap(valor):
         return f"$ {valor / 1_000_000:.2f}M"
     else:
         return f"$ {valor:,.2f}"
+
+def formatar_tempo(segundos):
+    """Converte segundos em string formatada Xh Ym Zs"""
+    if segundos < 0:
+        segundos = 0
+    horas = int(segundos // 3600)
+    minutos = int((segundos % 3600) // 60)
+    seg = int(segundos % 60)
+    partes = []
+    if horas > 0:
+        partes.append(f"{horas}h")
+    if minutos > 0:
+        partes.append(f"{minutos}m")
+    if seg > 0 or not partes:
+        partes.append(f"{seg}s")
+    return " ".join(partes)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GERENCIADOR DE EXCHANGES (SÍNCRONO)
@@ -733,6 +750,7 @@ def calcular_retracao_fibonacci_smc(swing_high, swing_low):
     }
 
 def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swing):
+    # Identifica o swing
     swing_info = identificar_swing_smc(df_completo.iloc[PERIODO_AQUECIMENTO:])
     if not swing_info:
         swing_high = df_completo['high'].max()
@@ -745,11 +763,19 @@ def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swi
             'stop': stop_projetado,
             'swing_high': swing_high,
             'swing_low': swing_low,
-            'alvos': []
+            'alvos': [],
+            'idx_sinal': len(df_completo) - 1,
+            'timestamp_sinal': df_completo['timestamp'].iloc[-1]
         }
+    
     swing_high = swing_info['swing_high']
     swing_low = swing_info['swing_low']
     preco_atual = df_completo['close'].iloc[-1]
+    
+    # Índice da última vela (sinal)
+    idx_sinal = len(df_completo) - 1
+    timestamp_sinal = df_completo['timestamp'].iloc[-1]
+    
     if direcao_smc == "LONG":
         entrada_projetada = calcular_retracao_fibonacci_smc(swing_high, swing_low)['fib_618']
         stop_projetado = swing_low
@@ -766,11 +792,13 @@ def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swi
         risco = stop_projetado - entrada_projetada
         alvos = [entrada_projetada - mult * risco for mult in multiplicadores]
         alvos_validos = [a for a in alvos if a < entrada_projetada]
+    
     alvos_finais = alvos_validos[:8]
     if direcao_smc == "SHORT":
         alvos_finais.sort(reverse=True)
     else:
         alvos_finais.sort()
+    
     return {
         "direcao": direcao_smc,
         "swing_high": swing_high,
@@ -779,8 +807,37 @@ def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swi
         "stop": stop_projetado,
         "risco": risco,
         "alvos": alvos_finais,
-        "multiplicadores": multiplicadores[:len(alvos_finais)]
+        "multiplicadores": multiplicadores[:len(alvos_finais)],
+        "idx_sinal": idx_sinal,
+        "timestamp_sinal": timestamp_sinal
     }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FUNÇÃO AUXILIAR PARA STATUS E TEMPO DOS ALVOS
+def calcular_status_alvo(df, idx_sinal, timestamp_sinal, preco_alvo, direcao, tempo_atual):
+    """
+    Verifica se o alvo foi batido nos dados históricos a partir do índice do sinal.
+    Retorna (status, tempo_formatado, timestamp_batida)
+    """
+    # Percorre as velas seguintes
+    for i in range(idx_sinal + 1, len(df)):
+        if direcao == "LONG":
+            if df.loc[i, 'high'] >= preco_alvo:
+                # Bateu
+                timestamp_batida = df.loc[i, 'timestamp']
+                delta = (timestamp_batida - timestamp_sinal) / 1000  # em segundos
+                return "batido", formatar_tempo(delta), timestamp_batida
+        else:  # SHORT
+            if df.loc[i, 'low'] <= preco_alvo:
+                timestamp_batida = df.loc[i, 'timestamp']
+                delta = (timestamp_batida - timestamp_sinal) / 1000
+                return "batido", formatar_tempo(delta), timestamp_batida
+    
+    # Se não bateu, calcula tempo desde o sinal até agora
+    delta = (tempo_atual.timestamp() * 1000 - timestamp_sinal) / 1000  # em segundos
+    if delta < 0:
+        delta = 0
+    return "aguardado", formatar_tempo(delta), None
 
 def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento=100):
     df_analise = df_completo.iloc[periodo_aquecimento:].copy()
@@ -861,11 +918,10 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa, direcao
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BACKTEST – AGORA SEMPRE RETORNA UMA MENSAGEM
+# BACKTEST
 def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, txt,
                                             periodo_swing, target_profit_pct=1.0,
                                             look_ahead_candles=5):
-    # Verifica se há dados suficientes
     if len(df) < periodo_aquecimento + periodo_swing + look_ahead_candles:
         return txt["backtest_sem_dados"], {}
     
@@ -874,7 +930,6 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
     total_lucro_pct = 0.0
     total_risco_pct = 0.0
     operacoes_registradas = []
-    
     inicio_backtest = periodo_aquecimento + periodo_swing
     
     for i in range(inicio_backtest, len(df) - look_ahead_candles):
@@ -955,7 +1010,6 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
         if drawdown > max_drawdown:
             max_drawdown = drawdown
     
-    # Monta o resultado em uma string formatada
     resultado_str = f"""
     **{txt['backtest_resultados']}**
     - {txt['backtest_sinais']}: {total_sinais}
@@ -1083,7 +1137,6 @@ def main():
     )
     txt = DICIONARIO_LINGUAS[idioma_selecionado]
     
-    # Obtém lista de pares
     pares = obter_todos_pares_usdt()
     if not pares:
         pares = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
@@ -1094,10 +1147,7 @@ def main():
         index=pares.index("SOL/USDT") if "SOL/USDT" in pares else 0
     )
     
-    # Obtém nome extenso da cripto para exibir no cabeçalho
     nome_extenso = obter_nome_extenso_cripto(simbolo)
-    
-    # Título com nome extenso e ticker
     st.title(f"{txt['titulo']} – {nome_extenso} ({simbolo})")
     
     st.sidebar.header(txt["config_globais"])
@@ -1164,6 +1214,7 @@ def main():
     # ─── PAINEL PRINCIPAL ────────────────────────────────────────────────
     @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
     def painel_principal_fragment():
+        tempo_atual = datetime.now()
         df = carregar_dados(simbolo, timeframe)
         if df is None or df.empty:
             st.warning(txt["erro_dados"])
@@ -1235,19 +1286,29 @@ def main():
             alvos = sinal_fib['alvos']
             st.markdown("**🎯 Projeção dos Alvos:**")
             cols_alvos = st.columns(4)
+            # Para cada alvo, calcular status e tempo
             for i, preco_alvo in enumerate(alvos):
                 label = txt["alvo_prefix"].format(n=i+1)
-                # Verifica se o alvo foi batido com base no preço atual
+                # Calcula status e tempo
+                status, tempo_str, _ = calcular_status_alvo(
+                    df, sinal_fib['idx_sinal'], sinal_fib['timestamp_sinal'],
+                    preco_alvo, sinal_fib['direcao'], tempo_atual
+                )
+                if status == "batido":
+                    status_label = txt["batido"]
+                else:
+                    status_label = txt["aguardado"]
+                # Texto do tempo
+                tempo_texto = txt["tempo_status"].format(tempo=tempo_str)
+                
                 if sinal_fib['direcao'] == "LONG":
                     pct = ((preco_alvo - sinal_fib['entrada']) / sinal_fib['entrada']) * 100
-                    atingido = preco_atual >= preco_alvo
                 else:
                     pct = ((sinal_fib['entrada'] - preco_alvo) / sinal_fib['entrada']) * 100
-                    atingido = preco_atual <= preco_alvo
-                status = txt["batido"] if atingido else txt["aguardado"]
-                cols_alvos[i % 4].metric(label, formatar_preco(preco_alvo), delta=f"{pct:+.2f}%")
-                # Exibe o status abaixo do valor
-                cols_alvos[i % 4].write(status)
+                
+                with cols_alvos[i % 4]:
+                    st.metric(label, formatar_preco(preco_alvo), delta=f"{pct:+.2f}%")
+                    st.write(f"{status_label} – {tempo_texto}")
         else:
             st.info(txt["sem_alvos"])
 
@@ -1287,7 +1348,9 @@ def main():
             st.metric(txt["variacao_24h"], f"{variacao_24h:.2f}%", delta=f"{variacao_24h:.2f}%")
         with col_info3:
             st.metric(txt["volume_24h"], formatar_market_cap(volume_24h))
-        st.metric(label_market_cap, market_cap_display)
+        
+        market_cap_display = txt['marketcap_nao_disponivel'] if market_cap is None else formatar_market_cap(market_cap)
+        st.metric(f"{txt['market_cap']}", market_cap_display)
 
         if modo_vivo:
             st.markdown(f"<p style='text-align: right; color: #94a3b8;'>{txt['ultima_atualizacao']}: {datetime.now().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
