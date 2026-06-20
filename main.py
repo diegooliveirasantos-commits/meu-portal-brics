@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import asyncio
 import ccxt.async_support as ccxt_async
+from functools import partial
 
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC PRO",
@@ -25,7 +26,7 @@ PERIODO_AQUECIMENTO = 100
 PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (completo)
+# DICIONÁRIO DE IDIOMAS (completo – mantido igual ao original)
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci PRO",
@@ -641,7 +642,7 @@ DICIONARIO_LINGUAS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO
+# FORMATAÇÃO (sem alterações)
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -757,40 +758,48 @@ async def obter_dados_24h_async(simbolo):
     manager = ExchangeManager()
     tasks = []
     for exchange_name in manager.PRIORITY:
-        # CORREÇÃO: usar argumento padrão para evitar problema de closure
-        async def fetch_from_exchange(ex_name=exchange_name):
-            try:
-                client = await manager.get_client(ex_name)
-                if not client:
-                    return None
-                symbol = manager.get_symbol_format(ex_name, simbolo)
-                ticker = await client.fetch_ticker(symbol)
-                if ticker:
-                    result = {
-                        "last": ticker.get("last"),
-                        "change": ticker.get("percentage"),
-                        "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
-                        "high": ticker.get("high"),
-                        "low": ticker.get("low"),
-                        "bid": ticker.get("bid"),
-                        "ask": ticker.get("ask")
-                    }
-                    if not result["volume"]:
-                        result["volume"] = await obter_volume_usd_direto_async(ex_name, simbolo)
-                    if result["last"] is not None:
-                        await client.close()
-                        return result
-                await client.close()
-            except Exception:
-                pass
-            return None
-        tasks.append(fetch_from_exchange())
+        # CORREÇÃO: usar functools.partial para fixar o nome da exchange
+        fetch_func = partial(
+            fetch_from_exchange_24h,
+            exchange_name=exchange_name,
+            manager=manager,
+            simbolo=simbolo
+        )
+        tasks.append(asyncio.create_task(fetch_func()))
     
-    # Implementa a "Race Condition" controlada
     for future in asyncio.as_completed(tasks):
         result = await future
         if result:
             return result
+    return None
+
+async def fetch_from_exchange_24h(exchange_name, manager, simbolo):
+    client = None
+    try:
+        client = await manager.get_client(exchange_name)
+        if not client:
+            return None
+        symbol = manager.get_symbol_format(exchange_name, simbolo)
+        ticker = await client.fetch_ticker(symbol)
+        if ticker:
+            result = {
+                "last": ticker.get("last"),
+                "change": ticker.get("percentage"),
+                "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
+                "high": ticker.get("high"),
+                "low": ticker.get("low"),
+                "bid": ticker.get("bid"),
+                "ask": ticker.get("ask")
+            }
+            if not result["volume"]:
+                result["volume"] = await obter_volume_usd_direto_async(exchange_name, simbolo)
+            if result["last"] is not None:
+                return result
+    except Exception:
+        pass
+    finally:
+        if client:
+            await client.close()
     return None
 
 async def obter_volume_usd_direto_async(exchange_name, simbolo):
@@ -1114,7 +1123,8 @@ def calcular_retracao_fibonacci_smc(swing_high, swing_low):
         'fib_100': swing_low
     }
 
-def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swing, txt):
+# CORREÇÃO: removeu parâmetro txt (não utilizado)
+def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swing):
     swing_info = identificar_swing_smc(df_completo.iloc[PERIODO_AQUECIMENTO:])
 
     if not swing_info:
@@ -1285,6 +1295,7 @@ async def carregar_dados_async(simbolo_id, timeframe_selecionado):
 
     velas_novas = []
     for exchange_name in manager.PRIORITY:
+        client = None
         try:
             client = await manager.get_client(exchange_name)
             if not client:
@@ -1303,11 +1314,12 @@ async def carregar_dados_async(simbolo_id, timeframe_selecionado):
             )
             if velas:
                 velas_novas.extend(velas)
-                await client.close()
                 break
-            await client.close()
         except Exception:
             continue
+        finally:
+            if client:
+                await client.close()
     
     if not velas_novas and df_cached.empty:
         return None
@@ -1367,7 +1379,8 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
                 df_contexto, txt, limiar, periodo_aquecimento
             )
             
-            sinal_fib = gerar_sinal_fibonacci(df_contexto, direcao, [1.0], PERIODO_SWING_DEFAULT, txt)
+            # CHAMADA CORRIGIDA: sem o parâmetro txt
+            sinal_fib = gerar_sinal_fibonacci(df_contexto, direcao, [1.0], PERIODO_SWING_DEFAULT)
             entrada = sinal_fib['entrada']
             stop_loss = sinal_fib['stop']
             
@@ -1465,7 +1478,7 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
     return resultado_str, {'equity_curve': equity_curve, 'operacoes': operacoes_registradas}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICO
+# GRÁFICO – CORREÇÃO: verificação de timedelta
 def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, operacoes_backtest=None):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
@@ -1498,6 +1511,13 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
     ))
 
     if operacoes_backtest:
+        # Calcular a diferença média de tempo entre velas para posicionar os alvos
+        diff_mean = df_grafico['time'].diff().mean()
+        if pd.notna(diff_mean):
+            delta_tempo = diff_mean * look_ahead_candles
+        else:
+            delta_tempo = pd.Timedelta(minutes=5)  # fallback
+
         for op in operacoes_backtest:
             if op['direcao'] == 'LONG':
                 fig.add_trace(go.Scatter(
@@ -1510,7 +1530,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
                 ))
                 if op['acerto']:
                     fig.add_trace(go.Scatter(
-                        x=[pd.to_datetime(op['timestamp'], unit='ms') + pd.Timedelta(minutes=df_grafico['time'].diff().mean().total_seconds()/60 * look_ahead_candles)],
+                        x=[pd.to_datetime(op['timestamp'], unit='ms') + delta_tempo],
                         y=[op['alvo_preco']],
                         mode='markers',
                         marker=dict(symbol='star', size=10, color='lime'),
@@ -1536,7 +1556,7 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
                 ))
                 if op['acerto']:
                     fig.add_trace(go.Scatter(
-                        x=[pd.to_datetime(op['timestamp'], unit='ms') + pd.Timedelta(minutes=df_grafico['time'].diff().mean().total_seconds()/60 * look_ahead_candles)],
+                        x=[pd.to_datetime(op['timestamp'], unit='ms') + delta_tempo],
                         y=[op['alvo_preco']],
                         mode='markers',
                         marker=dict(symbol='star', size=10, color='orange'),
@@ -1714,7 +1734,8 @@ async def main():
         </div>
         """, unsafe_allow_html=True)
 
-        sinal_fib = gerar_sinal_fibonacci(df_dados, direcao, multiplicadores, periodo_swing, txt)
+        # CHAMADA CORRIGIDA: sem txt
+        sinal_fib = gerar_sinal_fibonacci(df_dados, direcao, multiplicadores, periodo_swing)
 
         st.markdown(f"### {txt['alvo_swing_title']}")
         
@@ -1747,7 +1768,6 @@ async def main():
                 df_dados, limiar_sinal, periodo_aquecimento_ui, txt, 
                 target_profit_pct=target_profit_pct_ui, look_ahead_candles=look_ahead_candles_ui
             )
-            # CORREÇÃO: tratar retorno que sempre é tupla
             if isinstance(resultado_backtest, tuple):
                 resultado_backtest_str, backtest_metrics = resultado_backtest
                 st.markdown(resultado_backtest_str)
