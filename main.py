@@ -66,6 +66,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Tendência de Alta 🟢",
         "trend_descendente": "Tendência de Baixa 🔴",
         "trend_neutra": "Tendência Neutra 🟡",
+        "batido": "✅ Batido",
+        "aguardado": "⏳ Aguardado",
         "intervalos": {
             "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
             "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
@@ -113,6 +115,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Uptrend 🟢",
         "trend_descendente": "Downtrend 🔴",
         "trend_neutra": "Neutral Trend 🟡",
+        "batido": "✅ Hit",
+        "aguardado": "⏳ Pending",
         "intervalos": {
             "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
             "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
@@ -160,6 +164,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Tendencia Alcista 🟢",
         "trend_descendente": "Tendencia Bajista 🔴",
         "trend_neutra": "Tendencia Neutral 🟡",
+        "batido": "✅ Alcanzado",
+        "aguardado": "⏳ Pendiente",
         "intervalos": {
             "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
             "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
@@ -207,6 +213,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Tendance Haussière 🟢",
         "trend_descendente": "Tendance Baissière 🔴",
         "trend_neutra": "Tendance Neutre 🟡",
+        "batido": "✅ Atteint",
+        "aguardado": "⏳ En attente",
         "intervalos": {
             "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
             "30 Minutes": "30m", "1 Heure": "1h", "4 Heures": "4h",
@@ -254,6 +262,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Aufwärtstrend 🟢",
         "trend_descendente": "Abwärtstrend 🔴",
         "trend_neutra": "Neutraler Trend 🟡",
+        "batido": "✅ Erreicht",
+        "aguardado": "⏳ Ausstehend",
         "intervalos": {
             "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m",
             "30 Minuten": "30m", "1 Stunde": "1h", "4 Stunden": "4h",
@@ -301,6 +311,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Tendenza Rialzista 🟢",
         "trend_descendente": "Tendenza Ribassista 🔴",
         "trend_neutra": "Tendenza Neutra 🟡",
+        "batido": "✅ Raggiunto",
+        "aguardado": "⏳ In attesa",
         "intervalos": {
             "1 Minuto": "1m", "5 Minuti": "5m", "15 Minuti": "15m",
             "30 Minuti": "30m", "1 Ora": "1h", "4 Ore": "4h",
@@ -348,6 +360,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Восходящий тренд 🟢",
         "trend_descendente": "Нисходящий тренд 🔴",
         "trend_neutra": "Нейтральный тренд 🟡",
+        "batido": "✅ Достигнуто",
+        "aguardado": "⏳ Ожидается",
         "intervalos": {
             "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m",
             "30 Минут": "30m", "1 Час": "1h", "4 Часа": "4h",
@@ -395,6 +409,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "上升趋势 🟢",
         "trend_descendente": "下降趋势 🔴",
         "trend_neutra": "中性趋势 🟡",
+        "batido": "✅ 已到达",
+        "aguardado": "⏳ 等待中",
         "intervalos": {
             "1 分钟": "1m", "5 分钟": "5m", "15 分钟": "15m",
             "30 分钟": "30m", "1 小时": "1h", "4 小时": "4h",
@@ -442,6 +458,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "上升趨勢 🟢",
         "trend_descendente": "下降趨勢 🔴",
         "trend_neutra": "中性趨勢 🟡",
+        "batido": "✅ 已到達",
+        "aguardado": "⏳ 等待中",
         "intervalos": {
             "1 分鐘": "1m", "5 分鐘": "5m", "15 分鐘": "15m",
             "30 分鐘": "30m", "1 小時": "1h", "4 小時": "4h",
@@ -489,6 +507,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "上昇トレンド 🟢",
         "trend_descendente": "下降トレンド 🔴",
         "trend_neutra": "中立トレンド 🟡",
+        "batido": "✅ 到達済み",
+        "aguardado": "⏳ 待機中",
         "intervalos": {
             "1 分": "1m", "5 分": "5m", "15 分": "15m",
             "30 分": "30m", "1 時間": "1h", "4 時間": "4h",
@@ -536,6 +556,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "상승 추세 🟢",
         "trend_descendente": "하락 추세 🔴",
         "trend_neutra": "중립 추세 🟡",
+        "batido": "✅ 도달함",
+        "aguardado": "⏳ 대기 중",
         "intervalos": {
             "1분": "1m", "5분": "5m", "15분": "15m",
             "30분": "30m", "1시간": "1h", "4시간": "4h",
@@ -583,6 +605,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Xu hướng tăng 🟢",
         "trend_descendente": "Xu hướng giảm 🔴",
         "trend_neutra": "Xu hướng trung lập 🟡",
+        "batido": "✅ Đã đạt",
+        "aguardado": "⏳ Đang chờ",
         "intervalos": {
             "1 Phút": "1m", "5 Phút": "5m", "15 Phút": "15m",
             "30 Phút": "30m", "1 Giờ": "1h", "4 Giờ": "4h",
@@ -630,6 +654,8 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Yükseliş Trendi 🟢",
         "trend_descendente": "Düşüş Trendi 🔴",
         "trend_neutra": "Nötr Trend 🟡",
+        "batido": "✅ Gerçekleşti",
+        "aguardado": "⏳ Bekleniyor",
         "intervalos": {
             "1 Dakika": "1m", "5 Dakika": "5m", "15 Dakika": "15m",
             "30 Dakika": "30m", "1 Saat": "1h", "4 Saat": "4h",
@@ -639,7 +665,7 @@ DICIONARIO_LINGUAS = {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO (sem alterações)
+# FORMATAÇÃO
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
@@ -1283,7 +1309,7 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa, direcao
 
 # ─────────────────────────────────────────────────────────────────────────────
-# BACKTEST – CORRIGIDO: agora aceita periodo_swing e o utiliza
+# BACKTEST
 def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, txt,
                                             periodo_swing, target_profit_pct=1.0,
                                             look_ahead_candles=5):
@@ -1301,7 +1327,6 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
             _, _, _, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
                 df_contexto, txt, limiar, periodo_aquecimento
             )
-            # Usa o periodo_swing passado como argumento
             sinal_fib = gerar_sinal_fibonacci(df_contexto, direcao, [1.0], periodo_swing)
             entrada = sinal_fib['entrada']
             stop_loss = sinal_fib['stop']
@@ -1645,21 +1670,25 @@ def main():
             cols_alvos = st.columns(4)
             for i, preco_alvo in enumerate(alvos):
                 label = txt["alvo_prefix"].format(n=i+1)
+                # Verifica se o alvo foi batido com base no preço atual
                 if sinal_fib['direcao'] == "LONG":
                     pct = ((preco_alvo - sinal_fib['entrada']) / sinal_fib['entrada']) * 100
+                    atingido = preco_atual >= preco_alvo
                 else:
                     pct = ((sinal_fib['entrada'] - preco_alvo) / sinal_fib['entrada']) * 100
+                    atingido = preco_atual <= preco_alvo
+                status = txt["batido"] if atingido else txt["aguardado"]
                 cols_alvos[i % 4].metric(label, formatar_preco(preco_alvo), delta=f"{pct:+.2f}%")
+                cols_alvos[i % 4].caption(status)
         else:
             st.info(txt["sem_alvos"])
 
         st.divider()
 
         with st.expander("📊 Ver Assertividade nos Últimos Dados (Backtest Robusto)"):
-            # CHAMADA CORRIGIDA: agora passa periodo_swing
             resultado_backtest = calcular_assertividade_historica_robusta(
                 df, limiar_sinal, periodo_aquecimento_ui, txt,
-                periodo_swing=periodo_swing,  # <-- NOVO
+                periodo_swing=periodo_swing,
                 target_profit_pct=target_profit_pct_ui,
                 look_ahead_candles=look_ahead_candles_ui
             )
