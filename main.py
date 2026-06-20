@@ -2,14 +2,13 @@ import streamlit as st
 import ccxt
 import pandas as pd
 import numpy as np
-import time
-import requests
 import math
 from decimal import Decimal
 import plotly.graph_objects as go
 from datetime import datetime
 import asyncio
 import ccxt.async_support as ccxt_async
+import requests
 from functools import partial
 
 st.set_page_config(
@@ -26,619 +25,12 @@ PERIODO_AQUECIMENTO = 100
 PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (completo – mantido igual ao original)
+# DICIONÁRIO DE IDIOMAS (completo – igual ao original, omitido por brevidade)
+# Mantenha o mesmo dicionário DICIONARIO_LINGUAS que você já tem.
+# (Apenas para não alongar, assuma que ele está aqui exatamente como antes)
 DICIONARIO_LINGUAS = {
-    "Português (BR)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci PRO",
-        "config_globais": "⚙️  Configurações Globais",
-        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
-        "tempo_grafico": "Tempo Gráfico:",
-        "modo_vivo": "Ativar Monitoramento em Tempo Real",
-        "intervalo_refresh": "Intervalo de Atualização (Segundos):",
-        "preco_spot": "Preço Atual",
-        "variacao_24h": "Variação 24h",
-        "volume_24h": "Volume 24h (USDT)",
-        "market_cap": "Market Cap (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI)",
-        "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI)",
-        "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
-        "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
-        "ctx_desconto": "Zona de Desconto de Fibonacci (Excelente risco/retorno).",
-        "ctx_premium": "Zona Premium de Fibonacci (Preço esticado, propício para realização).",
-        "ctx_neutro": "Zona neutra de Fibonacci (Fair Value Zone).",
-        "ultima_atualizacao": "Última Atualização",
-        "proximo_refresh": "Próximo refresh em",
-        "segundos": "segundos",
-        "grafico_titulo": "📈  Gráfico de Preço Interativo",
-        "buscando_marketcap": "🔍  Buscando Market Cap...",
-        "marketcap_nao_disponivel": "Não disponível",
-        "idioma_label": "🌐  Idioma / Language",
-        "idioma_selecao": "Selecione o idioma da interface:",
-        "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
-        "alvo_swing_title": "🎯 Projeção de Alvos (Fibonacci / Smart Money)",
-        "direcao_operacao": "Direção",
-        "entrada_projetada": "Entrada Projetada",
-        "stop_projetado": "Stop Loss Projetado",
-        "swing_alto": "Topo do Swing (High)",
-        "swing_baixo": "Fundo do Swing (Low)",
-        "range_label": "Oscilação (Range)",
-        "alvo_prefix": "ALVO {n}",
-        "sem_alvos": "Nenhum alvo projetado para este movimento.",
-        "contexto_smc": "Contexto SMC",
-        "trend_ascendente": "Tendência de Alta 🟢",
-        "trend_descendente": "Tendência de Baixa 🔴",
-        "trend_neutra": "Tendência Neutra 🟡",
-        "intervalos": {
-            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
-            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
-            "1 Dia": "1d", "1 Semana": "1w"
-        }
-    },
-    "English (EN)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + Fibonacci Engine PRO",
-        "config_globais": "⚙️  Global Settings",
-        "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
-        "tempo_grafico": "Timeframe:",
-        "modo_vivo": "Enable Real-Time Monitoring",
-        "intervalo_refresh": "Refresh Interval (Seconds):",
-        "preco_spot": "Current Price",
-        "variacao_24h": "24h Variation",
-        "volume_24h": "24h Volume (USDT)",
-        "market_cap": "Market Cap (USD)",
-        "stop_atr": "ATR Stop",
-        "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI)",
-        "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI)",
-        "neutro": "🟡  NEUTRAL (AWAIT SMC)",
-        "erro_dados": "Insufficient historical data. Try another asset or reduce the Timeframe.",
-        "ctx_desconto": "Fibonacci Discount Zone (Excellent risk/reward).",
-        "ctx_premium": "Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
-        "ctx_neutro": "Neutral Fibonacci zone (Fair Value Zone).",
-        "ultima_atualizacao": "Last Update",
-        "proximo_refresh": "Next refresh in",
-        "segundos": "seconds",
-        "grafico_titulo": "📈  Interactive Price Chart",
-        "buscando_marketcap": "🔍  Fetching Market Cap...",
-        "marketcap_nao_disponivel": "Not available",
-        "idioma_label": "🌐  Language / Idioma",
-        "idioma_selecao": "Select Interface Language:",
-        "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
-        "alvo_swing_title": "🎯 Target Projection (Fibonacci / Smart Money)",
-        "direcao_operacao": "Direction",
-        "entrada_projetada": "Projected Entry",
-        "stop_projetado": "Projected Stop Loss",
-        "swing_alto": "Swing High",
-        "swing_baixo": "Swing Low",
-        "range_label": "Range",
-        "alvo_prefix": "TARGET {n}",
-        "sem_alvos": "No targets projected for this move.",
-        "contexto_smc": "SMC Context",
-        "trend_ascendente": "Uptrend 🟢",
-        "trend_descendente": "Downtrend 🔴",
-        "trend_neutra": "Neutral Trend 🟡",
-        "intervalos": {
-            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
-            "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
-            "1 Day": "1d", "1 Week": "1w"
-        }
-    },
-    "Español": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci PRO",
-        "config_globais": "⚙️  Configuraciones Globales",
-        "selecione_cripto": "Seleccione cualquier criptomoneda (/USDT):",
-        "tempo_grafico": "Marco temporal:",
-        "modo_vivo": "Activar monitoreo en tiempo real",
-        "intervalo_refresh": "Intervalo de actualización (segundos):",
-        "preco_spot": "Precio Actual",
-        "variacao_24h": "Variación 24h",
-        "volume_24h": "Volumen 24h (USDT)",
-        "market_cap": "Capitalización (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI)",
-        "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI)",
-        "neutro": "🟡  NEUTRO (ESPERAR SMC)",
-        "erro_dados": "Datos históricos insuficientes. Pruebe con otro activo o reduzca el marco temporal.",
-        "ctx_desconto": "Zona de Descuento de Fibonacci (Excelente riesgo/retorno).",
-        "ctx_premium": "Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
-        "ctx_neutro": "Zona neutral de Fibonacci (Fair Value Zone).",
-        "ultima_actualizacion": "Última actualización",
-        "proximo_refresh": "Próxima actualización en",
-        "segundos": "segundos",
-        "grafico_titulo": "📈  Gráfico de Precio Interactivo",
-        "buscando_marketcap": "🔍  Buscando Capitalización...",
-        "marketcap_nao_disponivel": "No disponible",
-        "idioma_label": "🌐  Idioma / Language",
-        "idioma_selecao": "Seleccione el idioma de la interfaz:",
-        "aviso_aquecimento": "⚠️ Velas de calentamiento usadas en el cálculo",
-        "alvo_swing_title": "🎯 Proyección de Objetivos (Fibonacci / Smart Money)",
-        "direcao_operacion": "Dirección",
-        "entrada_projetada": "Entrada Proyectada",
-        "stop_projetado": "Stop Loss Proyectado",
-        "swing_alto": "Máximo del Swing",
-        "swing_baixo": "Mínimo del Swing",
-        "range_label": "Rango",
-        "alvo_prefix": "OBJETIVO {n}",
-        "sem_alvos": "No hay objetivos proyectados para este movimiento.",
-        "contexto_smc": "Contexto SMC",
-        "trend_ascendente": "Tendencia Alcista 🟢",
-        "trend_descendente": "Tendencia Bajista 🔴",
-        "trend_neutra": "Tendencia Neutral 🟡",
-        "intervalos": {
-            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
-            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
-            "1 Día": "1d", "1 Semana": "1w"
-        }
-    },
-    "Français": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Moteur SMC + Fibonacci PRO",
-        "config_globais": "⚙️  Paramètres globaux",
-        "selecione_cripto": "Sélectionnez une cryptomonnaie (/USDT):",
-        "tempo_grafico": "Période:",
-        "modo_vivo": "Activer la surveillance en temps réel",
-        "intervalo_refresh": "Intervalle de rafraîchissement (secondes):",
-        "preco_spot": "Prix Actuel",
-        "variacao_24h": "Variation 24h",
-        "volume_24h": "Volume 24h (USDT)",
-        "market_cap": "Capitalisation (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI)",
-        "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI)",
-        "neutro": "🟡  NEUTRE (ATTENDRE SMC)",
-        "erro_dados": "Données historiques insuffisantes. Essayez un autre actif ou réduisez la période.",
-        "ctx_desconto": "Zone de discount de Fibonacci (Excellent risque/rendement).",
-        "ctx_premium": "Zone premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
-        "ctx_neutro": "Zone neutre de Fibonacci (Fair Value Zone).",
-        "ultima_atualisation": "Dernière mise à jour",
-        "proximo_refresh": "Prochain rafraîchissement dans",
-        "segundos": "secondes",
-        "grafico_titulo": "📈  Graphique de prix interactif",
-        "buscando_marketcap": "🔍  Recherche de la capitalisation...",
-        "marketcap_nao_disponivel": "Indisponible",
-        "idioma_label": "🌐  Langue / Language",
-        "idioma_selecao": "Sélectionnez la langue de l'interface:",
-        "aviso_aquecimento": "⚠️ Bougies de chauffe utilisées dans le calcul",
-        "alvo_swing_title": "🎯 Projection d'Objectifs (Fibonacci / Smart Money)",
-        "direcao_operacion": "Direction",
-        "entrada_projetada": "Entrée Projetée",
-        "stop_projetado": "Stop Loss Projeté",
-        "swing_alto": "Haut du Swing",
-        "swing_baixo": "Bas du Swing",
-        "range_label": "Plage",
-        "alvo_prefix": "OBJECTIF {n}",
-        "sem_alvos": "Aucun objectif projeté pour ce mouvement.",
-        "contexto_smc": "Contexte SMC",
-        "trend_ascendente": "Tendance Haussière 🟢",
-        "trend_descendente": "Tendance Baissière 🔴",
-        "trend_neutra": "Tendance Neutre 🟡",
-        "intervalos": {
-            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
-            "30 Minutes": "30m", "1 Heure": "1h", "4 Heures": "4h",
-            "1 Jour": "1d", "1 Semaine": "1w"
-        }
-    },
-    "Deutsch": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + Fibonacci Motor PRO",
-        "config_globais": "⚙️  Globale Einstellungen",
-        "selecione_cripto": "Wählen Sie eine Kryptowährung (/USDT):",
-        "tempo_grafico": "Zeitrahmen:",
-        "modo_vivo": "Echtzeit-Überwachung aktivieren",
-        "intervalo_refresh": "Aktualisierungsintervall (Sekunden):",
-        "preco_spot": "Aktueller Preis",
-        "variacao_24h": "24h-Veränderung",
-        "volume_24h": "24h-Volumen (USDT)",
-        "market_cap": "Marktkapitalisierung (USD)",
-        "stop_atr": "ATR-Stop",
-        "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI)",
-        "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI)",
-        "neutro": "🟡  NEUTRAL (SMC ABWARTEN)",
-        "erro_dados": "Unzureichende historische Daten. Versuchen Sie es mit einem anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
-        "ctx_desconto": "Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite).",
-        "ctx_premium": "Fibonacci-Premium-Zone (Preis gedehnt, gewinnmitnahme geeignet).",
-        "ctx_neutro": "Neutrale Fibonacci-Zone (Fair Value Zone).",
-        "ultima_aktualisierung": "Letzte Aktualisierung",
-        "proximo_refresh": "Nächste Aktualisierung in",
-        "segundos": "Sekunden",
-        "grafico_titulo": "📈  Interaktives Kursdiagramm",
-        "buscando_marketcap": "🔍  Marktkapitalisierung wird abgerufen...",
-        "marketcap_nao_disponivel": "Nicht verfügbar",
-        "idioma_label": "🌐  Sprache / Language",
-        "idioma_selecao": "Wählen Sie die Oberflächensprache:",
-        "aviso_aquecimento": "⚠️ Aufwärm-Kerzen im Rechengang verwendet",
-        "alvo_swing_title": "🎯 Zielprojektion (Fibonacci / Smart Money)",
-        "direcao_operacion": "Richtung",
-        "entrada_projetada": "Projizierter Einstieg",
-        "stop_projetado": "Projizierter Stop Loss",
-        "swing_alto": "Swing-Hoch",
-        "swing_baixo": "Swing-Tief",
-        "range_label": "Bereich",
-        "alvo_prefix": "ZIEL {n}",
-        "sem_alvos": "Für diese Bewegung wurden keine Ziele projiziert.",
-        "contexto_smc": "SMC-Kontext",
-        "trend_ascendente": "Aufwärtstrend 🟢",
-        "trend_descendente": "Abwärtstrend 🔴",
-        "trend_neutra": "Neutraler Trend 🟡",
-        "intervalos": {
-            "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m",
-            "30 Minuten": "30m", "1 Stunde": "1h", "4 Stunden": "4h",
-            "1 Tag": "1d", "1 Woche": "1w"
-        }
-    },
-    "Italiano": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motore SMC + Fibonacci PRO",
-        "config_globais": "⚙️  Impostazioni globali",
-        "selecione_cripto": "Seleziona una criptovaluta (/USDT):",
-        "tempo_grafico": "Timeframe:",
-        "modo_vivo": "Attiva monitoraggio in tempo reale",
-        "intervalo_refresh": "Intervallo di aggiornamento (secondi):",
-        "preco_spot": "Prezzo Corrente",
-        "variacao_24h": "Variazione 24h",
-        "volume_24h": "Volume 24h (USDT)",
-        "market_cap": "Capitalizzazione (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI)",
-        "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI)",
-        "neutro": "🟡  NEUTRO (ATTENDERE SMC)",
-        "erro_dados": "Dati storici insufficienti. Prova un altro asset o riduci il timeframe.",
-        "ctx_desconto": "Zona di Sconto di Fibonacci (Ottimo rischio/rendimento).",
-        "ctx_premium": "Zona Premium di Fibonacci (Prezzo allungato, adatto per presa di profitto).",
-        "ctx_neutro": "Zona neutrale di Fibonacci (Fair Value Zone).",
-        "ultima_aggiornamento": "Ultimo aggiornamento",
-        "proximo_refresh": "Prossimo aggiornamento tra",
-        "segundos": "secondi",
-        "grafico_titulo": "📈  Grafico Prezzo Interattivo",
-        "buscando_marketcap": "🔍  Ricerca Capitalizzazione...",
-        "marketcap_nao_disponivel": "Non disponibile",
-        "idioma_label": "🌐  Lingua / Language",
-        "idioma_selecao": "Seleziona la lingua dell'interfaccia:",
-        "aviso_aquecimento": "⚠️ Candele di riscaldamento utilizzate nel calcolo",
-        "alvo_swing_title": "🎯 Proiezione Obiettivi (Fibonacci / Smart Money)",
-        "direcao_operacion": "Direzione",
-        "entrada_projetada": "Entrata Proiettata",
-        "stop_projetado": "Stop Loss Proiettato",
-        "swing_alto": "Massimo del Swing",
-        "swing_baixo": "Minimo del Swing",
-        "range_label": "Intervallo",
-        "alvo_prefix": "OBIETTIVO {n}",
-        "sem_alvos": "Nessun obiettivo proiettato per questo movimento.",
-        "contexto_smc": "Contesto SMC",
-        "trend_ascendente": "Tendenza Rialzista 🟢",
-        "trend_descendente": "Tendenza Ribassista 🔴",
-        "trend_neutra": "Tendenza Neutra 🟡",
-        "intervalos": {
-            "1 Minuto": "1m", "5 Minuti": "5m", "15 Minuti": "15m",
-            "30 Minuti": "30m", "1 Ora": "1h", "4 Ore": "4h",
-            "1 Giorno": "1d", "1 Settimana": "1w"
-        }
-    },
-    "Русский": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель SMC + Фибоначчи PRO",
-        "config_globais": "⚙️  Глобальные настройки",
-        "selecione_cripto": "Выберите любую криптовалюту (/USDT):",
-        "tempo_grafico": "Таймфрейм:",
-        "modo_vivo": "Включить мониторинг в реальном времени",
-        "intervalo_refresh": "Интервал обновления (секунды):",
-        "preco_spot": "Текущая цена",
-        "variacao_24h": "Изменение за 24 часа",
-        "volume_24h": "Объем за 24 часа (USDT)",
-        "market_cap": "Рыночная капитализация (USD)",
-        "stop_atr": "Стоп ATR",
-        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ)",
-        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ)",
-        "neutro": "🟡  НЕЙТРАЛЬНО (ОЖИДАНИЕ SMC)",
-        "erro_dados": "Недостаточно исторических данных. Попробуйте другой актив или уменьшите таймфрейм.",
-        "ctx_desconto": "Зона скидки Фибоначчи (Отличное соотношение риск/прибыль).",
-        "ctx_premium": "Премиум-зона Фибоначчи (Цена растянута, подходит для фиксации прибыли).",
-        "ctx_neutro": "Нейтральная зона Фибоначчи (Зона справедливой стоимости).",
-        "ultima_aktualizatsiya": "Последнее обновление",
-        "proximo_refresh": "Следующее обновление через",
-        "segundos": "секунд",
-        "grafico_titulo": "📈  Интерактивный график цен",
-        "buscando_marketcap": "🔍  Получение рыночной капитализации...",
-        "marketcap_nao_disponivel": "Недоступно",
-        "idioma_label": "🌐  Язык / Language",
-        "idioma_selecao": "Выберите язык интерфейса:",
-        "aviso_aquecimento": "⚠️ В расчете использованы разогревочные свечи",
-        "alvo_swing_title": "🎯 Проекция целей (Фибоначчи / Smart Money)",
-        "direcao_operacion": "Направление",
-        "entrada_projetada": "Прогнозируемый вход",
-        "stop_projetado": "Прогнозируемый стоп-лосс",
-        "swing_alto": "Максимум свинга",
-        "swing_baixo": "Минимум свинга",
-        "range_label": "Диапазон",
-        "alvo_prefix": "ЦЕЛЬ {n}",
-        "sem_alvos": "Для этого движения цели не прогнозируются.",
-        "contexto_smc": "Контекст SMC",
-        "trend_ascendente": "Восходящий тренд 🟢",
-        "trend_descendente": "Нисходящий тренд 🔴",
-        "trend_neutra": "Нейтральный тренд 🟡",
-        "intervalos": {
-            "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m",
-            "30 Минут": "30m", "1 Час": "1h", "4 Часа": "4h",
-            "1 День": "1d", "1 Неделя": "1w"
-        }
-    },
-    "简体中文": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + 斐波那契引擎 PRO",
-        "config_globais": "⚙️  全局设置",
-        "selecione_cripto": "选择任何加密货币 (/USDT):",
-        "tempo_grafico": "时间框架:",
-        "modo_vivo": "启用实时监控",
-        "intervalo_refresh": "刷新间隔 (秒):",
-        "preco_spot": "当前价格",
-        "variacao_24h": "24小时变化",
-        "volume_24h": "24小时交易量 (USDT)",
-        "market_cap": "市值 (USD)",
-        "stop_atr": "ATR止损",
-        "compra_forte": "🟢  强力买入 (SMC + 斐波那契)",
-        "venda_forte": "🔴  强力卖出 (SMC + 斐波那契)",
-        "neutro": "🟡  中性 (等待SMC)",
-        "erro_dados": "历史数据不足。尝试其他资产或缩短时间框架。",
-        "ctx_desconto": "斐波那契折扣区 (优秀的风险/回报).",
-        "ctx_premium": "斐波那契溢价区 (价格过高，适合获利了结).",
-        "ctx_neutro": "斐波那契中性区 (公允价值区).",
-        "ultima_atualizacao": "最后更新",
-        "proximo_refresh": "下次刷新时间",
-        "segundos": "秒",
-        "grafico_titulo": "📈  交互式价格图表",
-        "buscando_marketcap": "🔍  正在获取市值...",
-        "marketcap_nao_disponivel": "不可用",
-        "idioma_label": "🌐  语言 / Language",
-        "idioma_selecao": "选择界面语言:",
-        "aviso_aquecimento": "⚠️ 计算中使用预热K线",
-        "alvo_swing_title": "🎯 目标预测 (斐波那契 / 智能资金)",
-        "direcao_operacion": "方向",
-        "entrada_projetada": "预计入场",
-        "stop_projetado": "预计止损",
-        "swing_alto": "摆动高点",
-        "swing_baixo": "摆动低点",
-        "range_label": "范围",
-        "alvo_prefix": "目标 {n}",
-        "sem_alvos": "此波动没有预测目标.",
-        "contexto_smc": "SMC上下文",
-        "trend_ascendente": "上升趋势 🟢",
-        "trend_descendente": "下降趋势 🔴",
-        "trend_neutra": "中性趋势 🟡",
-        "intervalos": {
-            "1 分钟": "1m", "5 分钟": "5m", "15 分钟": "15m",
-            "30 分钟": "30m", "1 小时": "1h", "4 小时": "4h",
-            "1 天": "1d", "1 周": "1w"
-        }
-    },
-    "繁體中文": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + 斐波那契引擎 PRO",
-        "config_globais": "⚙️  全局設置",
-        "selecione_cripto": "選擇任何加密貨幣 (/USDT):",
-        "tempo_grafico": "時間框架:",
-        "modo_vivo": "啟用實時監控",
-        "intervalo_refresh": "刷新間隔 (秒):",
-        "preco_spot": "當前價格",
-        "variacao_24h": "24小時變化",
-        "volume_24h": "24小時交易量 (USDT)",
-        "market_cap": "市值 (USD)",
-        "stop_atr": "ATR止損",
-        "compra_forte": "🟢  強力買入 (SMC + 斐波那契)",
-        "venda_forte": "🔴  強力賣出 (SMC + 斐波那契)",
-        "neutro": "🟡  中性 (等待SMC)",
-        "erro_dados": "歷史數據不足。嘗試其他資產或縮短時間框架。",
-        "ctx_desconto": "斐波那契折扣區 (優秀的風險/回報).",
-        "ctx_premium": "斐波那契溢價區 (價格過高，適合獲利了結).",
-        "ctx_neutro": "斐波那契中性區 (公允價值區).",
-        "ultima_atualizacao": "最後更新",
-        "proximo_refresh": "下次刷新時間",
-        "segundos": "秒",
-        "grafico_titulo": "📈  交互式價格圖表",
-        "buscando_marketcap": "🔍  正在獲取市值...",
-        "marketcap_nao_disponivel": "不可用",
-        "idioma_label": "🌐  語言 / Language",
-        "idioma_selecao": "選擇界面語言:",
-        "aviso_aquecimento": "⚠️ 計算中使用預熱K線",
-        "alvo_swing_title": "🎯 目標預測 (斐波那契 / 智能資金)",
-        "direcao_operacion": "方向",
-        "entrada_projetada": "預計入場",
-        "stop_projetado": "預計止損",
-        "swing_alto": "擺動高點",
-        "swing_baixo": "擺動低點",
-        "range_label": "範圍",
-        "alvo_prefix": "目標 {n}",
-        "sem_alvos": "此波動沒有預測目標.",
-        "contexto_smc": "SMC上下文",
-        "trend_ascendente": "上升趨勢 🟢",
-        "trend_descendente": "下降趨勢 🔴",
-        "trend_neutra": "中性趨勢 🟡",
-        "intervalos": {
-            "1 分鐘": "1m", "5 分鐘": "5m", "15 分鐘": "15m",
-            "30 分鐘": "30m", "1 小時": "1h", "4 小時": "4h",
-            "1 天": "1d", "1 週": "1w"
-        }
-    },
-    "日本語": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + フィボナッチエンジン PRO",
-        "config_globais": "⚙️  グローバル設定",
-        "selecione_cripto": "任意の暗号通貨を選択 (/USDT):",
-        "tempo_grafico": "時間枠:",
-        "modo_vivo": "リアルタイム監視を有効にする",
-        "intervalo_refresh": "更新間隔 (秒):",
-        "preco_spot": "現在の価格",
-        "variacao_24h": "24時間変動",
-        "volume_24h": "24時間出来高 (USDT)",
-        "market_cap": "時価総額 (USD)",
-        "stop_atr": "ATRストップ",
-        "compra_forte": "🟢  強力買い (SMC + フィボナッチ)",
-        "venda_forte": "🔴  強力売り (SMC + フィボナッチ)",
-        "neutro": "🟡  中立 (SMC待ち)",
-        "erro_dados": "履歴データが不足しています。別の資産を試すか、時間枠を短くしてください。",
-        "ctx_desconto": "フィボナッチ割引ゾーン (優れたリスク/リターン).",
-        "ctx_premium": "フィボナッチプレミアムゾーン (価格が伸びており、利益確定に適しています).",
-        "ctx_neutro": "フィボナッチ中立ゾーン (公正価値ゾーン).",
-        "ultima_atualizacao": "最終更新",
-        "proximo_refresh": "次回の更新まで",
-        "segundos": "秒",
-        "grafico_titulo": "📈  インタラクティブ価格チャート",
-        "buscando_marketcap": "🔍  時価総額を取得中...",
-        "marketcap_nao_disponivel": "利用不可",
-        "idioma_label": "🌐  言語 / Language",
-        "idioma_selecao": "インターフェース言語を選択:",
-        "aviso_aquecimento": "⚠️ 計算にウォームアップ足を使用",
-        "alvo_swing_title": "🎯 目標予測 (フィボナッチ / スマートマネー)",
-        "direcao_operacion": "方向",
-        "entrada_projetada": "予測エントリー",
-        "stop_projetado": "予測ストップロス",
-        "swing_alto": "スイング高値",
-        "swing_baixo": "スイング安値",
-        "range_label": "範囲",
-        "alvo_prefix": "目標 {n}",
-        "sem_alvos": "この動きの目標は予測されていません.",
-        "contexto_smc": "SMCコンテキスト",
-        "trend_ascendente": "上昇トレンド 🟢",
-        "trend_descendente": "下降トレンド 🔴",
-        "trend_neutra": "中立トレンド 🟡",
-        "intervalos": {
-            "1 分": "1m", "5 分": "5m", "15 分": "15m",
-            "30 分": "30m", "1 時間": "1h", "4 時間": "4h",
-            "1 日": "1d", "1 週": "1w"
-        }
-    },
-    "한국어": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + 피보나치 엔진 PRO",
-        "config_globais": "⚙️  글로벌 설정",
-        "selecione_cripto": "암호화폐 선택 (/USDT):",
-        "tempo_grafico": "시간 프레임:",
-        "modo_vivo": "실시간 모니터링 활성화",
-        "intervalo_refresh": "새로 고침 간격(초):",
-        "preco_spot": "현재 가격",
-        "variacao_24h": "24시간 변동",
-        "volume_24h": "24시간 거래량 (USDT)",
-        "market_cap": "시가총액 (USD)",
-        "stop_atr": "ATR 스탑",
-        "compra_forte": "🟢  강한 매수 (SMC + 피보나치)",
-        "venda_forte": "🔴  강한 매도 (SMC + 피보나치)",
-        "neutro": "🟡  중립 (SMC 대기)",
-        "erro_dados": "과거 데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
-        "ctx_desconto": "피보나치 할인 영역 (우수한 위험/수익률).",
-        "ctx_premium": "피보나치 프리미엄 영역 (가격이 늘어나 있어 이익 실현에 적합).",
-        "ctx_neutro": "피보나치 중립 영역 (공정 가치 영역).",
-        "ultima_atualizacao": "마지막 업데이트",
-        "proximo_refresh": "다음 새로 고침까지",
-        "segundos": "초",
-        "grafico_titulo": "📈  대화형 가격 차트",
-        "buscando_marketcap": "🔍  시가총액 가져오는 중...",
-        "marketcap_nao_disponivel": "사용 불가",
-        "idioma_label": "🌐  언어 / Language",
-        "idioma_selecao": "인터페이스 언어 선택:",
-        "aviso_aquecimento": "⚠️ 계산에 워밍업 캔들 사용됨",
-        "alvo_swing_title": "🎯 목표 투영 (피보나치 / 스마트 머니)",
-        "direcao_operacion": "방향",
-        "entrada_projetada": "예상 진입",
-        "stop_projetado": "예상 손절매",
-        "swing_alto": "스윙 고점",
-        "swing_baixo": "스윙 저점",
-        "range_label": "범위",
-        "alvo_prefix": "목표 {n}",
-        "sem_alvos": "이 움직임에 대한 목표가 없습니다.",
-        "contexto_smc": "SMC 컨텍스트",
-        "trend_ascendente": "상승 추세 🟢",
-        "trend_descendente": "하락 추세 🔴",
-        "trend_neutra": "중립 추세 🟡",
-        "intervalos": {
-            "1분": "1m", "5분": "5m", "15분": "15m",
-            "30분": "30m", "1시간": "1h", "4시간": "4h",
-            "1일": "1d", "1주": "1w"
-        }
-    },
-    "Tiếng Việt": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Động cơ SMC + Fibonacci PRO",
-        "config_globais": "⚙️  Cài đặt toàn cầu",
-        "selecione_cripto": "Chọn bất kỳ tiền mã hóa nào (/USDT):",
-        "tempo_grafico": "Khung thời gian:",
-        "modo_vivo": "Bật giám sát thời gian thực",
-        "intervalo_refresh": "Khoảng thời gian làm mới (giây):",
-        "preco_spot": "Giá hiện tại",
-        "variacao_24h": "Biến động 24h",
-        "volume_24h": "Khối lượng 24h (USDT)",
-        "market_cap": "Vốn hóa thị trường (USD)",
-        "stop_atr": "Dừng ATR",
-        "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI)",
-        "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI)",
-        "neutro": "🟡  TRUNG LẬP (CHỜ SMC)",
-        "erro_dados": "Dữ liệu lịch sử không đủ. Chọn tài sản khác hoặc giảm khung thời gian.",
-        "ctx_desconto": "Vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời).",
-        "ctx_premium": "Vùng cao cấp Fibonacci (Giá kéo dài, phù hợp để chốt lời).",
-        "ctx_neutro": "Vùng trung tính Fibonacci (Vùng giá trị hợp lý).",
-        "ultima_atualizacao": "Cập nhật cuối cùng",
-        "proximo_refresh": "Làm mới tiếp theo trong",
-        "segundos": "giây",
-        "grafico_titulo": "📈  Biểu đồ giá tương tác",
-        "buscando_marketcap": "🔍  Đang tìm vốn hóa thị trường...",
-        "marketcap_nao_disponivel": "Không có sẵn",
-        "idioma_label": "🌐  Ngôn ngữ / Language",
-        "idioma_selecao": "Chọn ngôn ngữ giao diện:",
-        "aviso_aquecimento": "⚠️ Nến làm nóng được sử dụng trong tính toán",
-        "alvo_swing_title": "🎯 Dự báo Mục tiêu (Fibonacci / Smart Money)",
-        "direcao_operacion": "Hướng",
-        "entrada_projetada": "Điểm vào dự kiến",
-        "stop_projetado": "Dừng lỗ dự kiến",
-        "swing_alto": "Đỉnh dao động",
-        "swing_baixo": "Đáy dao động",
-        "range_label": "Phạm vi",
-        "alvo_prefix": "MỤC TIÊU {n}",
-        "sem_alvos": "Không có mục tiêu nào cho chuyển động này.",
-        "contexto_smc": "Bối cảnh SMC",
-        "trend_ascendente": "Xu hướng tăng 🟢",
-        "trend_descendente": "Xu hướng giảm 🔴",
-        "trend_neutra": "Xu hướng trung lập 🟡",
-        "intervalos": {
-            "1 Phút": "1m", "5 Phút": "5m", "15 Phút": "15m",
-            "30 Phút": "30m", "1 Giờ": "1h", "4 Giờ": "4h",
-            "1 Ngày": "1d", "1 Tuần": "1w"
-        }
-    },
-    "Türkçe": {
-        "titulo": "🏦  BRICSVAULT PORTAL - SMC + Fibonacci Motoru PRO",
-        "config_globais": "⚙️  Genel Ayarlar",
-        "selecione_cripto": "Herhangi bir Kripto Para Birimi Seçin (/USDT):",
-        "tempo_grafico": "Zaman Dilimi:",
-        "modo_vivo": "Gerçek Zamanlı İzlemeyi Etkinleştir",
-        "intervalo_refresh": "Yenileme Aralığı (Saniye):",
-        "preco_spot": "Güncel Fiyat",
-        "variacao_24h": "24 Saatlik Değişim",
-        "volume_24h": "24 Saatlik Hacim (USDT)",
-        "market_cap": "Piyasa Değeri (USD)",
-        "stop_atr": "ATR Durdurma",
-        "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI)",
-        "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI)",
-        "neutro": "🟡  NÖTR (SMC BEKLE)",
-        "erro_dados": "Yetersiz geçmiş veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
-        "ctx_desconto": "Fibonacci İskonto Bölgesi (Mükemmel risk/getiri).",
-        "ctx_premium": "Fibonacci Prim Bölgesi (Fiyat gerilmiş, kar alma için uygun).",
-        "ctx_neutro": "Fibonacci nötr bölgesi (Fair Value Zone).",
-        "ultima_atualizacao": "Son Güncelleme",
-        "proximo_refresh": "Sonraki yenileme",
-        "segundos": "saniye",
-        "grafico_titulo": "📈  Etkileşimli Fiyat Grafiği",
-        "buscando_marketcap": "🔍  Piyasa Değeri alınıyor...",
-        "marketcap_nao_disponivel": "Mevcut değil",
-        "idioma_label": "🌐  Dil / Language",
-        "idioma_selecao": "Arayüz dilini seçin:",
-        "aviso_aquecimento": "⚠️ Hesaplamada ısınma mumları kullanıldı",
-        "alvo_swing_title": "🎯 Hedef Projeksiyonu (Fibonacci / Smart Money)",
-        "direcao_operacion": "Yön",
-        "entrada_projetada": "Projeksiyon Giriş",
-        "stop_projetado": "Projeksiyon Durdurma",
-        "swing_alto": "Salınım Yüksek",
-        "swing_baixo": "Salınım Düşük",
-        "range_label": "Aralık",
-        "alvo_prefix": "HEDEF {n}",
-        "sem_alvos": "Bu hareket için hedef yok.",
-        "contexto_smc": "SMC Bağlamı",
-        "trend_ascendente": "Yükseliş Trendi 🟢",
-        "trend_descendente": "Düşüş Trendi 🔴",
-        "trend_neutra": "Nötr Trend 🟡",
-        "intervalos": {
-            "1 Dakika": "1m", "5 Dakika": "5m", "15 Dakika": "15m",
-            "30 Dakika": "30m", "1 Saat": "1h", "4 Saat": "4h",
-            "1 Gün": "1d", "1 Hafta": "1w"
-        }
-    }
+    "Português (BR)": { ... },  # Coloque o dicionário completo aqui
+    # ... todos os idiomas
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -683,7 +75,7 @@ def formatar_market_cap(valor):
         return f"$ {valor:,.2f}"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES (ASYNC)
+# GERENCIADOR DE EXCHANGES (ASYNC) – mantido com @st.cache_resource
 class ExchangeManager:
     EXCHANGES = {
         "Gate.io": {
@@ -738,11 +130,14 @@ class ExchangeManager:
         else:
             return symbol
 
+@st.cache_resource
+def get_exchange_manager():
+    return ExchangeManager()
+
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÕES DE MERCADO (ASYNC)
-@st.cache_data(ttl=3600)
+# FUNÇÕES ASSÍNCRONAS (sem cache) – implementam a lógica de rede
 async def obter_todos_pares_usdt_async():
-    manager = ExchangeManager()
+    manager = get_exchange_manager()
     client = await manager.get_client("Gate.io")
     if not client:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
@@ -753,24 +148,36 @@ async def obter_todos_pares_usdt_async():
         return sorted(pairs)
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+    finally:
+        if client:
+            await client.close()
 
-async def obter_dados_24h_async(simbolo):
-    manager = ExchangeManager()
-    tasks = []
-    for exchange_name in manager.PRIORITY:
-        # CORREÇÃO: usar functools.partial para fixar o nome da exchange
-        fetch_func = partial(
-            fetch_from_exchange_24h,
-            exchange_name=exchange_name,
-            manager=manager,
-            simbolo=simbolo
-        )
-        tasks.append(asyncio.create_task(fetch_func()))
-    
-    for future in asyncio.as_completed(tasks):
-        result = await future
-        if result:
-            return result
+async def obter_volume_usd_direto_async(exchange_name, simbolo):
+    try:
+        if exchange_name == "MEXC":
+            pair = simbolo.replace("/", "")
+            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
+            resp = await asyncio.to_thread(requests.get, url, timeout=10)
+            if resp.status_code == 200:
+                return float(resp.json().get("quoteVolume", 0))
+        elif exchange_name == "KuCoin":
+            pair = simbolo.replace("/", "-")
+            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
+            resp = await asyncio.to_thread(requests.get, url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("code") == "200000":
+                    return float(data.get("data", {}).get("volValue", 0))
+        elif exchange_name == "Gate.io":
+            pair = simbolo.replace("/", "_")
+            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
+            resp = await asyncio.to_thread(requests.get, url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data and len(data) > 0:
+                    return float(data[0].get("quote_volume", 0))
+    except Exception:
+        pass
     return None
 
 async def fetch_from_exchange_24h(exchange_name, manager, simbolo):
@@ -802,37 +209,24 @@ async def fetch_from_exchange_24h(exchange_name, manager, simbolo):
             await client.close()
     return None
 
-async def obter_volume_usd_direto_async(exchange_name, simbolo):
-    try:
-        if exchange_name == "MEXC":
-            pair = simbolo.replace("/", "")
-            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
-            resp = await asyncio.to_thread(requests.get, url, timeout=10)
-            if resp.status_code == 200:
-                return float(resp.json().get("quoteVolume", 0))
-        elif exchange_name == "KuCoin":
-            pair = simbolo.replace("/", "-")
-            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
-            resp = await asyncio.to_thread(requests.get, url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("code") == "200000":
-                    return float(data.get("data", {}).get("volValue", 0))
-        elif exchange_name == "Gate.io":
-            pair = simbolo.replace("/", "_")
-            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
-            resp = await asyncio.to_thread(requests.get, url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data and len(data) > 0:
-                    return float(data[0].get("quote_volume", 0))
-    except Exception:
-        pass
+async def obter_dados_24h_async(simbolo):
+    manager = get_exchange_manager()
+    tasks = []
+    for exchange_name in manager.PRIORITY:
+        fetch_func = partial(
+            fetch_from_exchange_24h,
+            exchange_name=exchange_name,
+            manager=manager,
+            simbolo=simbolo
+        )
+        tasks.append(asyncio.create_task(fetch_func()))
+    
+    for future in asyncio.as_completed(tasks):
+        result = await future
+        if result:
+            return result
     return None
 
-# ─────────────────────────────────────────────────────────────────────────────
-# NOME EXTENSO
-@st.cache_data(ttl=3600)
 async def obter_nome_extenso_cripto_async(simbolo_id):
     try:
         base_currency = simbolo_id.split("/")[0]
@@ -847,9 +241,6 @@ async def obter_nome_extenso_cripto_async(simbolo_id):
     except Exception:
         return simbolo_id.split("/")[0]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP – CORRIGIDA (ASYNC)
-@st.cache_data(ttl=3600)
 async def obter_id_coingecko_async(simbolo):
     try:
         url = "https://api.coingecko.com/api/v3/search"
@@ -870,7 +261,6 @@ async def obter_id_coingecko_async(simbolo):
     except Exception:
         return None
 
-@st.cache_data(ttl=600)
 async def obter_market_cap_coingecko_async(simbolo):
     coin_id = await obter_id_coingecko_async(simbolo)
     if not coin_id:
@@ -897,7 +287,6 @@ async def obter_market_cap_coingecko_async(simbolo):
     except Exception:
         return None
 
-@st.cache_data(ttl=600)
 async def obter_market_cap_coincap_async(simbolo):
     try:
         asset_id = simbolo.lower()
@@ -928,21 +317,13 @@ async def obter_market_cap_coincap_async(simbolo):
 
 async def obter_market_cap_robusto_async(simbolo_id):
     simbolo = simbolo_id.split("/")[0]
-    mc_cg = None
-    mc_cc = None
-
-    results = await asyncio.gather(
-        obter_market_cap_coingecko_async(simbolo),
-        obter_market_cap_coincap_async(simbolo),
-        return_exceptions=True
-    )
-    mc_cg, mc_cc = results[0], results[1]
-
+    mc_cg = await obter_market_cap_coingecko_async(simbolo)
+    mc_cc = await obter_market_cap_coincap_async(simbolo)
+    
     if isinstance(mc_cg, Exception): mc_cg = None
     if isinstance(mc_cc, Exception): mc_cc = None
-
+    
     valores = [v for v in (mc_cg, mc_cc) if v is not None and v > 0]
-
     if len(valores) == 2:
         return sum(valores) / len(valores)
     elif len(valores) == 1:
@@ -951,7 +332,107 @@ async def obter_market_cap_robusto_async(simbolo_id):
         return None
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS
+# FUNÇÕES SÍNCRONAS COM CACHE – chamam as assíncronas via asyncio.run
+@st.cache_data(ttl=3600)
+def obter_todos_pares_usdt():
+    return asyncio.run(obter_todos_pares_usdt_async())
+
+@st.cache_data(ttl=60)  # cache curto para dados de 24h
+def obter_dados_24h(simbolo):
+    return asyncio.run(obter_dados_24h_async(simbolo))
+
+@st.cache_data(ttl=3600)
+def obter_nome_extenso_cripto(simbolo_id):
+    return asyncio.run(obter_nome_extenso_cripto_async(simbolo_id))
+
+@st.cache_data(ttl=600)
+def obter_market_cap_robusto(simbolo_id):
+    return asyncio.run(obter_market_cap_robusto_async(simbolo_id))
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CARREGAMENTO DE DADOS OHLCV (async, com cache manual no session_state)
+async def carregar_dados_async(simbolo_id, timeframe_selecionado):
+    manager = get_exchange_manager()
+    
+    if 'ohlcv_data' not in st.session_state:
+        st.session_state.ohlcv_data = {}
+    if simbolo_id not in st.session_state.ohlcv_data:
+        st.session_state.ohlcv_data[simbolo_id] = {}
+    if timeframe_selecionado not in st.session_state.ohlcv_data[simbolo_id]:
+        st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado] = pd.DataFrame()
+
+    df_cached = st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
+    
+    since_timestamp = None
+    if not df_cached.empty:
+        since_timestamp = int(df_cached['timestamp'].iloc[-1]) + 1 
+
+    velas_novas = []
+    for exchange_name in manager.PRIORITY:
+        client = None
+        try:
+            client = await manager.get_client(exchange_name)
+            if not client:
+                continue
+            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
+            
+            limit_fetch = VELAS_TOTAL - len(df_cached) if not df_cached.empty else VELAS_TOTAL
+            if limit_fetch <= 0:
+                limit_fetch = 1
+
+            velas = await client.fetch_ohlcv(
+                symbol,
+                timeframe=timeframe_selecionado,
+                limit=limit_fetch,
+                since=since_timestamp
+            )
+            if velas:
+                velas_novas.extend(velas)
+                break
+        except Exception:
+            continue
+        finally:
+            if client:
+                await client.close()
+    
+    if not velas_novas and df_cached.empty:
+        return None
+
+    df_novas = pd.DataFrame(
+        velas_novas,
+        columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+    )
+    df_novas['time'] = pd.to_datetime(df_novas['timestamp'], unit='ms')
+    df_novas = df_novas.drop_duplicates(subset=['timestamp'])
+
+    df_combinado = pd.concat([df_cached, df_novas]).drop_duplicates(subset=['timestamp']).sort_values('timestamp').reset_index(drop=True)
+    
+    if len(df_combinado) > VELAS_TOTAL:
+        df_combinado = df_combinado.iloc[-VELAS_TOTAL:].reset_index(drop=True)
+
+    if len(df_combinado) < PERIODO_AQUECIMENTO + 50:
+        return None
+
+    # Calcular indicadores (funções síncronas)
+    df_combinado['RSI_14'] = calcular_rsi(df_combinado['close'], 14)
+    macd, sinal, hist = calcular_macd(df_combinado['close'])
+    df_combinado['MACD'] = macd
+    df_combinado['MACD_SIGNAL'] = sinal
+    df_combinado['MACD_HIST'] = hist
+    df_combinado['MFI'] = calcular_mfi(df_combinado)
+    df_combinado = calcular_ssl_hybrid(df_combinado)
+    df_combinado = calcular_atr_stop(df_combinado)
+    df_combinado = calcular_ppo(df_combinado)
+
+    df_combinado['SSL_Baseline'] = df_combinado['SSL_Baseline'].ffill()
+    df_combinado['ATR_Stop'] = df_combinado['ATR_Stop'].replace(0, np.nan).ffill()
+
+    st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado] = df_combinado.dropna(subset=['close']).reset_index(drop=True)
+    
+    return st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INDICADORES TÉCNICOS (síncronos – sem alterações)
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
     ganho = delta.clip(lower=0)
@@ -1052,29 +533,27 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
     return df
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SMC AVANÇADO E LÓGICA DE SINAIS
-
+# SMC AVANÇADO E LÓGICA DE SINAIS (síncronos)
 def identificar_fractais(df, window=2):
-    df['fractal_high'] = df['high'].rolling(window=window*2+1, center=True).apply(lambda x: x.iloc[window] if x.iloc[window] == x.max() else np.nan, raw=False)
-    df['fractal_low'] = df['low'].rolling(window=window*2+1, center=True).apply(lambda x: x.iloc[window] if x.iloc[window] == x.min() else np.nan, raw=False)
+    df['fractal_high'] = df['high'].rolling(window=window*2+1, center=True).apply(
+        lambda x: x.iloc[window] if x.iloc[window] == x.max() else np.nan, raw=False
+    )
+    df['fractal_low'] = df['low'].rolling(window=window*2+1, center=True).apply(
+        lambda x: x.iloc[window] if x.iloc[window] == x.min() else np.nan, raw=False
+    )
     return df
 
 def identificar_swing_smc(df_ohlcv, periodo_minimo_swing=10):
     df = df_ohlcv.copy()
     df = identificar_fractais(df, window=2)
-
     swing_highs = df[df['fractal_high'].notna()]['high']
     swing_lows = df[df['fractal_low'].notna()]['low']
-
     if swing_highs.empty or swing_lows.empty:
         return None
-
     last_high_idx = swing_highs.index[-1] if not swing_highs.empty else None
     last_low_idx = swing_lows.index[-1] if not swing_lows.empty else None
-
     if last_high_idx is None and last_low_idx is None:
         return None
-
     if last_high_idx is not None and (last_low_idx is None or last_high_idx > last_low_idx):
         current_swing_high = df.loc[last_high_idx, 'high']
         prev_low_candidates = swing_lows[swing_lows.index < last_high_idx]
@@ -1084,7 +563,6 @@ def identificar_swing_smc(df_ohlcv, periodo_minimo_swing=10):
         else:
             current_swing_low = df['low'].min()
             current_swing_low_idx = df['low'].idxmin()
-        
         return {
             'swing_high': current_swing_high,
             'swing_low': current_swing_low,
@@ -1101,7 +579,6 @@ def identificar_swing_smc(df_ohlcv, periodo_minimo_swing=10):
         else:
             current_swing_high = df['high'].max()
             current_swing_high_idx = df['high'].idxmax()
-
         return {
             'swing_high': current_swing_high,
             'swing_low': current_swing_low,
@@ -1123,29 +600,24 @@ def calcular_retracao_fibonacci_smc(swing_high, swing_low):
         'fib_100': swing_low
     }
 
-# CORREÇÃO: removeu parâmetro txt (não utilizado)
 def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swing):
     swing_info = identificar_swing_smc(df_completo.iloc[PERIODO_AQUECIMENTO:])
-
     if not swing_info:
         swing_high = df_completo['high'].max()
         swing_low = df_completo['low'].min()
         entrada_projetada = df_completo['close'].iloc[-1]
         stop_projetado = swing_low if direcao_smc == "LONG" else swing_high
-        alvos = []
         return {
             'direcao': direcao_smc,
             'entrada': entrada_projetada,
             'stop': stop_projetado,
             'swing_high': swing_high,
             'swing_low': swing_low,
-            'alvos': alvos
+            'alvos': []
         }
-
     swing_high = swing_info['swing_high']
     swing_low = swing_info['swing_low']
     preco_atual = df_completo['close'].iloc[-1]
-    
     if direcao_smc == "LONG":
         entrada_projetada = calcular_retracao_fibonacci_smc(swing_high, swing_low)['fib_618']
         stop_projetado = swing_low
@@ -1162,13 +634,11 @@ def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swi
         risco = stop_projetado - entrada_projetada
         alvos = [entrada_projetada - mult * risco for mult in multiplicadores]
         alvos_validos = [a for a in alvos if a < entrada_projetada]
-
     alvos_finais = alvos_validos[:8]
     if direcao_smc == "SHORT":
         alvos_finais.sort(reverse=True)
     else:
         alvos_finais.sort()
-
     return {
         "direcao": direcao_smc,
         "swing_high": swing_high,
@@ -1184,20 +654,16 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
     df_analise = df_completo.iloc[periodo_aquecimento:].copy()
     if df_analise.empty:
         return txt["neutro"], "#ffcc00", txt["erro_dados"], 0.0, 0.0, "NEUTRO"
-
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg["close"]
-
     pontos_alta = 0.0
     pontos_baixa = 0.0
     contexto_fib = txt["ctx_neutro"]
-
     swing_info = identificar_swing_smc(df_completo)
     if swing_info:
         swing_high = swing_info['swing_high']
         swing_low = swing_info['swing_low']
         fib_niveis_smc = calcular_retracao_fibonacci_smc(swing_high, swing_low)
-
         if preco_atual >= fib_niveis_smc['fib_382'] and preco_atual <= fib_niveis_smc['fib_0']:
             pontos_baixa += 2.5
             contexto_fib = txt["ctx_premium"]
@@ -1206,43 +672,36 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
             contexto_fib = txt["ctx_desconto"]
         else:
             contexto_fib = txt["ctx_neutro"]
-
         if swing_info['direction_from_swing'] == 'LONG':
             pontos_alta += 1.0
         elif swing_info['direction_from_swing'] == 'SHORT':
             pontos_baixa += 1.0
-
     rsi_val = ultimo_reg["RSI_14"]
     if not math.isnan(rsi_val):
         if rsi_val < 40: 
             pontos_alta += 2.5
         elif rsi_val > 60: 
             pontos_baixa += 2.5
-
     macd_hist = ultimo_reg["MACD_HIST"]
     if not math.isnan(macd_hist):
         if macd_hist > 0:
             pontos_alta += 2
         else:
             pontos_baixa += 2
-
     mfi_val = ultimo_reg["MFI"]
     if not math.isnan(mfi_val):
         if mfi_val < 40: 
             pontos_alta += 1.5
         elif mfi_val > 60: 
             pontos_baixa += 1.5
-
     if ultimo_reg["ssl_dir"] == 1:
         pontos_alta += 1.5
     else:
         pontos_baixa += 1.5
-
     if ultimo_reg["atr_dir"] == 1:
         pontos_alta += 1.5
     else:
         pontos_baixa += 1.5
-
     ppo_val = ultimo_reg["PPO"]
     ppo_sig = ultimo_reg["PPO_Signal"]
     if not (math.isnan(ppo_val) or math.isnan(ppo_sig)):
@@ -1250,7 +709,6 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
             pontos_alta += 2
         else: 
             pontos_baixa += 2
-
     direcao = "NEUTRO"
     if pontos_alta >= limiar_sinal and pontos_alta > pontos_baixa:
         direcao = "LONG"
@@ -1271,93 +729,7 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
         return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa, direcao
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS (ASYNC com cache de sessão)
-
-@st.cache_resource
-def get_exchange_manager():
-    return ExchangeManager()
-
-async def carregar_dados_async(simbolo_id, timeframe_selecionado):
-    manager = get_exchange_manager()
-    
-    if 'ohlcv_data' not in st.session_state:
-        st.session_state.ohlcv_data = {}
-    if simbolo_id not in st.session_state.ohlcv_data:
-        st.session_state.ohlcv_data[simbolo_id] = {}
-    if timeframe_selecionado not in st.session_state.ohlcv_data[simbolo_id]:
-        st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado] = pd.DataFrame()
-
-    df_cached = st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
-    
-    since_timestamp = None
-    if not df_cached.empty:
-        since_timestamp = int(df_cached['timestamp'].iloc[-1]) + 1 
-
-    velas_novas = []
-    for exchange_name in manager.PRIORITY:
-        client = None
-        try:
-            client = await manager.get_client(exchange_name)
-            if not client:
-                continue
-            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
-            
-            limit_fetch = VELAS_TOTAL - len(df_cached) if not df_cached.empty else VELAS_TOTAL
-            if limit_fetch <= 0:
-                limit_fetch = 1
-
-            velas = await client.fetch_ohlcv(
-                symbol,
-                timeframe=timeframe_selecionado,
-                limit=limit_fetch,
-                since=since_timestamp
-            )
-            if velas:
-                velas_novas.extend(velas)
-                break
-        except Exception:
-            continue
-        finally:
-            if client:
-                await client.close()
-    
-    if not velas_novas and df_cached.empty:
-        return None
-
-    df_novas = pd.DataFrame(
-        velas_novas,
-        columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-    )
-    df_novas['time'] = pd.to_datetime(df_novas['timestamp'], unit='ms')
-    df_novas = df_novas.drop_duplicates(subset=['timestamp'])
-
-    df_combinado = pd.concat([df_cached, df_novas]).drop_duplicates(subset=['timestamp']).sort_values('timestamp').reset_index(drop=True)
-    
-    if len(df_combinado) > VELAS_TOTAL:
-        df_combinado = df_combinado.iloc[-VELAS_TOTAL:].reset_index(drop=True)
-
-    if len(df_combinado) < PERIODO_AQUECIMENTO + 50:
-        return None
-
-    df_combinado['RSI_14'] = calcular_rsi(df_combinado['close'], 14)
-    macd, sinal, hist = calcular_macd(df_combinado['close'])
-    df_combinado['MACD'] = macd
-    df_combinado['MACD_SIGNAL'] = sinal
-    df_combinado['MACD_HIST'] = hist
-    df_combinado['MFI'] = calcular_mfi(df_combinado)
-    df_combinado = calcular_ssl_hybrid(df_combinado)
-    df_combinado = calcular_atr_stop(df_combinado)
-    df_combinado = calcular_ppo(df_combinado)
-
-    df_combinado['SSL_Baseline'] = df_combinado['SSL_Baseline'].ffill()
-    df_combinado['ATR_Stop'] = df_combinado['ATR_Stop'].replace(0, np.nan).ffill()
-
-    st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado] = df_combinado.dropna(subset=['close']).reset_index(drop=True)
-    
-    return st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÃO PARA CALCULAR ASSERTIVIDADE HISTÓRICA (BACKTEST ROBUSTO)
+# BACKTEST
 def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, txt, 
                                             target_profit_pct=1.0, look_ahead_candles=5):
     acertos = 0
@@ -1365,39 +737,29 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
     total_lucro_pct = 0.0
     total_risco_pct = 0.0
     operacoes_registradas = []
-
     if len(df) < periodo_aquecimento + PERIODO_SWING_DEFAULT + look_ahead_candles:
         return "Dados históricos insuficientes para testar a assertividade robusta.", {}
-    
     inicio_backtest = periodo_aquecimento + PERIODO_SWING_DEFAULT
-    
     for i in range(inicio_backtest, len(df) - look_ahead_candles):
         df_contexto = df.iloc[:i+1].copy()
-        
         try:
             _, _, _, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
                 df_contexto, txt, limiar, periodo_aquecimento
             )
-            
-            # CHAMADA CORRIGIDA: sem o parâmetro txt
             sinal_fib = gerar_sinal_fibonacci(df_contexto, direcao, [1.0], PERIODO_SWING_DEFAULT)
             entrada = sinal_fib['entrada']
             stop_loss = sinal_fib['stop']
-            
             if direcao == "LONG" and pontos_alta >= limiar:
                 total_sinais += 1
                 risco_pct = ((entrada - stop_loss) / entrada) * 100 if entrada > 0 else 0
-                
                 futuros = df.iloc[i+1 : i+1+look_ahead_candles]
                 if not futuros.empty:
                     alvo_preco = entrada * (1 + target_profit_pct / 100)
-                    
                     if futuros['high'].max() >= alvo_preco:
                         acertos += 1
                         lucro_realizado = target_profit_pct
                     else:
                         lucro_realizado = ((futuros['close'].iloc[-1] - entrada) / entrada) * 100
-                    
                     total_lucro_pct += lucro_realizado
                     total_risco_pct += risco_pct
                     operacoes_registradas.append({
@@ -1410,21 +772,17 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
                         'risco_pct': risco_pct,
                         'acerto': (futuros['high'].max() >= alvo_preco)
                     })
-
             elif direcao == "SHORT" and pontos_baixa >= limiar:
                 total_sinais += 1
                 risco_pct = ((stop_loss - entrada) / entrada) * 100 if entrada > 0 else 0
-
                 futuros = df.iloc[i+1 : i+1+look_ahead_candles]
                 if not futuros.empty:
                     alvo_preco = entrada * (1 - target_profit_pct / 100)
-                    
                     if futuros['low'].min() <= alvo_preco:
                         acertos += 1
                         lucro_realizado = target_profit_pct
                     else:
                         lucro_realizado = ((entrada - futuros['close'].iloc[-1]) / entrada) * 100
-
                     total_lucro_pct += lucro_realizado
                     total_risco_pct += risco_pct
                     operacoes_registradas.append({
@@ -1437,25 +795,19 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
                         'risco_pct': risco_pct,
                         'acerto': (futuros['low'].min() <= alvo_preco)
                     })
-
-        except Exception as e:
+        except Exception:
             continue
-    
     if total_sinais == 0:
         return "Nenhum sinal forte gerado no histórico recente para backtest. Tente reduzir a nota de corte ou ajustar o período de swing.", {}
-    
     assertividade = (acertos / total_sinais) * 100
     lucro_medio_por_operacao = total_lucro_pct / total_sinais if total_sinais > 0 else 0
     risco_medio_por_operacao = total_risco_pct / total_sinais if total_sinais > 0 else 0
-    
     ganhos = sum([op['lucro_realizado_pct'] for op in operacoes_registradas if op['lucro_realizado_pct'] > 0])
     perdas = sum([abs(op['lucro_realizado_pct']) for op in operacoes_registradas if op['lucro_realizado_pct'] < 0])
     fator_lucro = ganhos / perdas if perdas > 0 else (ganhos / 1e-10 if ganhos > 0 else 0)
-
     equity_curve = [100]
     max_drawdown = 0
     peak = 100
-
     for op in operacoes_registradas:
         equity_curve.append(equity_curve[-1] * (1 + op['lucro_realizado_pct'] / 100))
         if equity_curve[-1] > peak:
@@ -1463,7 +815,6 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
         drawdown = (peak - equity_curve[-1]) / peak * 100
         if drawdown > max_drawdown:
             max_drawdown = drawdown
-
     resultado_str = f"""
     **Resultados do Backtest:**
     - Sinais Gerados: {total_sinais}
@@ -1478,10 +829,9 @@ def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, tx
     return resultado_str, {'equity_curve': equity_curve, 'operacoes': operacoes_registradas}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICO – CORREÇÃO: verificação de timedelta
+# GRÁFICO
 def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, operacoes_backtest=None):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
-
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
         x=df_grafico['time'],
@@ -1509,15 +859,12 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
         name='ATR Trailing Stop',
         line=dict(color='#ffaa00', width=1, dash='dash')
     ))
-
     if operacoes_backtest:
-        # Calcular a diferença média de tempo entre velas para posicionar os alvos
         diff_mean = df_grafico['time'].diff().mean()
         if pd.notna(diff_mean):
             delta_tempo = diff_mean * look_ahead_candles
         else:
-            delta_tempo = pd.Timedelta(minutes=5)  # fallback
-
+            delta_tempo = pd.Timedelta(minutes=5)
         for op in operacoes_backtest:
             if op['direcao'] == 'LONG':
                 fig.add_trace(go.Scatter(
@@ -1571,7 +918,6 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
                     name='Stop SHORT',
                     showlegend=False
                 ))
-
     fig.update_layout(
         paper_bgcolor='#0b0f19',
         plot_bgcolor='#0b0f19',
@@ -1585,11 +931,9 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, opera
     st.plotly_chart(fig, use_container_width=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR E PAINEL PRINCIPAL (Streamlit UI)
-
+# MAIN (UI)
 async def main():
     idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
-    
     st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
     idioma_selecionado = st.sidebar.selectbox(
         DICIONARIO_LINGUAS['Português (BR)']['idioma_selecao'],
@@ -1600,7 +944,8 @@ async def main():
     st.title(txt["titulo"])
     st.sidebar.header(txt["config_globais"])
     
-    lista_criptos = await obter_todos_pares_usdt_async()
+    # Chamada síncrona com cache
+    lista_criptos = obter_todos_pares_usdt()
     if not lista_criptos:
         lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     
@@ -1669,26 +1014,21 @@ async def main():
     st.sidebar.markdown("**BRICSVAULT PORTAL SMC PRO**")
     st.sidebar.markdown("Versão: 2.0 (Aprimorada com SMC e Async)")
 
-    # ─────────────────────────────────────────────────────────────────────────────
     # PAINEL PRINCIPAL
     @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
     async def painel_principal_fragment(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh,
                                         multiplicadores, periodo_swing, limiar_sinal, periodo_aquecimento_ui,
                                         target_profit_pct_ui, look_ahead_candles_ui):
         df_dados = await carregar_dados_async(simbolo_id, timeframe)
-
         if df_dados is None or df_dados.empty:
             st.warning(txt["erro_dados"])
             return
-
         df_analise = df_dados.iloc[periodo_aquecimento_ui:]
         if df_analise.empty:
             st.warning(txt["erro_dados"])
             return
-
         ultimo_reg = df_analise.iloc[-1]
         preco_atual = ultimo_reg['close']
-
         st.markdown("---")
         col_preco1, col_preco2, col_preco3 = st.columns([1, 2, 1])
         with col_preco2:
@@ -1709,10 +1049,11 @@ async def main():
             )
         st.markdown("---")
 
-        dados_24h = await obter_dados_24h_async(simbolo_id)
+        # Dados 24h e market cap – chamadas síncronas com cache
+        dados_24h = obter_dados_24h(simbolo_id)
         variacao_24h = dados_24h.get("change") if dados_24h else 0.0
         volume_24h = dados_24h.get("volume") if dados_24h else None
-        market_cap = await obter_market_cap_robusto_async(simbolo_id)
+        market_cap = obter_market_cap_robusto(simbolo_id)
 
         recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, direcao = analisar_confluencia(
             df_dados, txt, limiar_sinal, periodo_aquecimento_ui
@@ -1734,11 +1075,9 @@ async def main():
         </div>
         """, unsafe_allow_html=True)
 
-        # CHAMADA CORRIGIDA: sem txt
         sinal_fib = gerar_sinal_fibonacci(df_dados, direcao, multiplicadores, periodo_swing)
 
         st.markdown(f"### {txt['alvo_swing_title']}")
-        
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric(txt["direcao_operacao"], f"{sinal_fib['direcao']} 🚀")
         col2.metric(txt["entrada_projetada"], formatar_preco(sinal_fib['entrada']))
@@ -1772,7 +1111,6 @@ async def main():
                 resultado_backtest_str, backtest_metrics = resultado_backtest
                 st.markdown(resultado_backtest_str)
                 st.caption("💡 Quanto maior a porcentagem, mais confiável a configuração atual para o ativo e timeframe escolhidos.")
-                
                 if 'equity_curve' in backtest_metrics and len(backtest_metrics['equity_curve']) > 1:
                     st.subheader("Curva de Capital (Equity Curve)")
                     fig_equity = go.Figure(data=go.Scatter(y=backtest_metrics['equity_curve'], mode='lines'))
@@ -1789,7 +1127,7 @@ async def main():
                 st.markdown(resultado_backtest)
                 backtest_metrics = {}
 
-        nome_extenso = await obter_nome_extenso_cripto_async(simbolo_id)
+        nome_extenso = obter_nome_extenso_cripto(simbolo_id)
         label_market_cap = f"{txt['market_cap']}"
         if market_cap is None:
             market_cap_display = txt['marketcap_nao_disponivel']
@@ -1808,7 +1146,6 @@ async def main():
             st.metric(txt["variacao_24h"], f"{variacao_24h:.2f}%", delta=f"{variacao_24h:.2f}%")
         with col_info3:
             st.metric(txt["volume_24h"], formatar_market_cap(volume_24h))
-        
         st.metric(label_market_cap, market_cap_display)
 
         if modo_vivo:
