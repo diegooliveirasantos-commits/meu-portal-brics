@@ -22,7 +22,7 @@ PERIODO_AQUECIMENTO = 100
 PERIODO_SWING_DEFAULT = 50
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (COMPLETO – Português, Inglês, Espanhol)
+# DICIONÁRIO DE IDIOMAS
 DICIONARIO_LINGUAS = {
     "Português (BR)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Motor SMC + Fibonacci PRO",
@@ -65,11 +65,11 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Tendência de Alta 🟢",
         "trend_descendente": "Tendência de Baixa 🔴",
         "trend_neutra": "Tendência Neutra 🟡",
-        "batido": "✅ Batido",
-        "aguardado": "⏳ Aguardado",
+        "batido": "✅ Alvo batido",
+        "aguardado": "⏳ Aguardando",
         "tempo_status": "Tempo decorrido: {tempo}",
         "backtest_titulo": "📊 Ver Assertividade nos Últimos Dados (Backtest Robusto)",
-        "backtest_sem_dados": "⚠️ Dados históricos insuficientes para o backtest. Aumente VELAS_TOTAL ou reduza os parâmetros (período de swing, aquecimento ou lookahead).",
+        "backtest_sem_dados": "⚠️ Dados históricos insuficientes para o backtest. Aumente VELAS_TOTAL ou reduza os parâmetros.",
         "backtest_sem_sinais": "⚠️ Nenhum sinal forte gerado no histórico recente. Reduza a nota de corte ou ajuste o período de swing.",
         "backtest_resultados": "**Resultados do Backtest:**",
         "backtest_sinais": "Sinais Gerados",
@@ -129,11 +129,11 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Uptrend 🟢",
         "trend_descendente": "Downtrend 🔴",
         "trend_neutra": "Neutral Trend 🟡",
-        "batido": "✅ Hit",
+        "batido": "✅ Target hit",
         "aguardado": "⏳ Pending",
         "tempo_status": "Elapsed: {tempo}",
         "backtest_titulo": "📊 Check Assertiveness in Recent Data (Robust Backtest)",
-        "backtest_sem_dados": "⚠️ Insufficient historical data for backtest. Increase VELAS_TOTAL or reduce parameters (swing period, warm-up, or lookahead).",
+        "backtest_sem_dados": "⚠️ Insufficient historical data for backtest. Increase VELAS_TOTAL or reduce parameters.",
         "backtest_sem_sinais": "⚠️ No strong signals generated in recent history. Reduce the cutoff score or adjust the swing period.",
         "backtest_resultados": "**Backtest Results:**",
         "backtest_sinais": "Signals Generated",
@@ -193,11 +193,11 @@ DICIONARIO_LINGUAS = {
         "trend_ascendente": "Tendencia Alcista 🟢",
         "trend_descendente": "Tendencia Bajista 🔴",
         "trend_neutra": "Tendencia Neutral 🟡",
-        "batido": "✅ Alcanzado",
+        "batido": "✅ Objetivo alcanzado",
         "aguardado": "⏳ Pendiente",
         "tempo_status": "Tiempo transcurrido: {tempo}",
         "backtest_titulo": "📊 Ver Assertividad en Datos Recientes (Backtest Robusto)",
-        "backtest_sem_dados": "⚠️ Datos históricos insuficientes para el backtest. Aumente VELAS_TOTAL o reduzca los parámetros (período de swing, calentamiento o lookahead).",
+        "backtest_sem_dados": "⚠️ Datos históricos insuficientes para el backtest. Aumente VELAS_TOTAL o reduzca los parámetros.",
         "backtest_sem_sinais": "⚠️ No se generaron señales fuertes en el historial reciente. Reduzca el puntaje de corte o ajuste el período de swing.",
         "backtest_resultados": "**Resultados del Backtest:**",
         "backtest_sinais": "Señales Generadas",
@@ -275,7 +275,7 @@ def formatar_tempo(segundos):
     return " ".join(partes)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES (SÍNCRONO)
+# GERENCIADOR DE EXCHANGES
 class ExchangeManager:
     EXCHANGES = {
         "Gate.io": {"class": ccxt.gate, "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}}, "separator": "/"},
@@ -546,7 +546,7 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
     return st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS (incluindo novos)
+# INDICADORES TÉCNICOS
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
     ganho = delta.clip(lower=0)
@@ -655,7 +655,7 @@ def calcular_obv(df):
     return obv
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SMC E FIBONACCI – APRIMORADOS
+# SMC E FIBONACCI APRIMORADOS
 def identificar_swing_smc_avancado(df, periodo_minimo_swing=10):
     df_fractal = identificar_fractais(df.copy())
     swing_highs = df_fractal[df_fractal['fractal_high'].notna()]['high']
@@ -666,8 +666,6 @@ def identificar_swing_smc_avancado(df, periodo_minimo_swing=10):
         return {'swing_high': swing_high, 'swing_low': swing_low, 'direction': 'NEUTRO'}
     last_high_idx = swing_highs.index[-1] if not swing_highs.empty else None
     last_low_idx = swing_lows.index[-1] if not swing_lows.empty else None
-    if last_high_idx is None and last_low_idx is None:
-        return None
     if last_high_idx is not None and (last_low_idx is None or last_high_idx > last_low_idx):
         swing_high = df.loc[last_high_idx, 'high']
         prev_lows = swing_lows[swing_lows.index < last_high_idx]
@@ -919,7 +917,7 @@ def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento
     return recomendacao, cor, analise, pontos_alta, pontos_baixa, direcao, detalhes
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÃO PARA CALCULAR STATUS E TEMPO DOS ALVOS
+# STATUS E TEMPO DOS ALVOS
 def calcular_status_alvo(df, idx_sinal, timestamp_sinal, preco_alvo, direcao, tempo_atual):
     for i in range(idx_sinal + 1, len(df)):
         if direcao == "LONG":
