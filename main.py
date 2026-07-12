@@ -2,287 +2,794 @@ import streamlit as st
 import ccxt
 import pandas as pd
 import numpy as np
+import time
+import requests
 import math
 from decimal import Decimal
+import re
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import requests
-import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 
 st.set_page_config(
-    page_title="BRICSVAULT PORTAL SMC PRO - Ultimate Edition",
+    page_title="BRICSVAULT PORTAL SMC",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTES
-VELAS_TOTAL = 1000
+# CONSTANTES DE AQUECIMENTO
+VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
-PERIODO_SWING_DEFAULT = 50
-LIMIAR_SINAL_DEFAULT = 9.0
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (multilíngue – 11 idiomas)
-# Inclui as chaves para todos os textos usados na interface.
-# Para não alongar, estou incluindo apenas as chaves principais.
-# (Na prática, você pode expandir com as traduções completas.)
-IDIOMAS = {
+# DICIONÁRIO DE IDIOMAS – 15 línguas (sem timeframes > 1 semana)
+DICIONARIO_LINGUAS = {
     "Português (BR)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Ultimate SMC + Fibonacci",
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
         "config_globais": "⚙️  Configurações Globais",
-        "selecione_cripto": "Selecione a Criptomoeda (/USDT):",
+        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
         "tempo_grafico": "Tempo Gráfico:",
-        "modo_vivo": "Monitoramento em Tempo Real",
-        "intervalo_refresh": "Intervalo (seg):",
-        "preco_spot": "Preço Atual",
+        "modo_vivo": "Ativar Monitoramento em Tempo Real",
+        "intervalo_refresh": "Intervalo de Atualização (Segundos):",
+        "preco_spot": "Preço Spot Real",
         "variacao_24h": "Variação 24h",
         "volume_24h": "Volume 24h (USDT)",
         "market_cap": "Market Cap (USD)",
-        "stop_atr": "Stop ATR",
-        "compra_forte": "🟢  COMPRA FORTE",
-        "venda_forte": "🔴  VENDA FORTE",
-        "neutro": "🟡  NEUTRO",
-        "erro_dados": "Dados históricos insuficientes.",
-        "ctx_desconto": "Zona de Desconto (Fibonacci)",
-        "ctx_premium": "Zona Premium (Fibonacci)",
-        "ctx_neutro": "Zona Neutra (Fair Value)",
-        "ultima_atualizacao": "Última atualização",
+        "stop_atr": "Preço Stop ATR",
+        "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
+        "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
+        "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
+        "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
+        "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
+        "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Última Atualização",
         "proximo_refresh": "Próximo refresh em",
         "segundos": "segundos",
-        "grafico_titulo": "📈  Gráfico Interativo",
+        "pontos_compra": "Pontos de Compra",
+        "pontos_venda": "Pontos de Venda",
+        "grafico_titulo": "📈  Gráfico de Preço Interativo",
         "buscando_marketcap": "🔍  Buscando Market Cap...",
-        "marketcap_nao_disponivel": "Indisponível",
-        "idioma_label": "🌐  Idioma",
-        "idioma_selecao": "Escolha o idioma:",
-        "aviso_aquecimento": "⚠️ Velas de aquecimento usadas",
-        "alvo_swing_title": "🎯 Projeção de Alvos",
-        "direcao_operacao": "Direção",
-        "entrada_projetada": "Entrada Projetada",
-        "stop_projetado": "Stop Loss",
-        "swing_alto": "Swing High",
-        "swing_baixo": "Swing Low",
-        "range_label": "Range",
-        "alvo_prefix": "ALVO {n}",
-        "sem_alvos": "Nenhum alvo projetado.",
-        "contexto_smc": "Contexto SMC",
-        "trend_ascendente": "Alta 🟢",
-        "trend_descendente": "Baixa 🔴",
-        "trend_neutra": "Neutra 🟡",
-        "batido": "✅ Alvo batido",
-        "aguardado": "⏳ Aguardando",
-        "tempo_status": "Tempo: {tempo}",
-        "backtest_titulo": "📊 Assertividade (Backtest Robusto)",
-        "backtest_sem_dados": "⚠️ Dados insuficientes para backtest.",
-        "backtest_sem_sinais": "⚠️ Nenhum sinal forte no histórico.",
-        "backtest_resultados": "**Resultados do Backtest:**",
-        "backtest_sinais": "Sinais Gerados",
-        "backtest_acertos": "Acertos",
-        "backtest_assertividade": "Assertividade",
-        "backtest_lucro_medio": "Lucro Médio (%)",
-        "backtest_risco_medio": "Risco Médio (%)",
-        "backtest_fator_lucro": "Fator de Lucro",
-        "backtest_drawdown": "Drawdown Máximo (%)",
-        "backtest_rr": "R:R Médio",
-        "backtest_curva_capital": "Curva de Capital",
-        "backtest_carregando": "⏳ Calculando...",
-        "fear_greed": "Fear & Greed",
-        "fear_greed_valor": "Índice: {valor}",
-        "orderbook_titulo": "📖 Order Book (Bids/Asks)",
-        "stoch_rsi": "Stochastic RSI",
-        "cmf": "CMF",
-        "wavetrend": "WaveTrend",
-        "alpha_trend": "Alpha Trend",
-        "spike": "Spike Detector",
-        "volume_profile": "Volume Profile (POC/VAH/VAL)",
-        "divergencia": "Divergência MACD-OBV",
+        "marketcap_nao_disponivel": "Não disponível",
+        "idioma_label": "🌐  Idioma / Language",
+        "idioma_selecao": "Selecione o idioma da interface:",
+        "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
         "intervalos": {
-            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m",
-            "30 Minutos": "30m", "1 Hora": "1h", "4 Horas": "4h",
-            "1 Dia": "1d", "1 Semana": "1w"
+            "1 Minuto": "1m",
+            "5 Minutos": "5m",
+            "15 Minutos": "15m",
+            "30 Minutos": "30m",
+            "1 Hora": "1h",
+            "4 Horas": "4h",
+            "1 Dia": "1d",
+            "1 Semana": "1w"
         }
     },
     "English (EN)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Ultimate SMC + Fibonacci",
+        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
         "config_globais": "⚙️  Global Settings",
-        "selecione_cripto": "Select Cryptocurrency (/USDT):",
+        "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
         "tempo_grafico": "Timeframe:",
-        "modo_vivo": "Real-Time Monitoring",
-        "intervalo_refresh": "Interval (sec):",
-        "preco_spot": "Current Price",
-        "variacao_24h": "24h Change",
+        "modo_vivo": "Enable Real-Time Monitoring",
+        "intervalo_refresh": "Refresh Interval (Seconds):",
+        "preco_spot": "Real Spot Price",
+        "variacao_24h": "24h Variation",
         "volume_24h": "24h Volume (USDT)",
         "market_cap": "Market Cap (USD)",
-        "stop_atr": "ATR Stop",
-        "compra_forte": "🟢  STRONG BUY",
-        "venda_forte": "🔴  STRONG SELL",
-        "neutro": "🟡  NEUTRAL",
-        "erro_dados": "Insufficient historical data.",
-        "ctx_desconto": "Fibonacci Discount Zone",
-        "ctx_premium": "Fibonacci Premium Zone",
-        "ctx_neutro": "Neutral Zone (Fair Value)",
+        "stop_atr": "ATR Stop Price",
+        "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
+        "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
+        "neutro": "🟡  NEUTRAL (AWAIT SMC)",
+        "erro_dados": "Insufficient historical data. Try another asset or reduce the Timeframe.",
+        "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
+        "ctx_premium": "Asset in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
+        "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
         "ultima_atualizacao": "Last Update",
         "proximo_refresh": "Next refresh in",
         "segundos": "seconds",
-        "grafico_titulo": "📈  Interactive Chart",
+        "pontos_compra": "Buy Points",
+        "pontos_venda": "Sell Points",
+        "grafico_titulo": "📈  Interactive Price Chart",
         "buscando_marketcap": "🔍  Fetching Market Cap...",
         "marketcap_nao_disponivel": "Not available",
-        "idioma_label": "🌐  Language",
-        "idioma_selecao": "Select Language:",
-        "aviso_aquecimento": "⚠️ Warm-up candles used",
-        "alvo_swing_title": "🎯 Target Projection",
-        "direcao_operacao": "Direction",
-        "entrada_projetada": "Projected Entry",
-        "stop_projetado": "Stop Loss",
-        "swing_alto": "Swing High",
-        "swing_baixo": "Swing Low",
-        "range_label": "Range",
-        "alvo_prefix": "TARGET {n}",
-        "sem_alvos": "No targets projected.",
-        "contexto_smc": "SMC Context",
-        "trend_ascendente": "Uptrend 🟢",
-        "trend_descendente": "Downtrend 🔴",
-        "trend_neutra": "Neutral 🟡",
-        "batido": "✅ Target hit",
-        "aguardado": "⏳ Pending",
-        "tempo_status": "Time: {tempo}",
-        "backtest_titulo": "📊 Assertiveness (Robust Backtest)",
-        "backtest_sem_dados": "⚠️ Insufficient data for backtest.",
-        "backtest_sem_sinais": "⚠️ No strong signals in history.",
-        "backtest_resultados": "**Backtest Results:**",
-        "backtest_sinais": "Signals",
-        "backtest_acertos": "Hits",
-        "backtest_assertividade": "Assertiveness",
-        "backtest_lucro_medio": "Avg Profit (%)",
-        "backtest_risco_medio": "Avg Risk (%)",
-        "backtest_fator_lucro": "Profit Factor",
-        "backtest_drawdown": "Max Drawdown (%)",
-        "backtest_rr": "Avg R:R",
-        "backtest_curva_capital": "Equity Curve",
-        "backtest_carregando": "⏳ Calculating...",
-        "fear_greed": "Fear & Greed",
-        "fear_greed_valor": "Index: {valor}",
-        "orderbook_titulo": "📖 Order Book (Bids/Asks)",
-        "stoch_rsi": "Stochastic RSI",
-        "cmf": "CMF",
-        "wavetrend": "WaveTrend",
-        "alpha_trend": "Alpha Trend",
-        "spike": "Spike Detector",
-        "volume_profile": "Volume Profile (POC/VAH/VAL)",
-        "divergencia": "MACD-OBV Divergence",
+        "idioma_label": "🌐  Language / Idioma",
+        "idioma_selecao": "Select Interface Language:",
+        "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
         "intervalos": {
-            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m",
-            "30 Minutes": "30m", "1 Hour": "1h", "4 Hours": "4h",
-            "1 Day": "1d", "1 Week": "1w"
+            "1 Minute": "1m",
+            "5 Minutes": "5m",
+            "15 Minutes": "15m",
+            "30 Minutes": "30m",
+            "1 Hour": "1h",
+            "4 Hours": "4h",
+            "1 Day": "1d",
+            "1 Week": "1w"
         }
     },
-    # (Demais idiomas – adicione seguindo a mesma estrutura)
+    "Español": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Configuraciones Globales",
+        "selecione_cripto": "Seleccione cualquier criptomoneda (/USDT):",
+        "tempo_grafico": "Marco temporal:",
+        "modo_vivo": "Activar monitoreo en tiempo real",
+        "intervalo_refresh": "Intervalo de actualización (segundos):",
+        "preco_spot": "Precio Spot Real",
+        "variacao_24h": "Variación 24h",
+        "volume_24h": "Volumen 24h (USDT)",
+        "market_cap": "Capitalización (USD)",
+        "stop_atr": "Precio Stop ATR",
+        "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
+        "neutro": "🟡  NEUTRO (ESPERAR SMC)",
+        "erro_dados": "Datos históricos insuficientes. Pruebe con otro activo o reduzca el marco temporal.",
+        "ctx_desconto": "Activo en Zona de Descuento de Fibonacci (Excelente riesgo/retorno para Institucionales).",
+        "ctx_premium": "Activo en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
+        "ctx_neutro": "Precio en zona neutral de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Última actualización",
+        "proximo_refresh": "Próxima actualización en",
+        "segundos": "segundos",
+        "pontos_compra": "Puntos de Compra",
+        "pontos_venda": "Puntos de Venta",
+        "grafico_titulo": "📈  Gráfico de Precio Interactivo",
+        "buscando_marketcap": "🔍  Buscando Capitalización...",
+        "marketcap_nao_disponivel": "No disponible",
+        "idioma_label": "🌐  Idioma / Language",
+        "idioma_selecao": "Seleccione el idioma de la interfaz:",
+        "aviso_aquecimento": "⚠️ Velas de calentamiento usadas en el cálculo",
+        "intervalos": {
+            "1 Minuto": "1m",
+            "5 Minutos": "5m",
+            "15 Minutos": "15m",
+            "30 Minutos": "30m",
+            "1 Hora": "1h",
+            "4 Horas": "4h",
+            "1 Día": "1d",
+            "1 Semana": "1w"
+        }
+    },
+    "Français": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Paramètres globaux",
+        "selecione_cripto": "Sélectionnez une cryptomonnaie (/USDT):",
+        "tempo_grafico": "Période:",
+        "modo_vivo": "Activer la surveillance en temps réel",
+        "intervalo_refresh": "Intervalle de rafraîchissement (secondes):",
+        "preco_spot": "Cours Spot réel",
+        "variacao_24h": "Variation 24h",
+        "volume_24h": "Volume 24h (USDT)",
+        "market_cap": "Capitalisation (USD)",
+        "stop_atr": "Prix Stop ATR",
+        "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
+        "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
+        "neutro": "🟡  NEUTRE (ATTENDRE SMC)",
+        "erro_dados": "Données historiques insuffisantes. Essayez un autre actif ou réduisez la période.",
+        "ctx_desconto": "Actif en zone de discount de Fibonacci (Excellent risque/rendement pour les institutionnels).",
+        "ctx_premium": "Actif en zone premium de Fibonacci (Prix étiré, propice à la prise de bénéfices).",
+        "ctx_neutro": "Prix en zone neutre de Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Dernière mise à jour",
+        "proximo_refresh": "Prochain rafraîchissement dans",
+        "segundos": "secondes",
+        "pontos_compra": "Points d'achat",
+        "pontos_venda": "Points de vente",
+        "grafico_titulo": "📈  Graphique de prix interactif",
+        "buscando_marketcap": "🔍  Recherche de la capitalisation...",
+        "marketcap_nao_disponivel": "Indisponible",
+        "idioma_label": "🌐  Langue / Language",
+        "idioma_selecao": "Sélectionnez la langue de l'interface:",
+        "aviso_aquecimento": "⚠️ Bougies de chauffe utilisées dans le calcul",
+        "intervalos": {
+            "1 Minute": "1m",
+            "5 Minutes": "5m",
+            "15 Minutes": "15m",
+            "30 Minutes": "30m",
+            "1 Heure": "1h",
+            "4 Heures": "4h",
+            "1 Jour": "1d",
+            "1 Semaine": "1w"
+        }
+    },
+    "Deutsch": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Motor",
+        "config_globais": "⚙️  Globale Einstellungen",
+        "selecione_cripto": "Wählen Sie eine Kryptowährung (/USDT):",
+        "tempo_grafico": "Zeitrahmen:",
+        "modo_vivo": "Echtzeit-Überwachung aktivieren",
+        "intervalo_refresh": "Aktualisierungsintervall (Sekunden):",
+        "preco_spot": "Echter Spot-Preis",
+        "variacao_24h": "24h-Veränderung",
+        "volume_24h": "24h-Volumen (USDT)",
+        "market_cap": "Marktkapitalisierung (USD)",
+        "stop_atr": "ATR-Stop-Preis",
+        "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI AUSGERICHTET)",
+        "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI AUSGERICHTET)",
+        "neutro": "🟡  NEUTRAL (SMC ABWARTEN)",
+        "erro_dados": "Unzureichende historische Daten. Versuchen Sie es mit einem anderen Vermögenswert oder reduzieren Sie den Zeitrahmen.",
+        "ctx_desconto": "Vermögenswert in Fibonacci-Discount-Zone (Ausgezeichnetes Risiko/Rendite für Institutionelle).",
+        "ctx_premium": "Vermögenswert in Fibonacci-Premium-Zone (Preis gedehnt, gewinnmitnahme geeignet).",
+        "ctx_neutro": "Preis in neutraler Fibonacci-Zone (Fair Value Zone).",
+        "ultima_atualizacao": "Letzte Aktualisierung",
+        "proximo_refresh": "Nächste Aktualisierung in",
+        "segundos": "Sekunden",
+        "pontos_compra": "Kaufpunkte",
+        "pontos_venda": "Verkaufspunkte",
+        "grafico_titulo": "📈  Interaktives Kursdiagramm",
+        "buscando_marketcap": "🔍  Marktkapitalisierung wird abgerufen...",
+        "marketcap_nao_disponivel": "Nicht verfügbar",
+        "idioma_label": "🌐  Sprache / Language",
+        "idioma_selecao": "Wählen Sie die Oberflächensprache:",
+        "aviso_aquecimento": "⚠️ Aufwärm-Kerzen im Rechengang verwendet",
+        "intervalos": {
+            "1 Minute": "1m",
+            "5 Minuten": "5m",
+            "15 Minuten": "15m",
+            "30 Minuten": "30m",
+            "1 Stunde": "1h",
+            "4 Stunden": "4h",
+            "1 Tag": "1d",
+            "1 Woche": "1w"
+        }
+    },
+    "Italiano": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Motore Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Impostazioni globali",
+        "selecione_cripto": "Seleziona una criptovaluta (/USDT):",
+        "tempo_grafico": "Timeframe:",
+        "modo_vivo": "Attiva monitoraggio in tempo reale",
+        "intervalo_refresh": "Intervallo di aggiornamento (secondi):",
+        "preco_spot": "Prezzo Spot Reale",
+        "variacao_24h": "Variazione 24h",
+        "volume_24h": "Volume 24h (USDT)",
+        "market_cap": "Capitalizzazione (USD)",
+        "stop_atr": "Prezzo Stop ATR",
+        "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI ALLINEATI)",
+        "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI ALLINEATI)",
+        "neutro": "🟡  NEUTRO (ATTENDERE SMC)",
+        "erro_dados": "Dati storici insufficienti. Prova un altro asset o riduci il timeframe.",
+        "ctx_desconto": "Asset in Zona di Sconto di Fibonacci (Ottimo rischio/rendimento per Istituzionali).",
+        "ctx_premium": "Asset in Zona Premium di Fibonacci (Prezzo allungato, adatto per presa di profitto).",
+        "ctx_neutro": "Prezzo in zona neutrale di Fibonacci (Fair Value Zone).",
+        "ultima_atualizacao": "Ultimo aggiornamento",
+        "proximo_refresh": "Prossimo aggiornamento tra",
+        "segundos": "secondi",
+        "pontos_compra": "Punti di Acquisto",
+        "pontos_venda": "Punti di Vendita",
+        "grafico_titulo": "📈  Grafico Prezzo Interattivo",
+        "buscando_marketcap": "🔍  Ricerca Capitalizzazione...",
+        "marketcap_nao_disponivel": "Non disponibile",
+        "idioma_label": "🌐  Lingua / Language",
+        "idioma_selecao": "Seleziona la lingua dell'interfaccia:",
+        "aviso_aquecimento": "⚠️ Candele di riscaldamento utilizzate nel calcolo",
+        "intervalos": {
+            "1 Minuto": "1m",
+            "5 Minuti": "5m",
+            "15 Minuti": "15m",
+            "30 Minuti": "30m",
+            "1 Ora": "1h",
+            "4 Ore": "4h",
+            "1 Giorno": "1d",
+            "1 Settimana": "1w"
+        }
+    },
+    "Русский": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Двигатель Smart Money Concepts (SMC)",
+        "config_globais": "⚙️  Глобальные настройки",
+        "selecione_cripto": "Выберите криптовалюту (/USDT):",
+        "tempo_grafico": "Таймфрейм:",
+        "modo_vivo": "Включить мониторинг в реальном времени",
+        "intervalo_refresh": "Интервал обновления (секунды):",
+        "preco_spot": "Реальная спот-цена",
+        "variacao_24h": "Изменение за 24ч",
+        "volume_24h": "Объем за 24ч (USDT)",
+        "market_cap": "Рыночная капитализация (USD)",
+        "stop_atr": "Цена стоп-лосса ATR",
+        "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
+        "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
+        "neutro": "🟡  НЕЙТРАЛЬНО (ОЖИДАТЬ SMC)",
+        "erro_dados": "Недостаточно исторических данных. Попробуйте другой актив или уменьшите таймфрейм.",
+        "ctx_desconto": "Актив в зоне скидки Фибоначчи (Отличное соотношение риск/доходность для институционалов).",
+        "ctx_premium": "Актив в премиальной зоне Фибоначчи (Цена растянута, подходит для фиксации прибыли).",
+        "ctx_neutro": "Цена в нейтральной зоне Фибоначчи (Fair Value Zone).",
+        "ultima_atualizacao": "Последнее обновление",
+        "proximo_refresh": "Следующее обновление через",
+        "segundos": "секунд",
+        "pontos_compra": "Очки покупки",
+        "pontos_venda": "Очки продажи",
+        "grafico_titulo": "📈  Интерактивный график цены",
+        "buscando_marketcap": "🔍  Получение рыночной капитализации...",
+        "marketcap_nao_disponivel": "Недоступно",
+        "idioma_label": "🌐  Язык / Language",
+        "idioma_selecao": "Выберите язык интерфейса:",
+        "aviso_aquecimento": "⚠️ Используются свечи разогрева в расчетах",
+        "intervalos": {
+            "1 Минута": "1m",
+            "5 Минут": "5m",
+            "15 Минут": "15m",
+            "30 Минут": "30m",
+            "1 Час": "1h",
+            "4 Часа": "4h",
+            "1 День": "1d",
+            "1 Неделя": "1w"
+        }
+    },
+    "日本語": {
+        "titulo": "🏦  BRICSVAULT PORTAL - スマートマネーコンセプト（SMC）エンジン",
+        "config_globais": "⚙️  グローバル設定",
+        "selecione_cripto": "暗号通貨を選択（/USDT）:",
+        "tempo_grafico": "タイムフレーム:",
+        "modo_vivo": "リアルタイム監視を有効にする",
+        "intervalo_refresh": "更新間隔（秒）:",
+        "preco_spot": "実勢スポット価格",
+        "variacao_24h": "24時間変動",
+        "volume_24h": "24時間出来高（USDT）",
+        "market_cap": "時価総額（USD）",
+        "stop_atr": "ATRストップ価格",
+        "compra_forte": "🟢  強い買い（SMC＋フィボナッチ整合）",
+        "venda_forte": "🔴  強い売り（SMC＋フィボナッチ整合）",
+        "neutro": "🟡  中立（SMC待機）",
+        "erro_dados": "履歴データが不十分です。別の資産を選ぶか、タイムフレームを小さくしてください。",
+        "ctx_desconto": "フィボナッチ割引ゾーンにある資産（機関投資家向けの優れたリスク/リターン）。",
+        "ctx_premium": "フィボナッチプレミアムゾーンにある資産（価格が伸びており、利益確定に適している）。",
+        "ctx_neutro": "フィボナッチ中立ゾーンの価格（フェアバリューゾーン）。",
+        "ultima_atualizacao": "最終更新",
+        "proximo_refresh": "次の更新まで",
+        "segundos": "秒",
+        "pontos_compra": "買いポイント",
+        "pontos_venda": "売りポイント",
+        "grafico_titulo": "📈  インタラクティブ価格チャート",
+        "buscando_marketcap": "🔍  時価総額を取得中...",
+        "marketcap_nao_disponivel": "利用不可",
+        "idioma_label": "🌐  言語 / Language",
+        "idioma_selecao": "インターフェース言語を選択:",
+        "aviso_aquecimento": "⚠️ 計算にウォームアップローソクを使用",
+        "intervalos": {
+            "1分": "1m",
+            "5分": "5m",
+            "15分": "15m",
+            "30分": "30m",
+            "1時間": "1h",
+            "4時間": "4h",
+            "1日": "1d",
+            "1週間": "1w"
+        }
+    },
+    "中文 (简体)": {
+        "titulo": "🏦  BRICSVAULT PORTAL - 智能资金概念（SMC）引擎",
+        "config_globais": "⚙️  全局设置",
+        "selecione_cripto": "选择加密货币（/USDT）：",
+        "tempo_grafico": "时间周期：",
+        "modo_vivo": "启用实时监控",
+        "intervalo_refresh": "刷新间隔（秒）：",
+        "preco_spot": "实时现货价格",
+        "variacao_24h": "24小时变化",
+        "volume_24h": "24小时成交量（USDT）",
+        "market_cap": "市值（美元）",
+        "stop_atr": "ATR止损价",
+        "compra_forte": "🟢  强烈买入（SMC + 斐波那契一致）",
+        "venda_forte": "🔴  强烈卖出（SMC + 斐波那契一致）",
+        "neutro": "🟡  中性（等待SMC）",
+        "erro_dados": "历史数据不足。请选择其他资产或缩短时间周期。",
+        "ctx_desconto": "资产处于斐波那契折价区（机构级卓越风险/回报）。",
+        "ctx_premium": "资产处于斐波那契溢价区（价格拉伸，适合获利了结）。",
+        "ctx_neutro": "价格处于斐波那契中性区（公允价值区）。",
+        "ultima_atualizacao": "最后更新",
+        "proximo_refresh": "下次刷新于",
+        "segundos": "秒",
+        "pontos_compra": "买入点",
+        "pontos_venda": "卖出点",
+        "grafico_titulo": "📈  交互式价格图表",
+        "buscando_marketcap": "🔍  正在获取市值...",
+        "marketcap_nao_disponivel": "不可用",
+        "idioma_label": "🌐  语言 / Language",
+        "idioma_selecao": "选择界面语言：",
+        "aviso_aquecimento": "⚠️ 计算中使用预热K线",
+        "intervalos": {
+            "1分钟": "1m",
+            "5分钟": "5m",
+            "15分钟": "15m",
+            "30分钟": "30m",
+            "1小时": "1h",
+            "4小时": "4h",
+            "1天": "1d",
+            "1周": "1w"
+        }
+    },
+    "हिन्दी": {
+        "titulo": "🏦  BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
+        "config_globais": "⚙️  वैश्विक सेटिंग्स",
+        "selecione_cripto": "कोई भी क्रिप्टोकरेंसी चुनें (/USDT):",
+        "tempo_grafico": "टाइमफ्रेम:",
+        "modo_vivo": "रीयल-टाइम मॉनिटरिंग सक्षम करें",
+        "intervalo_refresh": "रिफ्रेश अंतराल (सेकंड):",
+        "preco_spot": "वास्तविक स्पॉट मूल्य",
+        "variacao_24h": "24 घंटे का बदलाव",
+        "volume_24h": "24 घंटे का वॉल्यूम (USDT)",
+        "market_cap": "बाजार पूंजीकरण (USD)",
+        "stop_atr": "ATR स्टॉप मूल्य",
+        "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची संरेखित)",
+        "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
+        "neutro": "🟡  तटस्थ (SMC की प्रतीक्षा करें)",
+        "erro_dados": "अपर्याप्त ऐतिहासिक डेटा। कोई अन्य संपत्ति चुनें या टाइमफ्रेम कम करें।",
+        "ctx_desconto": "संपत्ति फिबोनाची डिस्काउंट ज़ोन में (संस्थागतों के लिए उत्कृष्ट जोखिम/रिटर्न)।",
+        "ctx_premium": "संपत्ति फिबोनाची प्रीमियम ज़ोन में (मूल्य खिंचा हुआ, लाभ-बुकिंग के लिए उपयुक्त)।",
+        "ctx_neutro": "फिबोनाची तटस्थ क्षेत्र में मूल्य (Fair Value Zone)।",
+        "ultima_atualizacao": "अंतिम अद्यतन",
+        "proximo_refresh": "अगला रिफ्रेश",
+        "segundos": "सेकंड",
+        "pontos_compra": "खरीद अंक",
+        "pontos_venda": "बिक्री अंक",
+        "grafico_titulo": "📈  इंटरैक्टिव मूल्य चार्ट",
+        "buscando_marketcap": "🔍  बाजार पूंजीकरण प्राप्त किया जा रहा है...",
+        "marketcap_nao_disponivel": "उपलब्ध नहीं",
+        "idioma_label": "🌐  भाषा / Language",
+        "idioma_selecao": "इंटरफ़ेस भाषा चुनें:",
+        "aviso_aquecimento": "⚠️ गणना में वार्म-अप मोमबत्तियों का उपयोग किया गया",
+        "intervalos": {
+            "1 मिनट": "1m",
+            "5 मिनट": "5m",
+            "15 मिनट": "15m",
+            "30 मिनट": "30m",
+            "1 घंटा": "1h",
+            "4 घंटे": "4h",
+            "1 दिन": "1d",
+            "1 सप्ताह": "1w"
+        }
+    },
+    "বাংলা": {
+        "titulo": "🏦  BRICSVAULT PORTAL - স্মার্ট মানি কনসেপ্টস (SMC) ইঞ্জিন",
+        "config_globais": "⚙️  গ্লোবাল সেটিংস",
+        "selecione_cripto": "যেকোনো ক্রিপ্টোকারেন্সি নির্বাচন করুন (/USDT):",
+        "tempo_grafico": "টাইমফ্রেম:",
+        "modo_vivo": "রিয়েল-টাইম মনিটরিং সক্রিয় করুন",
+        "intervalo_refresh": "রিফ্রেশ বিরতি (সেকেন্ড):",
+        "preco_spot": "প্রকৃত স্পট মূল্য",
+        "variacao_24h": "২৪ ঘণ্টার পরিবর্তন",
+        "volume_24h": "২৪ ঘণ্টার ভলিউম (USDT)",
+        "market_cap": "বাজার মূলধন (USD)",
+        "stop_atr": "ATR স্টপ মূল্য",
+        "compra_forte": "🟢  শক্তিশালী ক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
+        "venda_forte": "🔴  শক্তিশালী বিক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
+        "neutro": "🟡  নিরপেক্ষ (SMC এর জন্য অপেক্ষা করুন)",
+        "erro_dados": "অপর্যাপ্ত ঐতিহাসিক ডেটা। অন্য সম্পদ নির্বাচন করুন বা টাইমফ্রেম কমিয়ে দিন।",
+        "ctx_desconto": "সম্পদ ফিবোনাচি ডিসকাউন্ট জোনে (প্রাতিষ্ঠানিকদের জন্য চমৎকার ঝুঁকি/রিটার্ন)।",
+        "ctx_premium": "সম্পদ ফিবোনাচি প্রিমিয়াম জোনে (মূল্য প্রসারিত, মুনাফা গ্রহণের জন্য উপযুক্ত)।",
+        "ctx_neutro": "ফিবোনাচি নিরপেক্ষ অঞ্চলে মূল্য (Fair Value Zone)।",
+        "ultima_atualizacao": "শেষ আপডেট",
+        "proximo_refresh": "পরবর্তী রিফ্রেশ",
+        "segundos": "সেকেন্ড",
+        "pontos_compra": "ক্রয় পয়েন্ট",
+        "pontos_venda": "বিক্রয় পয়েন্ট",
+        "grafico_titulo": "📈  ইন্টারেক্টিভ মূল্য চার্ট",
+        "buscando_marketcap": "🔍  বাজার মূলধন সংগ্রহ করা হচ্ছে...",
+        "marketcap_nao_disponivel": "উপলব্ধ নয়",
+        "idioma_label": "🌐  ভাষা / Language",
+        "idioma_selecao": "ইন্টারফেস ভাষা নির্বাচন করুন:",
+        "aviso_aquecimento": "⚠️ গণনায় ওয়ার্ম-আপ মোমবাতি ব্যবহার করা হয়েছে",
+        "intervalos": {
+            "১ মিনিট": "1m",
+            "৫ মিনিট": "5m",
+            "১৫ মিনিট": "15m",
+            "৩০ মিনিট": "30m",
+            "১ ঘন্টা": "1h",
+            "৪ ঘন্টা": "4h",
+            "১ দিন": "1d",
+            "১ সপ্তাহ": "1w"
+        }
+    },
+    "العربية": {
+        "titulo": "🏦  BRICSVAULT PORTAL - محرك مفاهيم الأموال الذكية (SMC)",
+        "config_globais": "⚙️  الإعدادات العامة",
+        "selecione_cripto": "اختر أي عملة مشفرة (/USDT):",
+        "tempo_grafico": "الإطار الزمني:",
+        "modo_vivo": "تفعيل المراقبة في الوقت الفعلي",
+        "intervalo_refresh": "فترة التحديث (ثواني):",
+        "preco_spot": "سعر الفوري الحقيقي",
+        "variacao_24h": "تغير 24 ساعة",
+        "volume_24h": "حجم التداول 24 ساعة (USDT)",
+        "market_cap": "القيمة السوقية (USD)",
+        "stop_atr": "سعر وقف ATR",
+        "compra_forte": "🟢  شراء قوي (SMC + فيبوناتشي متوافقة)",
+        "venda_forte": "🔴  بيع قوي (SMC + فيبوناتشي متوافقة)",
+        "neutro": "🟡  محايد (انتظار SMC)",
+        "erro_dados": "بيانات تاريخية غير كافية. اختر أصلًا آخر أو قلل الإطار الزمني.",
+        "ctx_desconto": "الأصل في منطقة خصم فيبوناتشي (مخاطرة/عائد ممتاز للمؤسسات).",
+        "ctx_premium": "الأصل في منطقة فيبوناتشي الممتازة (السعر ممتد، مناسب لجني الأرباح).",
+        "ctx_neutro": "السعر في منطقة فيبوناتشي المحايدة (منطقة القيمة العادلة).",
+        "ultima_atualizacao": "آخر تحديث",
+        "proximo_refresh": "التحديث التالي في",
+        "segundos": "ثواني",
+        "pontos_compra": "نقاط الشراء",
+        "pontos_venda": "نقاط البيع",
+        "grafico_titulo": "📈  مخطط الأسعار التفاعلي",
+        "buscando_marketcap": "🔍  جاري الحصول على القيمة السوقية...",
+        "marketcap_nao_disponivel": "غير متاح",
+        "idioma_label": "🌐  اللغة / Language",
+        "idioma_selecao": "اختر لغة الواجهة:",
+        "aviso_aquecimento": "⚠️ تم استخدام شموع الإحماء في الحساب",
+        "intervalos": {
+            "دقيقة واحدة": "1m",
+            "5 دقائق": "5m",
+            "15 دقيقة": "15m",
+            "30 دقيقة": "30m",
+            "ساعة واحدة": "1h",
+            "4 ساعات": "4h",
+            "يوم واحد": "1d",
+            "أسبوع واحد": "1w"
+        }
+    },
+    "한국어": {
+        "titulo": "🏦  BRICSVAULT PORTAL - 스마트 머니 컨셉(SMC) 엔진",
+        "config_globais": "⚙️  글로벌 설정",
+        "selecione_cripto": "암호화폐 선택 (/USDT):",
+        "tempo_grafico": "시간 프레임:",
+        "modo_vivo": "실시간 모니터링 활성화",
+        "intervalo_refresh": "새로 고침 간격(초):",
+        "preco_spot": "실제 현물 가격",
+        "variacao_24h": "24시간 변동",
+        "volume_24h": "24시간 거래량 (USDT)",
+        "market_cap": "시가총액 (USD)",
+        "stop_atr": "ATR 스탑 가격",
+        "compra_forte": "🟢  강한 매수 (SMC + 피보나치 정렬)",
+        "venda_forte": "🔴  강한 매도 (SMC + 피보나치 정렬)",
+        "neutro": "🟡  중립 (SMC 대기)",
+        "erro_dados": "과거 데이터가 부족합니다. 다른 자산을 선택하거나 시간 프레임을 줄이세요.",
+        "ctx_desconto": "자산이 피보나치 할인 영역에 있습니다 (기관용 우수한 위험/수익률).",
+        "ctx_premium": "자산이 피보나치 프리미엄 영역에 있습니다 (가격이 늘어나 있어 이익 실현에 적합).",
+        "ctx_neutro": "피보나치 중립 영역의 가격 (공정 가치 영역).",
+        "ultima_atualizacao": "마지막 업데이트",
+        "proximo_refresh": "다음 새로 고침까지",
+        "segundos": "초",
+        "pontos_compra": "매수 포인트",
+        "pontos_venda": "매도 포인트",
+        "grafico_titulo": "📈  대화형 가격 차트",
+        "buscando_marketcap": "🔍  시가총액 가져오는 중...",
+        "marketcap_nao_disponivel": "사용 불가",
+        "idioma_label": "🌐  언어 / Language",
+        "idioma_selecao": "인터페이스 언어 선택:",
+        "aviso_aquecimento": "⚠️ 계산에 워밍업 캔들 사용됨",
+        "intervalos": {
+            "1분": "1m",
+            "5분": "5m",
+            "15분": "15m",
+            "30분": "30m",
+            "1시간": "1h",
+            "4시간": "4h",
+            "1일": "1d",
+            "1주": "1w"
+        }
+    },
+    "Tiếng Việt": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Động cơ Khái niệm Tiền thông minh (SMC)",
+        "config_globais": "⚙️  Cài đặt toàn cầu",
+        "selecione_cripto": "Chọn bất kỳ tiền mã hóa nào (/USDT):",
+        "tempo_grafico": "Khung thời gian:",
+        "modo_vivo": "Bật giám sát thời gian thực",
+        "intervalo_refresh": "Khoảng thời gian làm mới (giây):",
+        "preco_spot": "Giá spot thực tế",
+        "variacao_24h": "Biến động 24h",
+        "volume_24h": "Khối lượng 24h (USDT)",
+        "market_cap": "Vốn hóa thị trường (USD)",
+        "stop_atr": "Giá dừng ATR",
+        "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
+        "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
+        "neutro": "🟡  TRUNG LẬP (CHỜ SMC)",
+        "erro_dados": "Dữ liệu lịch sử không đủ. Chọn tài sản khác hoặc giảm khung thời gian.",
+        "ctx_desconto": "Tài sản nằm trong vùng chiết khấu Fibonacci (Tỷ lệ rủi ro/lợi nhuận tuyệt vời cho tổ chức).",
+        "ctx_premium": "Tài sản nằm trong vùng cao cấp Fibonacci (Giá kéo dài, phù hợp để chốt lời).",
+        "ctx_neutro": "Giá nằm trong vùng trung tính Fibonacci (Vùng giá trị hợp lý).",
+        "ultima_atualizacao": "Cập nhật cuối cùng",
+        "proximo_refresh": "Làm mới tiếp theo trong",
+        "segundos": "giây",
+        "pontos_compra": "Điểm mua",
+        "pontos_venda": "Điểm bán",
+        "grafico_titulo": "📈  Biểu đồ giá tương tác",
+        "buscando_marketcap": "🔍  Đang tìm vốn hóa thị trường...",
+        "marketcap_nao_disponivel": "Không có sẵn",
+        "idioma_label": "🌐  Ngôn ngữ / Language",
+        "idioma_selecao": "Chọn ngôn ngữ giao diện:",
+        "aviso_aquecimento": "⚠️ Nến làm nóng được sử dụng trong tính toán",
+        "intervalos": {
+            "1 Phút": "1m",
+            "5 Phút": "5m",
+            "15 Phút": "15m",
+            "30 Phút": "30m",
+            "1 Giờ": "1h",
+            "4 Giờ": "4h",
+            "1 Ngày": "1d",
+            "1 Tuần": "1w"
+        }
+    },
+    "Türkçe": {
+        "titulo": "🏦  BRICSVAULT PORTAL - Akıllı Para Kavramları (SMC) Motoru",
+        "config_globais": "⚙️  Genel Ayarlar",
+        "selecione_cripto": "Herhangi bir Kripto Para Birimi Seçin (/USDT):",
+        "tempo_grafico": "Zaman Dilimi:",
+        "modo_vivo": "Gerçek Zamanlı İzlemeyi Etkinleştir",
+        "intervalo_refresh": "Yenileme Aralığı (Saniye):",
+        "preco_spot": "Gerçek Spot Fiyat",
+        "variacao_24h": "24 Saatlik Değişim",
+        "volume_24h": "24 Saatlik Hacim (USDT)",
+        "market_cap": "Piyasa Değeri (USD)",
+        "stop_atr": "ATR Durdurma Fiyatı",
+        "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI UYUMLU)",
+        "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI UYUMLU)",
+        "neutro": "🟡  NÖTR (SMC BEKLE)",
+        "erro_dados": "Yetersiz geçmiş veri. Başka bir varlık seçin veya Zaman Dilimini azaltın.",
+        "ctx_desconto": "Varlık Fibonacci İskonto Bölgesinde (Kurumlar için mükemmel risk/getiri).",
+        "ctx_premium": "Varlık Fibonacci Prim Bölgesinde (Fiyat gerilmiş, kar alma için uygun).",
+        "ctx_neutro": "Fiyat Fibonacci nötr bölgesinde (Fair Value Zone).",
+        "ultima_atualizacao": "Son Güncelleme",
+        "proximo_refresh": "Sonraki yenileme",
+        "segundos": "saniye",
+        "pontos_compra": "Alım Noktaları",
+        "pontos_venda": "Satım Noktaları",
+        "grafico_titulo": "📈  Etkileşimli Fiyat Grafiği",
+        "buscando_marketcap": "🔍  Piyasa Değeri alınıyor...",
+        "marketcap_nao_disponivel": "Mevcut değil",
+        "idioma_label": "🌐  Dil / Language",
+        "idioma_selecao": "Arayüz dilini seçin:",
+        "aviso_aquecimento": "⚠️ Hesaplamada ısınma mumları kullanıldı",
+        "intervalos": {
+            "1 Dakika": "1m",
+            "5 Dakika": "5m",
+            "15 Dakika": "15m",
+            "30 Dakika": "30m",
+            "1 Saat": "1h",
+            "4 Saat": "4h",
+            "1 Gün": "1d",
+            "1 Hafta": "1w"
+        }
+    }
 }
 
-# Para simplificar, usarei apenas os dois idiomas acima (Português e Inglês) e mencionarei que os outros podem ser adicionados.
-
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÕES AUXILIARES
+# FORMATAÇÃO
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
     if valor <= 0:
-        return f"{prefixo}0.00"
+        return f"{prefixo}{valor}"
     if valor < 0.001:
         d = Decimal(str(valor))
         s = f"{d:.20f}".rstrip("0")
         partes = s.split(".")
         if len(partes) != 2:
-            return f"{prefixo}{valor}"
+            return f"{prefixo}{valor:.8f}"
         parte_decimal = partes[1]
         n_zeros = len(parte_decimal) - len(parte_decimal.lstrip("0"))
         digitos_sig = parte_decimal.lstrip("0")
         return f"{prefixo}0.0{n_zeros}x{digitos_sig}"
     elif valor < 1:
         return f"{prefixo}{valor:.6f}"
+    elif valor < 10:
+        return f"{prefixo}{valor:.4f}"
     else:
         return f"{prefixo}{valor:,.2f}"
 
-def formatar_market_cap(valor):
-    if valor is None: return "$ —"
-    if isinstance(valor, str):
-        try: valor = float(valor.replace('$','').replace(',','').replace(' ',''))
-        except: return "$ —"
-    if valor <= 0: return "$ 0.00"
-    if valor >= 1_000_000_000_000: return f"$ {valor/1_000_000_000_000:.2f}T"
-    if valor >= 1_000_000_000: return f"$ {valor/1_000_000_000:.2f}B"
-    if valor >= 1_000_000: return f"$ {valor/1_000_000:.2f}M"
-    return f"$ {valor:,.2f}"
 
-def formatar_tempo(segundos):
-    if segundos < 0: segundos = 0
-    horas = int(segundos // 3600)
-    minutos = int((segundos % 3600) // 60)
-    seg = int(segundos % 60)
-    partes = []
-    if horas > 0: partes.append(f"{horas}h")
-    if minutos > 0: partes.append(f"{minutos}m")
-    if seg > 0 or not partes: partes.append(f"{seg}s")
-    return " ".join(partes)
+def formatar_market_cap(valor):
+    if valor is None:
+        return "$ —"
+    if isinstance(valor, str):
+        try:
+            valor = float(valor.replace('$', '').replace(',', '').replace(' ', '').strip())
+        except:
+            return "$ —"
+    if valor <= 0:
+        return "$ —"
+    if valor >= 1_000_000_000_000:
+        return f"$ {valor / 1_000_000_000_000:.2f}T"
+    elif valor >= 1_000_000_000:
+        return f"$ {valor / 1_000_000_000:.2f}B"
+    elif valor >= 1_000_000:
+        return f"$ {valor / 1_000_000:.2f}M"
+    else:
+        return "$ —"
+
+
+def formatar_volume_usdt(valor):
+    """Exibe o volume em USDT com duas casas decimais e sufixo."""
+    if valor is None or (isinstance(valor, float) and math.isnan(valor)):
+        return "—"
+    return f"{valor:,.2f} USDT"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES (ccxt síncrono)
+# GERENCIADOR DE EXCHANGES (fallback interno)
 class ExchangeManager:
+    """Gerencia múltiplas exchanges com fallback e cache, sem exposição ao usuário."""
+    
     EXCHANGES = {
-        "Gate.io": {"class": ccxt.gate, "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}}, "separator": "/"},
-        "Kraken": {"class": ccxt.kraken, "config": {"enableRateLimit": True}, "separator": "/"},
-        "MEXC": {"class": ccxt.mexc, "config": {"enableRateLimit": True}, "separator": ""},
-        "KuCoin": {"class": ccxt.kucoin, "config": {"enableRateLimit": True}, "separator": "-"}
+        "Gate.io": {
+            "class": ccxt.gate,
+            "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}},
+            "separator": "/",
+            "has_volume_usd": False
+        },
+        "Kraken": {
+            "class": ccxt.kraken,
+            "config": {"enableRateLimit": True},
+            "separator": "/",
+            "has_volume_usd": False
+        },
+        "MEXC": {
+            "class": ccxt.mexc,
+            "config": {"enableRateLimit": True},
+            "separator": "",
+            "has_volume_usd": True
+        },
+        "KuCoin": {
+            "class": ccxt.kucoin,
+            "config": {"enableRateLimit": True},
+            "separator": "-",
+            "has_volume_usd": True
+        }
     }
+    
+    # Ordem de tentativa (primária primeiro, depois fallbacks)
     PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
-
+    
     def __init__(self):
         self.clients = {}
         self._init_clients()
-
+    
     def _init_clients(self):
         for name, config in self.EXCHANGES.items():
             try:
                 self.clients[name] = config["class"](config["config"])
-            except Exception:
+            except Exception as e:
+                # Não exibe erro para não poluir a interface
                 pass
-
+    
     def get_client(self, exchange_name):
         return self.clients.get(exchange_name)
-
+    
+    def get_separator(self, exchange_name):
+        return self.EXCHANGES.get(exchange_name, {}).get("separator", "/")
+    
     def get_symbol_format(self, exchange_name, symbol):
-        if exchange_name == "MEXC": return symbol.replace("/", "")
-        if exchange_name == "KuCoin": return symbol.replace("/", "-")
-        return symbol
+        sep = self.get_separator(exchange_name)
+        if exchange_name == "MEXC":
+            return symbol.replace("/", "")
+        elif exchange_name == "KuCoin":
+            return symbol.replace("/", "-")
+        else:
+            return symbol
 
-@st.cache_resource
-def get_exchange_manager():
-    return ExchangeManager()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÕES DE MERCADO (com cache)
-@st.cache_data(ttl=3600)
+# FUNÇÕES DE MERCADO COM FALLBACK
+
 def obter_todos_pares_usdt():
-    manager = get_exchange_manager()
+    """Obtém pares USDT da exchange primária (Gate.io) para a lista de seleção."""
+    manager = ExchangeManager()
     client = manager.get_client("Gate.io")
-    if not client: return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+    if not client:
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     try:
         markets = client.load_markets()
-        pairs = [s for s in markets.keys() if s.endswith("/USDT")]
+        pairs = [s for s in markets.keys() if s.endswith('/USDT')]
         return sorted(pairs)
-    except: return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+    except Exception:
+        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-@st.cache_data(ttl=60)
+
 def obter_dados_24h(simbolo):
-    manager = get_exchange_manager()
+    """
+    Tenta obter dados de 24h da exchange primária; se falhar, tenta as fallbacks.
+    Retorna o primeiro resultado bem-sucedido.
+    """
+    manager = ExchangeManager()
     for exchange_name in manager.PRIORITY:
         try:
             client = manager.get_client(exchange_name)
-            if not client: continue
+            if not client:
+                continue
+            # Ajusta o símbolo conforme a exchange
             symbol = manager.get_symbol_format(exchange_name, simbolo)
             ticker = client.fetch_ticker(symbol)
-            if ticker and ticker.get("last") is not None:
+            if ticker:
                 result = {
                     "last": ticker.get("last"),
                     "change": ticker.get("percentage"),
@@ -292,11 +799,73 @@ def obter_dados_24h(simbolo):
                     "bid": ticker.get("bid"),
                     "ask": ticker.get("ask")
                 }
-                if not result["volume"]:
+                # Se o volume for None e a exchange tem volume em USD, tenta direto
+                if not result["volume"] and manager.EXCHANGES[exchange_name].get("has_volume_usd"):
                     result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
-                return result
-        except: continue
+                # Se ainda for None, pula para a próxima exchange
+                if result["last"] is not None:
+                    return result
+        except Exception:
+            continue
     return None
+
+
+def obter_dados_24h_direto(exchange_name, simbolo):
+    """Tenta obter via REST direta (fallback)."""
+    try:
+        if exchange_name == "Gate.io":
+            pair = simbolo.replace("/", "_")
+            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data and len(data) > 0:
+                    d = data[0]
+                    return {
+                        "last": float(d.get("last", 0)),
+                        "change": float(d.get("change_percentage", 0)),
+                        "volume": float(d.get("quote_volume", 0)),
+                        "high": float(d.get("high_24h", 0)),
+                        "low": float(d.get("low_24h", 0)),
+                        "bid": float(d.get("highest_bid", 0)),
+                        "ask": float(d.get("lowest_ask", 0))
+                    }
+        elif exchange_name == "MEXC":
+            pair = simbolo.replace("/", "")
+            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                d = resp.json()
+                return {
+                    "last": float(d.get("lastPrice", 0)),
+                    "change": float(d.get("priceChangePercent", 0)),
+                    "volume": float(d.get("quoteVolume", 0)) or float(d.get("volume", 0)),
+                    "high": float(d.get("highPrice", 0)),
+                    "low": float(d.get("lowPrice", 0)),
+                    "bid": float(d.get("bidPrice", 0)),
+                    "ask": float(d.get("askPrice", 0))
+                }
+        elif exchange_name == "KuCoin":
+            pair = simbolo.replace("/", "-")
+            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                if data.get("code") == "200000":
+                    d = data.get("data", {})
+                    return {
+                        "last": float(d.get("last", 0)),
+                        "change": float(d.get("changeRate", 0)) * 100,
+                        "volume": float(d.get("volValue", 0)),
+                        "high": float(d.get("high", 0)),
+                        "low": float(d.get("low", 0)),
+                        "bid": float(d.get("buy", 0)),
+                        "ask": float(d.get("sell", 0))
+                    }
+    except Exception:
+        pass
+    return None
+
 
 def obter_volume_usd_direto(exchange_name, simbolo):
     try:
@@ -304,7 +873,8 @@ def obter_volume_usd_direto(exchange_name, simbolo):
             pair = simbolo.replace("/", "")
             url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
             resp = requests.get(url, timeout=10)
-            if resp.status_code == 200: return float(resp.json().get("quoteVolume", 0))
+            if resp.status_code == 200:
+                return float(resp.json().get("quoteVolume", 0))
         elif exchange_name == "KuCoin":
             pair = simbolo.replace("/", "-")
             url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
@@ -313,30 +883,13 @@ def obter_volume_usd_direto(exchange_name, simbolo):
                 data = resp.json()
                 if data.get("code") == "200000":
                     return float(data.get("data", {}).get("volValue", 0))
-        elif exchange_name == "Gate.io":
-            pair = simbolo.replace("/", "_")
-            url = f"https://api.gateio.ws/api/v4/spot/tickers?currency_pair={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data and len(data) > 0:
-                    return float(data[0].get("quote_volume", 0))
-    except: pass
+    except:
+        pass
     return None
 
-@st.cache_data(ttl=3600)
-def obter_nome_extenso_cripto(simbolo_id):
-    try:
-        base_currency = simbolo_id.split("/")[0]
-        url = "https://api.gateio.ws/api/v4/spot/currencies"
-        response = requests.get(url, timeout=10)
-        if response.status_code == 200:
-            dados = response.json()
-            for moeda in dados:
-                if moeda.get("currency", "").upper() == base_currency.upper():
-                    return moeda.get("name", base_currency).upper()
-        return base_currency
-    except: return simbolo_id.split("/")[0]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MARKET CAP (CoinGecko + CoinCap)
 
 @st.cache_data(ttl=3600)
 def obter_id_coingecko(simbolo):
@@ -345,33 +898,48 @@ def obter_id_coingecko(simbolo):
         params = {"query": simbolo}
         headers = {"Accept": "application/json"}
         resp = requests.get(url, params=params, headers=headers, timeout=10)
-        if resp.status_code != 200: return None
+        if resp.status_code != 200:
+            return None
         data = resp.json()
         coins = data.get("coins", [])
         simbolo_upper = simbolo.upper()
         for coin in coins:
             if coin.get("symbol", "").upper() == simbolo_upper:
                 return coin.get("id")
-        if coins: return coins[0].get("id")
+        if coins:
+            return coins[0].get("id")
         return None
-    except: return None
+    except Exception:
+        return None
+
 
 @st.cache_data(ttl=600)
 def obter_market_cap_coingecko(simbolo):
     coin_id = obter_id_coingecko(simbolo)
-    if not coin_id: return None
+    if not coin_id:
+        return None
     try:
         url = "https://api.coingecko.com/api/v3/coins/markets"
-        params = {"vs_currency": "usd", "ids": coin_id, "order": "market_cap_desc", "per_page": 1, "page": 1, "sparkline": "false"}
+        params = {
+            "vs_currency": "usd",
+            "ids": coin_id,
+            "order": "market_cap_desc",
+            "per_page": 1,
+            "page": 1,
+            "sparkline": "false"
+        }
         headers = {"Accept": "application/json"}
         resp = requests.get(url, params=params, headers=headers, timeout=10)
         if resp.status_code == 200:
             dados = resp.json()
             if dados and len(dados) > 0:
                 mc = dados[0].get("market_cap")
-                if mc and float(mc) > 1_000_000: return float(mc)
+                if mc and float(mc) > 1_000_000:
+                    return float(mc)
         return None
-    except: return None
+    except Exception:
+        return None
+
 
 @st.cache_data(ttl=600)
 def obter_market_cap_coincap(simbolo):
@@ -382,7 +950,10 @@ def obter_market_cap_coincap(simbolo):
         if resp.status_code == 200:
             data = resp.json()
             mc = data.get("data", {}).get("marketCapUsd")
-            if mc and float(mc) > 1_000_000: return float(mc)
+            if mc:
+                mc_float = float(mc)
+                if mc_float > 1_000_000:
+                    return mc_float
         url_list = "https://api.coincap.io/v2/assets"
         params = {"limit": 2000}
         resp = requests.get(url_list, params=params, timeout=10)
@@ -391,146 +962,29 @@ def obter_market_cap_coincap(simbolo):
             for item in data.get("data", []):
                 if item.get("symbol", "").upper() == simbolo.upper():
                     mc = item.get("marketCapUsd")
-                    if mc and float(mc) > 1_000_000: return float(mc)
+                    if mc:
+                        mc_float = float(mc)
+                        if mc_float > 1_000_000:
+                            return mc_float
         return None
-    except: return None
+    except Exception:
+        return None
 
-@st.cache_data(ttl=600)
+
 def obter_market_cap_robusto(simbolo_id):
-    simbolo = simbolo_id.split("/")[0]
-    mc_cg = obter_market_cap_coingecko(simbolo)
-    mc_cc = obter_market_cap_coincap(simbolo)
-    valores = [v for v in (mc_cg, mc_cc) if v is not None and v > 0]
-    if len(valores) == 2: return sum(valores)/len(valores)
-    if len(valores) == 1: return valores[0]
+    simbolo = simbolo_id.split('/')[0]
+    mc = obter_market_cap_coingecko(simbolo)
+    if mc is not None:
+        return mc
+    mc = obter_market_cap_coincap(simbolo)
+    if mc is not None:
+        return mc
     return None
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FEAR & GREED INDEX
-@st.cache_data(ttl=3600)
-def obter_fear_greed():
-    try:
-        url = "https://api.alternative.me/fng/"
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            if data and "data" in data and len(data["data"]) > 0:
-                valor = data["data"][0].get("value")
-                classificacao = data["data"][0].get("value_classification")
-                return int(valor), classificacao
-        return None, None
-    except: return None, None
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ORDER BOOK SNAPSHOT (básico)
-@st.cache_data(ttl=30)
-def obter_order_book(simbolo, limit=5):
-    manager = get_exchange_manager()
-    for exchange_name in manager.PRIORITY:
-        try:
-            client = manager.get_client(exchange_name)
-            if not client: continue
-            symbol = manager.get_symbol_format(exchange_name, simbolo)
-            orderbook = client.fetch_order_book(symbol, limit=limit)
-            if orderbook and "bids" in orderbook and "asks" in orderbook:
-                return {
-                    "bids": orderbook["bids"][:limit],
-                    "asks": orderbook["asks"][:limit],
-                    "exchange": exchange_name
-                }
-        except: continue
-    return None
+# INDICADORES TÉCNICOS (mesmos do código original)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS OHLCV
-def carregar_dados(simbolo_id, timeframe_selecionado):
-    manager = get_exchange_manager()
-    if 'ohlcv_data' not in st.session_state:
-        st.session_state.ohlcv_data = {}
-    if simbolo_id not in st.session_state.ohlcv_data:
-        st.session_state.ohlcv_data[simbolo_id] = {}
-    if timeframe_selecionado not in st.session_state.ohlcv_data[simbolo_id]:
-        st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado] = pd.DataFrame()
-    df_cached = st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
-    since_timestamp = None
-    if not df_cached.empty:
-        since_timestamp = int(df_cached['timestamp'].iloc[-1]) + 1
-    velas_novas = []
-    for exchange_name in manager.PRIORITY:
-        try:
-            client = manager.get_client(exchange_name)
-            if not client: continue
-            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
-            limit_fetch = VELAS_TOTAL - len(df_cached) if not df_cached.empty else VELAS_TOTAL
-            if limit_fetch <= 0: limit_fetch = 1
-            velas = client.fetch_ohlcv(symbol, timeframe=timeframe_selecionado, limit=limit_fetch, since=since_timestamp)
-            if velas:
-                velas_novas.extend(velas)
-                break
-        except: continue
-    if not velas_novas and df_cached.empty:
-        return None
-    df_novas = pd.DataFrame(velas_novas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    df_novas['time'] = pd.to_datetime(df_novas['timestamp'], unit='ms')
-    df_novas = df_novas.drop_duplicates(subset=['timestamp'])
-    df_combinado = pd.concat([df_cached, df_novas]).drop_duplicates(subset=['timestamp']).sort_values('timestamp').reset_index(drop=True)
-    if len(df_combinado) > VELAS_TOTAL:
-        df_combinado = df_combinado.iloc[-VELAS_TOTAL:].reset_index(drop=True)
-    if len(df_combinado) < PERIODO_AQUECIMENTO + 50:
-        return None
-    # Calcular todos os indicadores
-    df_combinado = calcular_todos_indicadores(df_combinado)
-    st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado] = df_combinado.dropna(subset=['close']).reset_index(drop=True)
-    return st.session_state.ohlcv_data[simbolo_id][timeframe_selecionado]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# CÁLCULO DE TODOS OS INDICADORES (incluindo novos)
-def calcular_todos_indicadores(df):
-    # RSI
-    df['RSI_14'] = calcular_rsi(df['close'], 14)
-    # MACD
-    macd, sinal, hist = calcular_macd(df['close'])
-    df['MACD'] = macd
-    df['MACD_SIGNAL'] = sinal
-    df['MACD_HIST'] = hist
-    # MFI
-    df['MFI'] = calcular_mfi(df, 14)
-    # SSL Hybrid
-    df = calcular_ssl_hybrid(df)
-    # ATR Stop
-    df = calcular_atr_stop(df)
-    # PPO
-    df = calcular_ppo(df)
-    # EMAs
-    df['EMA_20'] = df['close'].ewm(span=20, adjust=False).mean()
-    df['EMA_50'] = df['close'].ewm(span=50, adjust=False).mean()
-    # ATR
-    df['ATR'] = calcular_atr(df, 14)
-    # OBV
-    df['OBV'] = calcular_obv(df)
-    # Stochastic RSI
-    df['STOCH_RSI'] = calcular_stoch_rsi(df['close'], 14)
-    # CMF (Chaikin Money Flow)
-    df['CMF'] = calcular_cmf(df, 20)
-    # WaveTrend
-    df['WAVE_TREND'] = calcular_wavetrend(df)
-    # Alpha Trend (simplificado – baseado em EMA e ATR)
-    df['ALPHA_TREND'] = calcular_alpha_trend(df)
-    # Spike Detector
-    df['SPIKE'] = calcular_spike_detector(df)
-    # Volume Profile (POC, VAH, VAL) – calculado sobre o conjunto total
-    poc, vah, val = calcular_volume_profile(df)
-    df['POC'] = poc
-    df['VAH'] = vah
-    df['VAL'] = val
-    # MACD-OBV divergência (sinalização)
-    df['DIVERGENCIA'] = calcular_divergencia_macd_obv(df)
-    # Preencher valores nulos
-    df = df.ffill().bfill()
-    return df
-
-# ─────────────────────────────────────────────────────────────────────────────
-# IMPLEMENTAÇÃO DOS NOVOS INDICADORES
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
     ganho = delta.clip(lower=0)
@@ -539,12 +993,14 @@ def calcular_rsi(serie, periodo=14):
     ma_perda = perda.ewm(span=periodo, adjust=False).mean()
     return 100 - (100 / (1 + (ma_ganho / ma_perda.replace(0, 1e-10))))
 
+
 def calcular_macd(serie):
     ema12 = serie.ewm(span=12, adjust=False).mean()
     ema26 = serie.ewm(span=26, adjust=False).mean()
     macd = ema12 - ema26
     sinal = macd.ewm(span=9, adjust=False).mean()
     return macd, sinal, macd - sinal
+
 
 def calcular_mfi(df, periodo=14):
     tp = (df['high'] + df['low'] + df['close']) / 3
@@ -555,6 +1011,7 @@ def calcular_mfi(df, periodo=14):
     pos_sum = pos_flow.rolling(window=periodo).sum()
     neg_sum = neg_flow.rolling(window=periodo).sum().replace(0, 1e-10)
     return 100 - (100 / (1 + pos_sum / neg_sum))
+
 
 def calcular_ssl_hybrid(df, periodo=20):
     sma_high = df['high'].rolling(window=periodo).mean()
@@ -578,40 +1035,51 @@ def calcular_ssl_hybrid(df, periodo=20):
     df['SSL_Baseline'] = np.where(ssl_dir == 1, sma_high, sma_low)
     return df
 
+
 def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
+    tr = pd.concat(
+        [high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()],
+        axis=1
+    ).max(axis=1)
     atr = tr.ewm(span=periodo, adjust=False).mean()
     atr_stop = np.zeros(len(df))
     tendencia = np.zeros(len(df), dtype=int)
     close_arr = close.values
     atr_arr = atr.values
+
     if len(df) > 0:
-        atr_stop[0] = close_arr[0] - (atr_arr[0] * multiplicador) if not np.isnan(atr_arr[0]) else close_arr[0]
+        atr_stop[0] = (
+            close_arr[0] - (atr_arr[0] * multiplicador)
+            if not np.isnan(atr_arr[0]) else close_arr[0]
+        )
         tendencia[0] = 1
+
     for i in range(1, len(df)):
         if np.isnan(atr_arr[i]):
-            atr_stop[i] = atr_stop[i-1]
-            tendencia[i] = tendencia[i-1]
+            atr_stop[i] = atr_stop[i - 1]
+            tendencia[i] = tendencia[i - 1]
             continue
-        if tendencia[i-1] == 1:
-            if close_arr[i] < atr_stop[i-1]:
+        if tendencia[i - 1] == 1:
+            if close_arr[i] < atr_stop[i - 1]:
                 tendencia[i] = -1
                 atr_stop[i] = close_arr[i] + (atr_arr[i] * multiplicador)
             else:
                 tendencia[i] = 1
-                atr_stop[i] = max(atr_stop[i-1], close_arr[i] - (atr_arr[i] * multiplicador))
+                atr_stop[i] = max(atr_stop[i - 1], close_arr[i] - (atr_arr[i] * multiplicador))
         else:
-            if close_arr[i] > atr_stop[i-1]:
+            if close_arr[i] > atr_stop[i - 1]:
                 tendencia[i] = 1
                 atr_stop[i] = close_arr[i] - (atr_arr[i] * multiplicador)
             else:
                 tendencia[i] = -1
-                atr_stop[i] = min(atr_stop[i-1], close_arr[i] + (atr_arr[i] * multiplicador))
+                atr_stop[i] = min(atr_stop[i - 1], close_arr[i] + (atr_arr[i] * multiplicador))
+
     df = df.copy()
     df['ATR_Stop'] = atr_stop
     df['atr_dir'] = tendencia
     return df
+
 
 def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
     ema_rapida = df[col].ewm(span=rapido, adjust=False).mean()
@@ -621,746 +1089,329 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
     df['PPO_Signal'] = df['PPO'].ewm(span=sinal_periodo, adjust=False).mean()
     return df
 
-def calcular_atr(df, periodo=14):
-    high, low, close = df['high'], df['low'], df['close']
-    tr = pd.concat([high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()], axis=1).max(axis=1)
-    atr = tr.rolling(window=periodo).mean()
-    return atr
-
-def calcular_obv(df):
-    obv = np.zeros(len(df))
-    for i in range(1, len(df)):
-        if df['close'].iloc[i] > df['close'].iloc[i-1]:
-            obv[i] = obv[i-1] + df['volume'].iloc[i]
-        elif df['close'].iloc[i] < df['close'].iloc[i-1]:
-            obv[i] = obv[i-1] - df['volume'].iloc[i]
-        else:
-            obv[i] = obv[i-1]
-    return obv
-
-def calcular_stoch_rsi(serie, periodo=14):
-    rsi = calcular_rsi(serie, periodo)
-    min_rsi = rsi.rolling(periodo).min()
-    max_rsi = rsi.rolling(periodo).max()
-    stoch = (rsi - min_rsi) / (max_rsi - min_rsi) * 100
-    return stoch
-
-def calcular_cmf(df, periodo=20):
-    mf = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'] + 1e-10)
-    mf_volume = mf * df['volume']
-    cmf = mf_volume.rolling(periodo).sum() / df['volume'].rolling(periodo).sum()
-    return cmf
-
-def calcular_wavetrend(df, periodo=21):
-    # WaveTrend simplificado: média de preços normalizada
-    hlc = (df['high'] + df['low'] + df['close']) / 3
-    esa = hlc.ewm(span=periodo, adjust=False).mean()
-    d = (hlc - esa).abs().ewm(span=periodo, adjust=False).mean()
-    ci = (hlc - esa) / (0.015 * d + 1e-10)
-    return ci
-
-def calcular_alpha_trend(df, periodo=14):
-    # Alpha Trend: diferença normalizada entre EMA curta e longa
-    ema_fast = df['close'].ewm(span=periodo//2, adjust=False).mean()
-    ema_slow = df['close'].ewm(span=periodo, adjust=False).mean()
-    atr = calcular_atr(df, periodo)
-    alpha = (ema_fast - ema_slow) / (atr + 1e-10)
-    return alpha
-
-def calcular_spike_detector(df, threshold=2.0):
-    # Spike: quando amplitude da vela é > threshold * ATR
-    atr = calcular_atr(df, 14)
-    range_ = df['high'] - df['low']
-    spike = (range_ / (atr + 1e-10)) > threshold
-    return spike.astype(int)
-
-def calcular_volume_profile(df, num_bins=50):
-    # Perfil de volume simplificado: POC (Point of Control), VAH, VAL
-    price_min = df['low'].min()
-    price_max = df['high'].max()
-    if price_max <= price_min:
-        return df['close'].iloc[-1], df['close'].iloc[-1], df['close'].iloc[-1]
-    bins = np.linspace(price_min, price_max, num_bins+1)
-    mid_points = (bins[:-1] + bins[1:]) / 2
-    volume_per_bin = np.zeros(num_bins)
-    for i in range(len(df)):
-        row = df.iloc[i]
-        low, high, vol = row['low'], row['high'], row['volume']
-        # Distribuir volume proporcionalmente entre bins
-        if high <= low: continue
-        for j in range(num_bins):
-            bin_low = bins[j]
-            bin_high = bins[j+1]
-            overlap = max(0, min(high, bin_high) - max(low, bin_low))
-            if overlap > 0:
-                frac = overlap / (high - low)
-                volume_per_bin[j] += vol * frac
-    poc_idx = np.argmax(volume_per_bin)
-    poc = mid_points[poc_idx]
-    # VAH e VAL: níveis onde 70% do volume está concentrado (simplificado)
-    sorted_idx = np.argsort(volume_per_bin)[::-1]
-    cum_vol = 0
-    total_vol = sum(volume_per_bin)
-    vah, val = poc, poc
-    for idx in sorted_idx:
-        cum_vol += volume_per_bin[idx]
-        if cum_vol >= 0.85 * total_vol:
-            vah = mid_points[idx]
-            break
-    cum_vol = 0
-    for idx in sorted_idx[::-1]:
-        cum_vol += volume_per_bin[idx]
-        if cum_vol >= 0.85 * total_vol:
-            val = mid_points[idx]
-            break
-    return poc, vah, val
-
-def calcular_divergencia_macd_obv(df):
-    # Divergência MACD-OBV: quando MACD e OBV se movem em direções opostas
-    if len(df) < 10: return 0
-    macd_val = df['MACD'].iloc[-1]
-    obv_val = df['OBV'].iloc[-1]
-    macd_ant = df['MACD'].iloc[-5]
-    obv_ant = df['OBV'].iloc[-5]
-    if (macd_val > macd_ant and obv_val < obv_ant) or (macd_val < macd_ant and obv_val > obv_ant):
-        return 1  # divergência
-    return 0
 
 # ─────────────────────────────────────────────────────────────────────────────
-# SMC E FIBONACCI AVANÇADO
-def identificar_fractais(df, window=2):
-    df['fractal_high'] = df['high'].rolling(window=window*2+1, center=True).apply(
-        lambda x: x.iloc[window] if x.iloc[window] == x.max() else np.nan, raw=False
-    )
-    df['fractal_low'] = df['low'].rolling(window=window*2+1, center=True).apply(
-        lambda x: x.iloc[window] if x.iloc[window] == x.min() else np.nan, raw=False
-    )
-    return df
-
-def identificar_swing_smc_avancado(df, periodo_minimo_swing=10):
-    df_fractal = identificar_fractais(df.copy())
-    swing_highs = df_fractal[df_fractal['fractal_high'].notna()]['high']
-    swing_lows = df_fractal[df_fractal['fractal_low'].notna()]['low']
-    if swing_highs.empty or swing_lows.empty:
-        swing_high = df['high'].rolling(periodo_minimo_swing*2).max().iloc[-1]
-        swing_low = df['low'].rolling(periodo_minimo_swing*2).min().iloc[-1]
-        return {'swing_high': swing_high, 'swing_low': swing_low, 'direction': 'NEUTRO'}
-    last_high_idx = swing_highs.index[-1] if not swing_highs.empty else None
-    last_low_idx = swing_lows.index[-1] if not swing_lows.empty else None
-    if last_high_idx is not None and (last_low_idx is None or last_high_idx > last_low_idx):
-        swing_high = df.loc[last_high_idx, 'high']
-        prev_lows = swing_lows[swing_lows.index < last_high_idx]
-        if not prev_lows.empty: swing_low = prev_lows.iloc[-1]
-        else: swing_low = df['low'].min()
-        direction = 'SHORT'
-    elif last_low_idx is not None and (last_high_idx is None or last_low_idx > last_high_idx):
-        swing_low = df.loc[last_low_idx, 'low']
-        prev_highs = swing_highs[swing_highs.index < last_low_idx]
-        if not prev_highs.empty: swing_high = prev_highs.iloc[-1]
-        else: swing_high = df['high'].max()
-        direction = 'LONG'
-    else:
-        swing_high = df['high'].max()
-        swing_low = df['low'].min()
-        direction = 'NEUTRO'
-    # Confirmação com EMA50
-    ema50 = df['close'].ewm(span=50, adjust=False).mean().iloc[-1]
-    preco_atual = df['close'].iloc[-1]
-    if direction == 'LONG' and preco_atual < ema50: direction = 'NEUTRO'
-    elif direction == 'SHORT' and preco_atual > ema50: direction = 'NEUTRO'
-    return {'swing_high': swing_high, 'swing_low': swing_low, 'direction': direction}
-
-def calcular_retracao_fibonacci_smc(swing_high, swing_low):
-    diff = swing_high - swing_low
+# FIBONACCI
+def calcular_retracao_fibonacci(df_analise):
+    maxima = df_analise['high'].max()
+    minima = df_analise['low'].min()
+    diff = maxima - minima
     return {
-        'fib_0': swing_high,
-        'fib_236': swing_high - 0.236 * diff,
-        'fib_382': swing_high - 0.382 * diff,
-        'fib_500': swing_high - 0.500 * diff,
-        'fib_618': swing_high - 0.618 * diff,
-        'fib_786': swing_high - 0.786 * diff,
-        'fib_100': swing_low
+        'fib_0':   maxima,
+        'fib_236': maxima - 0.236 * diff,
+        'fib_382': maxima - 0.382 * diff,
+        'fib_500': maxima - 0.500 * diff,
+        'fib_618': maxima - 0.618 * diff,
+        'fib_786': maxima - 0.786 * diff,
+        'fib_100': minima
     }
 
-def gerar_sinal_fibonacci(df_completo, direcao_smc, multiplicadores, periodo_swing):
-    swing_info = identificar_swing_smc_avancado(df_completo.iloc[PERIODO_AQUECIMENTO:])
-    if not swing_info or swing_info['direction'] == 'NEUTRO':
-        swing_high = df_completo['high'].max()
-        swing_low = df_completo['low'].min()
-        entrada_projetada = df_completo['close'].iloc[-1]
-        stop_projetado = swing_low if direcao_smc == "LONG" else swing_high
-        return {
-            'direcao': direcao_smc,
-            'entrada': entrada_projetada,
-            'stop': stop_projetado,
-            'swing_high': swing_high,
-            'swing_low': swing_low,
-            'alvos': [],
-            'idx_sinal': len(df_completo) - 1,
-            'timestamp_sinal': df_completo['timestamp'].iloc[-1],
-            'zona': 'Neutra'
-        }
-    swing_high = swing_info['swing_high']
-    swing_low = swing_info['swing_low']
-    fibs = calcular_retracao_fibonacci_smc(swing_high, swing_low)
-    idx_sinal = len(df_completo) - 1
-    timestamp_sinal = df_completo['timestamp'].iloc[-1]
-    preco_atual = df_completo['close'].iloc[-1]
-    if direcao_smc == "LONG":
-        if preco_atual <= fibs['fib_618']:
-            entrada_projetada = fibs['fib_618']; zona = "Desconto (61.8%)"
-        elif preco_atual <= fibs['fib_786']:
-            entrada_projetada = fibs['fib_786']; zona = "Desconto profundo (78.6%)"
-        else:
-            entrada_projetada = fibs['fib_618']; zona = "Desconto (61.8%) - aguardar"
-        stop_projetado = swing_low
-        risco = entrada_projetada - stop_projetado
-        alvos = [entrada_projetada + mult * risco for mult in multiplicadores]
-        alvos_validos = [a for a in alvos if a > entrada_projetada]
-    else:
-        if preco_atual >= fibs['fib_382']:
-            entrada_projetada = fibs['fib_382']; zona = "Premium (38.2%)"
-        elif preco_atual >= fibs['fib_236']:
-            entrada_projetada = fibs['fib_236']; zona = "Premium (23.6%)"
-        else:
-            entrada_projetada = fibs['fib_382']; zona = "Premium (38.2%) - aguardar"
-        stop_projetado = swing_high
-        risco = stop_projetado - entrada_projetada
-        alvos = [entrada_projetada - mult * risco for mult in multiplicadores]
-        alvos_validos = [a for a in alvos if a < entrada_projetada]
-    alvos_finais = alvos_validos[:8]
-    if direcao_smc == "SHORT": alvos_finais.sort(reverse=True)
-    else: alvos_finais.sort()
-    return {
-        "direcao": direcao_smc,
-        "swing_high": swing_high,
-        "swing_low": swing_low,
-        "entrada": entrada_projetada,
-        "stop": stop_projetado,
-        "risco": risco,
-        "alvos": alvos_finais,
-        "multiplicadores": multiplicadores[:len(alvos_finais)],
-        "idx_sinal": idx_sinal,
-        "timestamp_sinal": timestamp_sinal,
-        "zona": zona
-    }
-
-def analisar_confluencia(df_completo, txt, limiar_sinal=9.0, periodo_aquecimento=100):
-    df_analise = df_completo.iloc[periodo_aquecimento:].copy()
-    if df_analise.empty:
-        return txt["neutro"], "#ffcc00", txt["erro_dados"], 0.0, 0.0, "NEUTRO", {}
-    ultimo_reg = df_analise.iloc[-1]
-    preco_atual = ultimo_reg["close"]
-    pontos_alta = 0.0
-    pontos_baixa = 0.0
-    contexto_fib = txt["ctx_neutro"]
-    detalhes = {}
-    # 1. SMC Swing
-    swing_info = identificar_swing_smc_avancado(df_completo)
-    if swing_info and swing_info['direction'] != 'NEUTRO':
-        swing_high = swing_info['swing_high']; swing_low = swing_info['swing_low']
-        fibs = calcular_retracao_fibonacci_smc(swing_high, swing_low)
-        if preco_atual <= fibs['fib_618'] and preco_atual >= fibs['fib_100']:
-            pontos_alta += 3.0; contexto_fib = txt["ctx_desconto"]; detalhes['fib'] = 'desconto'
-        elif preco_atual >= fibs['fib_382'] and preco_atual <= fibs['fib_0']:
-            pontos_baixa += 3.0; contexto_fib = txt["ctx_premium"]; detalhes['fib'] = 'premium'
-        else: detalhes['fib'] = 'neutro'
-        if swing_info['direction'] == 'LONG': pontos_alta += 1.5; detalhes['swing'] = 'LONG'
-        elif swing_info['direction'] == 'SHORT': pontos_baixa += 1.5; detalhes['swing'] = 'SHORT'
-    else: detalhes['swing'] = 'indefinido'
-    # 2. RSI
-    rsi = ultimo_reg["RSI_14"]
-    if not math.isnan(rsi):
-        if rsi < 40: pontos_alta += 2.0; detalhes['rsi'] = f'sobrevendido ({rsi:.1f})'
-        elif rsi > 60: pontos_baixa += 2.0; detalhes['rsi'] = f'sobrecomprado ({rsi:.1f})'
-        else: detalhes['rsi'] = f'neutro ({rsi:.1f})'
-    # 3. Stochastic RSI
-    stoch_rsi = ultimo_reg["STOCH_RSI"]
-    if not math.isnan(stoch_rsi):
-        if stoch_rsi < 20: pontos_alta += 1.5; detalhes['stoch'] = 'sobrevendido'
-        elif stoch_rsi > 80: pontos_baixa += 1.5; detalhes['stoch'] = 'sobrecomprado'
-        else: detalhes['stoch'] = 'neutro'
-    # 4. MACD
-    macd_hist = ultimo_reg["MACD_HIST"]
-    if not math.isnan(macd_hist):
-        if macd_hist > 0: pontos_alta += 1.5; detalhes['macd'] = 'bullish'
-        else: pontos_baixa += 1.5; detalhes['macd'] = 'bearish'
-    # 5. MFI
-    mfi = ultimo_reg["MFI"]
-    if not math.isnan(mfi):
-        if mfi < 40: pontos_alta += 1.0; detalhes['mfi'] = f'sobrevendido ({mfi:.1f})'
-        elif mfi > 60: pontos_baixa += 1.0; detalhes['mfi'] = f'sobrecomprado ({mfi:.1f})'
-        else: detalhes['mfi'] = f'neutro ({mfi:.1f})'
-    # 6. SSL
-    if ultimo_reg["ssl_dir"] == 1: pontos_alta += 1.0; detalhes['ssl'] = 'bullish'
-    else: pontos_baixa += 1.0; detalhes['ssl'] = 'bearish'
-    # 7. ATR Stop
-    if ultimo_reg["atr_dir"] == 1: pontos_alta += 1.0; detalhes['atr'] = 'bullish'
-    else: pontos_baixa += 1.0; detalhes['atr'] = 'bearish'
-    # 8. PPO
-    ppo = ultimo_reg["PPO"]; ppo_sig = ultimo_reg["PPO_Signal"]
-    if not (math.isnan(ppo) or math.isnan(ppo_sig)):
-        if ppo > ppo_sig: pontos_alta += 1.5; detalhes['ppo'] = 'bullish'
-        else: pontos_baixa += 1.5; detalhes['ppo'] = 'bearish'
-    # 9. EMA cruzamento
-    ema20, ema50 = ultimo_reg["EMA_20"], ultimo_reg["EMA_50"]
-    if not (math.isnan(ema20) or math.isnan(ema50)):
-        if ema20 > ema50: pontos_alta += 1.0; detalhes['ema'] = 'bullish'
-        else: pontos_baixa += 1.0; detalhes['ema'] = 'bearish'
-    # 10. CMF
-    cmf = ultimo_reg["CMF"]
-    if not math.isnan(cmf):
-        if cmf > 0: pontos_alta += 0.5; detalhes['cmf'] = 'positivo'
-        else: pontos_baixa += 0.5; detalhes['cmf'] = 'negativo'
-    # 11. WaveTrend
-    wt = ultimo_reg["WAVE_TREND"]
-    if not math.isnan(wt):
-        if wt < -2: pontos_alta += 0.5; detalhes['wt'] = 'sobrevendido'
-        elif wt > 2: pontos_baixa += 0.5; detalhes['wt'] = 'sobrecomprado'
-    # 12. Alpha Trend
-    at = ultimo_reg["ALPHA_TREND"]
-    if not math.isnan(at):
-        if at > 0: pontos_alta += 0.5; detalhes['alpha'] = 'bullish'
-        else: pontos_baixa += 0.5; detalhes['alpha'] = 'bearish'
-    # 13. Spike
-    spike = ultimo_reg["SPIKE"]
-    if not math.isnan(spike):
-        if spike == 1: pontos_alta += 0.5 if direcao == "LONG" else 0
-        detalhes['spike'] = 'detectado' if spike else 'normal'
-    # 14. Divergência MACD-OBV
-    diverg = ultimo_reg["DIVERGENCIA"]
-    if not math.isnan(diverg) and diverg == 1:
-        if pontos_alta > pontos_baixa: pontos_alta += 0.5
-        else: pontos_baixa += 0.5
-        detalhes['div'] = 'divergência'
-    # Decisão
-    direcao = "NEUTRO"
-    if pontos_alta >= limiar_sinal and pontos_alta > pontos_baixa:
-        direcao = "LONG"
-        recomendacao = txt["compra_forte"]
-        cor = "#00cc66"
-        analise = f"{contexto_fib} SMC + Confluência Bullish. Pontos: {pontos_alta:.1f} vs {pontos_baixa:.1f}"
-    elif pontos_baixa >= limiar_sinal and pontos_baixa > pontos_alta:
-        direcao = "SHORT"
-        recomendacao = txt["venda_forte"]
-        cor = "#ff3333"
-        analise = f"{contexto_fib} SMC + Confluência Bearish. Pontos: {pontos_baixa:.1f} vs {pontos_alta:.1f}"
-    else:
-        media_50 = df_analise['close'].rolling(50).mean().iloc[-1]
-        if preco_atual > media_50: direcao = "LONG"
-        else: direcao = "SHORT"
-        recomendacao = txt["neutro"]
-        cor = "#ffcc00"
-        analise = f"{contexto_fib} – Pontuação insuficiente. Long: {pontos_alta:.1f}, Short: {pontos_baixa:.1f}"
-    return recomendacao, cor, analise, pontos_alta, pontos_baixa, direcao, detalhes
 
 # ─────────────────────────────────────────────────────────────────────────────
-# STATUS E TEMPO DOS ALVOS
-def calcular_status_alvo(df, idx_sinal, timestamp_sinal, preco_alvo, direcao, tempo_atual):
-    for i in range(idx_sinal + 1, len(df)):
-        if direcao == "LONG":
-            if df.loc[i, 'high'] >= preco_alvo:
-                delta = (df.loc[i, 'timestamp'] - timestamp_sinal) / 1000.0
-                return "batido", formatar_tempo(delta), df.loc[i, 'timestamp']
-        else:
-            if df.loc[i, 'low'] <= preco_alvo:
-                delta = (df.loc[i, 'timestamp'] - timestamp_sinal) / 1000.0
-                return "batido", formatar_tempo(delta), df.loc[i, 'timestamp']
-    delta = (tempo_atual.timestamp() * 1000 - timestamp_sinal) / 1000.0
-    if delta < 0: delta = 0
-    return "aguardado", formatar_tempo(delta), None
+# CARREGAMENTO DE DADOS COM FALLBACK
 
-# ─────────────────────────────────────────────────────────────────────────────
-# BACKTEST (com os novos indicadores)
-def calcular_assertividade_historica_robusta(df, limiar, periodo_aquecimento, txt,
-                                            periodo_swing, target_profit_pct=1.0,
-                                            look_ahead_candles=5):
-    if len(df) < periodo_aquecimento + periodo_swing + look_ahead_candles:
-        return txt["backtest_sem_dados"], {}
-    acertos = 0; total_sinais = 0; total_lucro_pct = 0.0; total_risco_pct = 0.0
-    operacoes_registradas = []
-    inicio_backtest = periodo_aquecimento + periodo_swing
-    for i in range(inicio_backtest, len(df) - look_ahead_candles):
-        df_contexto = df.iloc[:i+1].copy()
+def carregar_dados(simbolo_id, timeframe_selecionado):
+    """
+    Tenta carregar dados da exchange primária; se falhar, tenta as fallbacks.
+    Retorna o primeiro DataFrame bem-sucedido.
+    """
+    manager = ExchangeManager()
+    for exchange_name in manager.PRIORITY:
         try:
-            _, _, _, pontos_alta, pontos_baixa, direcao, _ = analisar_confluencia(
-                df_contexto, txt, limiar, periodo_aquecimento
+            client = manager.get_client(exchange_name)
+            if not client:
+                continue
+            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
+            velas = client.fetch_ohlcv(
+                symbol,
+                timeframe=timeframe_selecionado,
+                limit=VELAS_TOTAL
             )
-            sinal_fib = gerar_sinal_fibonacci(df_contexto, direcao, [1.0], periodo_swing)
-            entrada = sinal_fib['entrada']
-            stop_loss = sinal_fib['stop']
-            if direcao == "LONG" and pontos_alta >= limiar:
-                total_sinais += 1
-                risco_pct = ((entrada - stop_loss) / entrada) * 100 if entrada > 0 else 0
-                futuros = df.iloc[i+1 : i+1+look_ahead_candles]
-                if not futuros.empty:
-                    alvo_preco = entrada * (1 + target_profit_pct / 100)
-                    if futuros['high'].max() >= alvo_preco:
-                        acertos += 1
-                        lucro_realizado = target_profit_pct
-                    else:
-                        lucro_realizado = ((futuros['close'].iloc[-1] - entrada) / entrada) * 100
-                    total_lucro_pct += lucro_realizado
-                    total_risco_pct += risco_pct
-                    operacoes_registradas.append({
-                        'timestamp': df_contexto['timestamp'].iloc[-1],
-                        'direcao': 'LONG',
-                        'entrada': entrada,
-                        'stop_loss': stop_loss,
-                        'alvo_preco': alvo_preco,
-                        'lucro_realizado_pct': lucro_realizado,
-                        'risco_pct': risco_pct,
-                        'acerto': (futuros['high'].max() >= alvo_preco)
-                    })
-            elif direcao == "SHORT" and pontos_baixa >= limiar:
-                total_sinais += 1
-                risco_pct = ((stop_loss - entrada) / entrada) * 100 if entrada > 0 else 0
-                futuros = df.iloc[i+1 : i+1+look_ahead_candles]
-                if not futuros.empty:
-                    alvo_preco = entrada * (1 - target_profit_pct / 100)
-                    if futuros['low'].min() <= alvo_preco:
-                        acertos += 1
-                        lucro_realizado = target_profit_pct
-                    else:
-                        lucro_realizado = ((entrada - futuros['close'].iloc[-1]) / entrada) * 100
-                    total_lucro_pct += lucro_realizado
-                    total_risco_pct += risco_pct
-                    operacoes_registradas.append({
-                        'timestamp': df_contexto['timestamp'].iloc[-1],
-                        'direcao': 'SHORT',
-                        'entrada': entrada,
-                        'stop_loss': stop_loss,
-                        'alvo_preco': alvo_preco,
-                        'lucro_realizado_pct': lucro_realizado,
-                        'risco_pct': risco_pct,
-                        'acerto': (futuros['low'].min() <= alvo_preco)
-                    })
+            if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
+                df = pd.DataFrame(
+                    velas,
+                    columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
+                )
+                df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+                df['RSI_14'] = calcular_rsi(df['close'], 14)
+                macd, sinal, hist = calcular_macd(df['close'])
+                df['MACD'] = macd
+                df['MACD_SIGNAL'] = sinal
+                df['MACD_HIST'] = hist
+                df['MFI'] = calcular_mfi(df)
+                df = calcular_ssl_hybrid(df)
+                df = calcular_atr_stop(df)
+                df = calcular_ppo(df)
+
+                df['SSL_Baseline'] = df['SSL_Baseline'].ffill()
+                df['ATR_Stop'] = df['ATR_Stop'].replace(0, np.nan).ffill()
+
+                return df.dropna(subset=['close']).reset_index(drop=True)
         except Exception:
             continue
-    if total_sinais == 0:
-        return txt["backtest_sem_sinais"], {}
-    assertividade = (acertos / total_sinais) * 100
-    lucro_medio = total_lucro_pct / total_sinais
-    risco_medio = total_risco_pct / total_sinais
-    ganhos = sum([op['lucro_realizado_pct'] for op in operacoes_registradas if op['lucro_realizado_pct'] > 0])
-    perdas = sum([abs(op['lucro_realizado_pct']) for op in operacoes_registradas if op['lucro_realizado_pct'] < 0])
-    fator_lucro = ganhos / perdas if perdas > 0 else (ganhos / 1e-10 if ganhos > 0 else 0)
-    equity = [100]
-    max_dd = 0
-    peak = 100
-    for op in operacoes_registradas:
-        equity.append(equity[-1] * (1 + op['lucro_realizado_pct'] / 100))
-        if equity[-1] > peak: peak = equity[-1]
-        dd = (peak - equity[-1]) / peak * 100
-        if dd > max_dd: max_dd = dd
-    resultado_str = f"""
-    **{txt['backtest_resultados']}**
-    - {txt['backtest_sinais']}: {total_sinais}
-    - {txt['backtest_acertos']}: {acertos}
-    - {txt['backtest_assertividade']}: {assertividade:.1f}%
-    - {txt['backtest_lucro_medio']}: {lucro_medio:.2f}%
-    - {txt['backtest_risco_medio']}: {risco_medio:.2f}%
-    - {txt['backtest_fator_lucro']}: {fator_lucro:.2f}
-    - {txt['backtest_drawdown']}: {max_dd:.2f}%
-    - {txt['backtest_rr']}: {lucro_medio / risco_medio if risco_medio > 0 else 0:.2f}:1
-    """
-    return resultado_str, {'equity_curve': equity, 'operacoes': operacoes_registradas}
+    return None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICO (com indicadores opcionais)
-def renderizar_grafico_plotly(df_completo, simbolo_id, look_ahead_candles, operacoes_backtest=None):
+# ANÁLISE DE CONFLUÊNCIA SMC
+def analisar_confluencia(df_completo, txt):
+    df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
+
+    if df_analise.empty:
+        return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0
+
+    u = df_analise.iloc[-1]
+    preco_atual = u['close']
+    fib_niveis = calcular_retracao_fibonacci(df_analise)
+
+    pontos_alta = 0.0
+    pontos_baixa = 0.0
+
+    rsi_val = u['RSI_14']
+    if not math.isnan(rsi_val):
+        if rsi_val < 40:
+            pontos_alta += 2
+        elif rsi_val > 60:
+            pontos_baixa += 2
+
+    macd_hist = u['MACD_HIST']
+    if not math.isnan(macd_hist):
+        if macd_hist > 0:
+            pontos_alta += 2
+        else:
+            pontos_baixa += 2
+
+    mfi_val = u['MFI']
+    if not math.isnan(mfi_val):
+        if mfi_val > 50:
+            pontos_alta += 1
+        else:
+            pontos_baixa += 1
+
+    if u['ssl_dir'] == 1:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
+
+    if u['atr_dir'] == 1:
+        pontos_alta += 1
+    else:
+        pontos_baixa += 1
+
+    ppo_val = u['PPO']
+    ppo_sig = u['PPO_Signal']
+    if not (math.isnan(ppo_val) or math.isnan(ppo_sig)):
+        if ppo_val > ppo_sig:
+            pontos_alta += 1.5
+        else:
+            pontos_baixa += 1.5
+
+    if preco_atual >= fib_niveis['fib_382']:
+        pontos_baixa += 2.0
+        contexto_fib = txt["ctx_premium"]
+    elif preco_atual <= fib_niveis['fib_618']:
+        pontos_alta += 2.0
+        contexto_fib = txt["ctx_desconto"]
+    else:
+        contexto_fib = txt["ctx_neutro"]
+
+    if pontos_alta >= 8.5:
+        return (
+            txt["compra_forte"], "#00cc66",
+            f"{contexto_fib} SMC + PPO Order Flow Bullish.",
+            pontos_alta, pontos_baixa
+        )
+    elif pontos_baixa >= 8.5:
+        return (
+            txt["venda_forte"], "#ff3333",
+            f"{contexto_fib} SMC + PPO Order Flow Bearish.",
+            pontos_alta, pontos_baixa
+        )
+    else:
+        return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GRÁFICO
+def renderizar_grafico_plotly(df_completo, simbolo_id):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
+
     fig = go.Figure()
+
     fig.add_trace(go.Candlestick(
         x=df_grafico['time'],
-        open=df_grafico['open'], high=df_grafico['high'], low=df_grafico['low'], close=df_grafico['close'],
+        open=df_grafico['open'],
+        high=df_grafico['high'],
+        low=df_grafico['low'],
+        close=df_grafico['close'],
         name=simbolo_id,
-        increasing_line_color='#10b981', decreasing_line_color='#ef4444',
-        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef4444'
+        increasing_line_color='#10b981',
+        decreasing_line_color='#ef4444',
+        increasing_fillcolor='#10b981',
+        decreasing_fillcolor='#ef4444'
     ))
-    fig.add_trace(go.Scatter(x=df_grafico['time'], y=df_grafico['SSL_Baseline'], mode='lines', name='SMC SSL', line=dict(color='#00aaff', width=2)))
-    fig.add_trace(go.Scatter(x=df_grafico['time'], y=df_grafico['ATR_Stop'], mode='lines', name='ATR Stop', line=dict(color='#ffaa00', width=1, dash='dash')))
-    # Adicionar POC/VAH/VAL como linhas horizontais
-    poc = df_grafico['POC'].iloc[-1] if 'POC' in df_grafico else None
-    vah = df_grafico['VAH'].iloc[-1] if 'VAH' in df_grafico else None
-    val = df_grafico['VAL'].iloc[-1] if 'VAL' in df_grafico else None
-    if poc and not math.isnan(poc):
-        fig.add_hline(y=poc, line_dash="dash", line_color="magenta", annotation_text="POC")
-    if vah and not math.isnan(vah):
-        fig.add_hline(y=vah, line_dash="dot", line_color="cyan", annotation_text="VAH")
-    if val and not math.isnan(val):
-        fig.add_hline(y=val, line_dash="dot", line_color="orange", annotation_text="VAL")
-    # Operações de backtest
-    if operacoes_backtest:
-        diff_mean = df_grafico['time'].diff().mean()
-        delta_tempo = diff_mean * look_ahead_candles if pd.notna(diff_mean) else pd.Timedelta(minutes=5)
-        for op in operacoes_backtest:
-            if op['direcao'] == 'LONG':
-                fig.add_trace(go.Scatter(x=[pd.to_datetime(op['timestamp'], unit='ms')], y=[op['entrada']], mode='markers', marker=dict(symbol='triangle-up', size=10, color='green'), showlegend=False))
-                if op['acerto']:
-                    fig.add_trace(go.Scatter(x=[pd.to_datetime(op['timestamp'], unit='ms') + delta_tempo], y=[op['alvo_preco']], mode='markers', marker=dict(symbol='star', size=10, color='lime'), showlegend=False))
-                fig.add_trace(go.Scatter(x=[pd.to_datetime(op['timestamp'], unit='ms')], y=[op['stop_loss']], mode='markers', marker=dict(symbol='x', size=10, color='red'), showlegend=False))
-            elif op['direcao'] == 'SHORT':
-                fig.add_trace(go.Scatter(x=[pd.to_datetime(op['timestamp'], unit='ms')], y=[op['entrada']], mode='markers', marker=dict(symbol='triangle-down', size=10, color='red'), showlegend=False))
-                if op['acerto']:
-                    fig.add_trace(go.Scatter(x=[pd.to_datetime(op['timestamp'], unit='ms') + delta_tempo], y=[op['alvo_preco']], mode='markers', marker=dict(symbol='star', size=10, color='orange'), showlegend=False))
-                fig.add_trace(go.Scatter(x=[pd.to_datetime(op['timestamp'], unit='ms')], y=[op['stop_loss']], mode='markers', marker=dict(symbol='x', size=10, color='green'), showlegend=False))
+
+    fig.add_trace(go.Scatter(
+        x=df_grafico['time'],
+        y=df_grafico['SSL_Baseline'],
+        mode='lines',
+        name='SMC Baseline (SSL)',
+        line=dict(color='#00aaff', width=2)
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=df_grafico['time'],
+        y=df_grafico['ATR_Stop'],
+        mode='lines',
+        name='ATR Trailing Stop',
+        line=dict(color='#ffaa00', width=1, dash='dash')
+    ))
+
     fig.update_layout(
-        paper_bgcolor='#0b0f19', plot_bgcolor='#0b0f19',
+        paper_bgcolor='#0b0f19',
+        plot_bgcolor='#0b0f19',
         font=dict(color='#e2e8f0'),
-        xaxis=dict(gridcolor='#1e293b', showgrid=True, rangeslider=dict(visible=False)),
+        xaxis=dict(
+            gridcolor='#1e293b',
+            showgrid=True,
+            rangeslider=dict(visible=False)
+        ),
         yaxis=dict(gridcolor='#1e293b', showgrid=True),
         legend=dict(bgcolor='#1e293b', bordercolor='#475569', borderwidth=1),
-        margin=dict(l=10, r=10, t=30, b=10), height=520
+        margin=dict(l=10, r=10, t=30, b=10),
+        height=520
     )
+
     st.plotly_chart(fig, width='stretch')
 
+
 # ─────────────────────────────────────────────────────────────────────────────
-# MAIN (UI)
-def main():
-    # Seleção de idioma
-    idiomas_disponiveis = list(IDIOMAS.keys())
-    st.sidebar.markdown(f"### {IDIOMAS['Português (BR)']['idioma_label']}")
-    idioma_selecionado = st.sidebar.selectbox(
-        IDIOMAS['Português (BR)']['idioma_selecao'],
-        options=idiomas_disponiveis, index=0
-    )
-    txt = IDIOMAS[idioma_selecionado]
+# SIDEBAR
+idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
 
-    # Lista de pares
-    pares = obter_todos_pares_usdt()
-    if not pares:
-        pares = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
+idioma_selecionado = st.sidebar.selectbox(
+    DICIONARIO_LINGUAS['Português (BR)']['idioma_selecao'],
+    options=idiomas_disponiveis,
+    index=0
+)
+txt = DICIONARIO_LINGUAS[idioma_selecionado]
+st.title(txt["titulo"])
+st.sidebar.header(txt["config_globais"])
 
-    simbolo = st.sidebar.selectbox(
-        txt["selecione_cripto"],
-        pares,
-        index=pares.index("SOL/USDT") if "SOL/USDT" in pares else 0
-    )
+# Lista de criptomoedas (obtida da Gate.io, que é a primária)
+lista_criptos = obter_todos_pares_usdt()
+if not lista_criptos:
+    lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
-    nome_extenso = obter_nome_extenso_cripto(simbolo)
-    st.title(f"{txt['titulo']} – {nome_extenso} ({simbolo})")
+simbolo_id = st.sidebar.selectbox(
+    txt["selecione_cripto"],
+    lista_criptos,
+    index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
+)
 
-    st.sidebar.header(txt["config_globais"])
+intervalos = txt["intervalos"]
+intervalo_escolhido = st.sidebar.selectbox(
+    txt["tempo_grafico"],
+    list(intervalos.keys()),
+    index=5  # padrão 4h
+)
+timeframe = intervalos[intervalo_escolhido]
 
-    intervalos = txt["intervalos"]
-    intervalo_escolhido = st.sidebar.selectbox(
-        txt["tempo_grafico"],
-        list(intervalos.keys()),
-        index=5
-    )
-    timeframe = intervalos[intervalo_escolhido]
+st.sidebar.markdown("---")
+modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
+intervalo_refresh = st.sidebar.slider(
+    txt["intervalo_refresh"], min_value=15, max_value=120, value=30
+)
 
-    st.sidebar.markdown("---")
-    modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
-    intervalo_refresh = st.sidebar.slider(
-        txt["intervalo_refresh"], min_value=15, max_value=120, value=30
-    )
 
-    st.sidebar.markdown("### 🎯 Configuração dos Alvos")
-    multiplicadores_padrao = [0.236, 0.5, 0.786, 1.272, 2.236, 3.618, 5.0, 8.0]
-    multiplicadores_str = st.sidebar.text_input(
-        "Multiplicadores (separados por vírgula):",
-        value=",".join(map(str, multiplicadores_padrao))
-    )
-    try:
-        multiplicadores = [float(x.strip()) for x in multiplicadores_str.split(",") if x.strip()]
-        if not multiplicadores: multiplicadores = multiplicadores_padrao
-    except:
-        multiplicadores = multiplicadores_padrao
+# ─────────────────────────────────────────────────────────────────────────────
+# PAINEL PRINCIPAL
+@st.fragment(run_every=intervalo_refresh if modo_vivo else None)
+def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
+    df_dados = carregar_dados(simbolo_id, timeframe)
 
-    periodo_swing = st.sidebar.slider(
-        "Período do Swing (velas):",
-        min_value=10, max_value=200, value=PERIODO_SWING_DEFAULT
-    )
+    if df_dados is None or df_dados.empty:
+        st.warning(txt["erro_dados"])
+        return
 
-    st.sidebar.markdown("### ⚙️ Ajuste de Assertividade")
-    limiar_sinal = st.sidebar.slider(
-        "Nota de corte (padrão 9.0):",
-        min_value=5.0, max_value=12.0, value=LIMIAR_SINAL_DEFAULT, step=0.5
-    )
-    periodo_aquecimento_ui = st.sidebar.slider(
-        "Velas de aquecimento (padrão 100):",
-        min_value=50, max_value=300, value=100, step=10
-    )
+    df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
+    if df_analise.empty:
+        st.warning(txt["erro_dados"])
+        return
 
-    target_profit_pct_ui = st.sidebar.slider(
-        "Alvo de Lucro para Backtest (%):",
-        min_value=0.5, max_value=5.0, value=1.0, step=0.1
-    )
-    look_ahead_candles_ui = st.sidebar.slider(
-        "Velas para Buscar Alvo no Backtest:",
-        min_value=3, max_value=20, value=5, step=1
+    ultimo_reg = df_analise.iloc[-1]
+    preco_atual = ultimo_reg['close']
+
+    # Dados de 24h com fallback automático
+    dados_24h = obter_dados_24h(simbolo_id)
+    variacao_24h = dados_24h.get("change") if dados_24h else 0.0
+    volume_24h = dados_24h.get("volume") if dados_24h else None
+
+    market_cap = obter_market_cap_robusto(simbolo_id)
+
+    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
+        df_dados, txt
     )
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("**BRICSVAULT PORTAL - Ultimate Edition**")
-    st.sidebar.markdown("Versão: 3.0 (Multilíngue + Indicadores Avançados)")
+    ppo_line = ultimo_reg['PPO']
+    ppo_sig = ultimo_reg['PPO_Signal']
+    ppo_txt = (
+        f"PPO: {ppo_line:.3f} / Signal: {ppo_sig:.3f}"
+        if not (math.isnan(ppo_line) or math.isnan(ppo_sig))
+        else "PPO: —"
+    )
 
-    # ─── PAINEL PRINCIPAL ────────────────────────────────────────────────
-    @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
-    def painel_principal_fragment():
-        tempo_atual = datetime.now()
-        df = carregar_dados(simbolo, timeframe)
-        if df is None or df.empty:
-            st.warning(txt["erro_dados"])
-            return
-        df_analise = df.iloc[periodo_aquecimento_ui:]
-        if df_analise.empty:
-            st.warning(txt["erro_dados"])
-            return
-        ultimo_reg = df_analise.iloc[-1]
-        preco_atual = ultimo_reg['close']
+    st.markdown(f"""
+    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
+                border:2px solid {cor_sinal};margin-bottom:20px;">
+    <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
+    <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>{ppo_txt}</b></p>
+    </div>
+    """, unsafe_allow_html=True)
 
-        # ─── Painel Superior de Métricas ──────────────────────────────
-        dados_24h = obter_dados_24h(simbolo)
-        variacao_24h = dados_24h.get("change") if dados_24h else 0.0
-        volume_24h = dados_24h.get("volume") if dados_24h else None
-        market_cap = obter_market_cap_robusto(simbolo)
+    nome_completo_ativo = simbolo_id.split('/')[0]
+    label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
 
-        # Fear & Greed
-        fg_valor, fg_class = obter_fear_greed()
-        if fg_valor is not None:
-            fg_texto = f"{fg_valor} - {fg_class}"
-            fg_cor = "🟢" if fg_valor < 30 else "🟡" if fg_valor < 70 else "🔴"
-        else:
-            fg_texto = "N/A"
-            fg_cor = "⚪"
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    m1.metric(label_preco, formatar_preco(preco_atual))
+    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
+    m3.metric(txt["volume_24h"], formatar_volume_usdt(volume_24h))
 
-        # Order Book snapshot
-        orderbook = obter_order_book(simbolo, limit=3)
-        if orderbook:
-            bid_str = ", ".join([f"{b[0]:.4f} ({b[1]:.0f})" for b in orderbook["bids"]])
-            ask_str = ", ".join([f"{a[0]:.4f} ({a[1]:.0f})" for a in orderbook["asks"]])
-        else:
-            bid_str, ask_str = "N/A", "N/A"
+    if market_cap is not None:
+        m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
+    else:
+        m4.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
 
-        # Métricas em colunas
-        col1, col2, col3, col4, col5 = st.columns(5)
-        with col1:
-            st.metric(txt["preco_spot"], formatar_preco(preco_atual))
-        with col2:
-            if variacao_24h is not None and not math.isnan(variacao_24h):
-                st.metric(txt["variacao_24h"], f"{variacao_24h:.2f}%", delta=f"{variacao_24h:.2f}%")
-            else:
-                st.metric(txt["variacao_24h"], "—")
-        with col3:
-            st.metric(txt["volume_24h"], formatar_market_cap(volume_24h))
-        with col4:
-            st.metric(txt["market_cap"], formatar_market_cap(market_cap))
-        with col5:
-            st.metric(f"{fg_cor} {txt['fear_greed']}", fg_texto)
+    m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
+    m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
 
-        # Indicadores adicionais em colunas menores
-        st.markdown("---")
-        col_indicadores = st.columns(7)
-        with col_indicadores[0]:
-            st.metric(txt["stoch_rsi"], f"{ultimo_reg['STOCH_RSI']:.1f}" if not math.isnan(ultimo_reg['STOCH_RSI']) else "—")
-        with col_indicadores[1]:
-            st.metric(txt["cmf"], f"{ultimo_reg['CMF']:.3f}" if not math.isnan(ultimo_reg['CMF']) else "—")
-        with col_indicadores[2]:
-            wt = ultimo_reg['WAVE_TREND']
-            st.metric(txt["wavetrend"], f"{wt:.2f}" if not math.isnan(wt) else "—")
-        with col_indicadores[3]:
-            alpha = ultimo_reg['ALPHA_TREND']
-            st.metric(txt["alpha_trend"], f"{alpha:.2f}" if not math.isnan(alpha) else "—")
-        with col_indicadores[4]:
-            spike = ultimo_reg['SPIKE']
-            st.metric(txt["spike"], "✅" if spike == 1 else "❌")
-        with col_indicadores[5]:
-            div = ultimo_reg['DIVERGENCIA']
-            st.metric(txt["divergencia"], "⚠️" if div == 1 else "—")
-        with col_indicadores[6]:
-            st.metric("Order Book", f"Bid: {bid_str}\nAsk: {ask_str}")
+    atr_stop_val = ultimo_reg['ATR_Stop']
+    st.markdown(
+        f"**{txt['stop_atr']}:** {formatar_preco(atr_stop_val)}"
+        f"  |  RSI: **{ultimo_reg['RSI_14']:.1f}**"
+        f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
+    )
 
-        # ─── Sinal SMC + Fibonacci ─────────────────────────────────────
-        recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa, direcao, detalhes = analisar_confluencia(
-            df, txt, limiar_sinal, periodo_aquecimento_ui
+    st.markdown(f"### {txt['grafico_titulo']}")
+    renderizar_grafico_plotly(df_dados, simbolo_id)
+
+    hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
+    n_velas = len(df_analise)
+    if modo_vivo:
+        st.info(
+            f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
+            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+            f"Velas analisadas: {n_velas}"
         )
-        sinal_fib = gerar_sinal_fibonacci(df, direcao, multiplicadores, periodo_swing)
+    else:
+        st.info(
+            f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
+            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+            f"Velas analisadas: {n_velas}"
+        )
 
-        st.markdown(f"""
-        <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
-                    border:2px solid {cor_sinal};margin-bottom:20px;">
-        <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
-        <p style="margin:8px 0 0 0;color:#ddd;">{analise}</p>
-        <details style="margin-top:10px; color:#aaa; font-size:0.9em;">
-            <summary>🔍 Ver detalhes da confluência</summary>
-            <pre>{detalhes}</pre>
-        </details>
-        </div>
-        """, unsafe_allow_html=True)
 
-        # ─── Alvos ──────────────────────────────────────────────────────
-        st.markdown(f"### {txt['alvo_swing_title']}")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric(txt["direcao_operacao"], f"{sinal_fib['direcao']} 🚀")
-        col2.metric(txt["entrada_projetada"], formatar_preco(sinal_fib['entrada']))
-        col3.metric(txt["stop_projetado"], formatar_preco(sinal_fib['stop']),
-                    delta=f"{((sinal_fib['stop'] - sinal_fib['entrada'])/sinal_fib['entrada']*100):+.2f}%")
-        col4.metric(txt["swing_alto"], formatar_preco(sinal_fib['swing_high']))
-        col5.metric(txt["swing_baixo"], formatar_preco(sinal_fib['swing_low']))
-        if 'zona' in sinal_fib:
-            st.caption(f"📍 Zona de entrada: {sinal_fib['zona']}")
-
-        if sinal_fib['alvos']:
-            alvos = sinal_fib['alvos']
-            st.markdown("**🎯 Projeção dos Alvos:**")
-            cols_alvos = st.columns(4)
-            for i, preco_alvo in enumerate(alvos):
-                label = txt["alvo_prefix"].format(n=i+1)
-                status, tempo_str, _ = calcular_status_alvo(
-                    df, sinal_fib['idx_sinal'], sinal_fib['timestamp_sinal'],
-                    preco_alvo, sinal_fib['direcao'], tempo_atual
-                )
-                status_label = txt["batido"] if status == "batido" else txt["aguardado"]
-                tempo_texto = txt["tempo_status"].format(tempo=tempo_str)
-                if sinal_fib['direcao'] == "LONG":
-                    pct = ((preco_alvo - sinal_fib['entrada']) / sinal_fib['entrada']) * 100
-                else:
-                    pct = ((sinal_fib['entrada'] - preco_alvo) / sinal_fib['entrada']) * 100
-                with cols_alvos[i % 4]:
-                    st.metric(label, formatar_preco(preco_alvo), delta=f"{pct:+.2f}%")
-                    st.write(f"{status_label} – {tempo_texto}")
-        else:
-            st.info(txt["sem_alvos"])
-
-        st.divider()
-
-        # ─── BACKTEST ──────────────────────────────────────────────────
-        with st.expander(txt["backtest_titulo"], expanded=True):
-            with st.spinner(txt["backtest_carregando"]):
-                resultado_backtest, backtest_metrics = calcular_assertividade_historica_robusta(
-                    df, limiar_sinal, periodo_aquecimento_ui, txt,
-                    periodo_swing=periodo_swing,
-                    target_profit_pct=target_profit_pct_ui,
-                    look_ahead_candles=look_ahead_candles_ui
-                )
-            st.markdown(resultado_backtest)
-            if backtest_metrics and 'equity_curve' in backtest_metrics and len(backtest_metrics['equity_curve']) > 1:
-                st.subheader(txt["backtest_curva_capital"])
-                fig_equity = go.Figure(data=go.Scatter(y=backtest_metrics['equity_curve'], mode='lines'))
-                fig_equity.update_layout(
-                    title=txt["backtest_curva_capital"],
-                    xaxis_title="Número de Operações",
-                    yaxis_title="Capital (%)",
-                    paper_bgcolor='#0b0f19', plot_bgcolor='#0b0f19',
-                    font=dict(color='#e2e8f0')
-                )
-                st.plotly_chart(fig_equity, width='stretch')
-
-        # ─── GRÁFICO ──────────────────────────────────────────────────
-        st.markdown(f"### {txt['grafico_titulo']}")
-        renderizar_grafico_plotly(df, simbolo, look_ahead_candles_ui,
-                                  operacoes_backtest=backtest_metrics.get('operacoes') if backtest_metrics else None)
-
-        # ─── RODAPÉ ────────────────────────────────────────────────────
-        if modo_vivo:
-            st.markdown(f"<p style='text-align: right; color: #94a3b8;'>{txt['ultima_atualizacao']}: {datetime.now().strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
-            st.markdown(f"<p style='text-align: right; color: #94a3b8;'>{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}</p>", unsafe_allow_html=True)
-
-    painel_principal_fragment()
-
-# ─────────────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    main()
+painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
