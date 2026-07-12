@@ -2,14 +2,10 @@ import streamlit as st
 import ccxt
 import pandas as pd
 import numpy as np
-import time
 import requests
 import math
 from decimal import Decimal
-import re
 import plotly.graph_objects as go
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
 
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -19,54 +15,63 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTES DE AQUECIMENTO
+# CONSTANTES
 VELAS_TOTAL = 500
 PERIODO_AQUECIMENTO = 100
+IDIOMA_PADRAO = "Português (BR)"
+TTL_MERCADOS_SEGUNDOS = 3600     # lista de pares muda raramente
+TTL_DADOS_LIVE_SEGUNDOS = 15     # cache curto para não martelar as exchanges
+EXCHANGE_TIMEOUT_MS = 10000
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS – 15 línguas (sem timeframes > 1 semana)
-DICIONARIO_LINGUAS = {
-    "Português (BR)": {
-        "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
-        "config_globais": "⚙️  Configurações Globais",
-        "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
-        "tempo_grafico": "Tempo Gráfico:",
-        "modo_vivo": "Ativar Monitoramento em Tempo Real",
-        "intervalo_refresh": "Intervalo de Atualização (Segundos):",
-        "preco_spot": "Preço Spot Real",
-        "variacao_24h": "Variação 24h",
-        "volume_24h": "Volume 24h (USDT)",
-        "market_cap": "Market Cap (USD)",
-        "stop_atr": "Preço Stop ATR",
-        "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
-        "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
-        "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
-        "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
-        "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
-        "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
-        "ultima_atualizacao": "Última Atualização",
-        "proximo_refresh": "Próximo refresh em",
-        "segundos": "segundos",
-        "pontos_compra": "Pontos de Compra",
-        "pontos_venda": "Pontos de Venda",
-        "grafico_titulo": "📈  Gráfico de Preço Interativo",
-        "buscando_marketcap": "🔍  Buscando Market Cap...",
-        "marketcap_nao_disponivel": "Não disponível",
-        "idioma_label": "🌐  Idioma / Language",
-        "idioma_selecao": "Selecione o idioma da interface:",
-        "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
-        "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minutos": "5m",
-            "15 Minutos": "15m",
-            "30 Minutos": "30m",
-            "1 Hora": "1h",
-            "4 Horas": "4h",
-            "1 Dia": "1d",
-            "1 Semana": "1w"
-        }
-    },
+# DICIONÁRIO DE IDIOMAS – Português (BR) é a base/fallback.
+# Qualquer chave nova adicionada aqui automaticamente "existe" em todos os
+# idiomas (com texto em PT-BR) até que alguém traduza — nenhum idioma quebra
+# por falta de chave. Ver `construir_dicionario_com_fallback()`.
+_TEXTOS_BASE_PT_BR = {
+    "titulo": "🏦  BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
+    "config_globais": "⚙️  Configurações Globais",
+    "selecione_cripto": "Selecione Qualquer Criptomoeda (/USDT):",
+    "tempo_grafico": "Tempo Gráfico:",
+    "modo_vivo": "Ativar Monitoramento em Tempo Real",
+    "intervalo_refresh": "Intervalo de Atualização (Segundos):",
+    "preco_spot": "Preço Spot Real",
+    "variacao_24h": "Variação 24h",
+    "volume_24h": "Volume 24h (USDT)",
+    "market_cap": "Market Cap (USD)",
+    "stop_atr": "Preço Stop ATR",
+    "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
+    "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
+    "neutro": "🟡  NEUTRO (AGUARDAR SMC)",
+    "erro_dados": "Dados históricos insuficientes. Tente outro ativo ou reduza o Tempo Gráfico.",
+    "ctx_desconto": "Ativo em Zona de Desconto de Fibonacci (Excelente risco/retorno para Institucionais).",
+    "ctx_premium": "Ativo em Zona Premium de Fibonacci (Preço esticado, propício para realização de lucro).",
+    "ctx_neutro": "Preço em zona neutra de Fibonacci (Fair Value Zone).",
+    "ultima_atualizacao": "Última Atualização",
+    "proximo_refresh": "Próximo refresh em",
+    "segundos": "segundos",
+    "pontos_compra": "Pontos de Compra",
+    "pontos_venda": "Pontos de Venda",
+    "grafico_titulo": "📈  Gráfico de Preço Interativo",
+    "buscando_marketcap": "🔍  Buscando Market Cap...",
+    "marketcap_nao_disponivel": "Não disponível",
+    "idioma_label": "🌐  Idioma / Language",
+    "idioma_selecao": "Selecione o idioma da interface:",
+    "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
+    "intervalos": {
+        "1 Minuto": "1m",
+        "5 Minutos": "5m",
+        "15 Minutos": "15m",
+        "30 Minutos": "30m",
+        "1 Hora": "1h",
+        "4 Horas": "4h",
+        "1 Dia": "1d",
+        "1 Semana": "1w"
+    }
+}
+
+_TRADUCOES = {
+    IDIOMA_PADRAO: _TEXTOS_BASE_PT_BR,
     "English (EN)": {
         "titulo": "🏦  BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
         "config_globais": "⚙️  Global Settings",
@@ -98,14 +103,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Select Interface Language:",
         "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minutes": "5m",
-            "15 Minutes": "15m",
-            "30 Minutes": "30m",
-            "1 Hour": "1h",
-            "4 Hours": "4h",
-            "1 Day": "1d",
-            "1 Week": "1w"
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m", "30 Minutes": "30m",
+            "1 Hour": "1h", "4 Hours": "4h", "1 Day": "1d", "1 Week": "1w"
         }
     },
     "Español": {
@@ -139,14 +138,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Seleccione el idioma de la interfaz:",
         "aviso_aquecimento": "⚠️ Velas de calentamiento usadas en el cálculo",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minutos": "5m",
-            "15 Minutos": "15m",
-            "30 Minutos": "30m",
-            "1 Hora": "1h",
-            "4 Horas": "4h",
-            "1 Día": "1d",
-            "1 Semana": "1w"
+            "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m", "30 Minutos": "30m",
+            "1 Hora": "1h", "4 Horas": "4h", "1 Día": "1d", "1 Semana": "1w"
         }
     },
     "Français": {
@@ -180,14 +173,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Sélectionnez la langue de l'interface:",
         "aviso_aquecimento": "⚠️ Bougies de chauffe utilisées dans le calcul",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minutes": "5m",
-            "15 Minutes": "15m",
-            "30 Minutes": "30m",
-            "1 Heure": "1h",
-            "4 Heures": "4h",
-            "1 Jour": "1d",
-            "1 Semaine": "1w"
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m", "30 Minutes": "30m",
+            "1 Heure": "1h", "4 Heures": "4h", "1 Jour": "1d", "1 Semaine": "1w"
         }
     },
     "Deutsch": {
@@ -221,14 +208,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Wählen Sie die Oberflächensprache:",
         "aviso_aquecimento": "⚠️ Aufwärm-Kerzen im Rechengang verwendet",
         "intervalos": {
-            "1 Minute": "1m",
-            "5 Minuten": "5m",
-            "15 Minuten": "15m",
-            "30 Minuten": "30m",
-            "1 Stunde": "1h",
-            "4 Stunden": "4h",
-            "1 Tag": "1d",
-            "1 Woche": "1w"
+            "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m", "30 Minuten": "30m",
+            "1 Stunde": "1h", "4 Stunden": "4h", "1 Tag": "1d", "1 Woche": "1w"
         }
     },
     "Italiano": {
@@ -262,14 +243,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Seleziona la lingua dell'interfaccia:",
         "aviso_aquecimento": "⚠️ Candele di riscaldamento utilizzate nel calcolo",
         "intervalos": {
-            "1 Minuto": "1m",
-            "5 Minuti": "5m",
-            "15 Minuti": "15m",
-            "30 Minuti": "30m",
-            "1 Ora": "1h",
-            "4 Ore": "4h",
-            "1 Giorno": "1d",
-            "1 Settimana": "1w"
+            "1 Minuto": "1m", "5 Minuti": "5m", "15 Minuti": "15m", "30 Minuti": "30m",
+            "1 Ora": "1h", "4 Ore": "4h", "1 Giorno": "1d", "1 Settimana": "1w"
         }
     },
     "Русский": {
@@ -303,14 +278,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Выберите язык интерфейса:",
         "aviso_aquecimento": "⚠️ Используются свечи разогрева в расчетах",
         "intervalos": {
-            "1 Минута": "1m",
-            "5 Минут": "5m",
-            "15 Минут": "15m",
-            "30 Минут": "30m",
-            "1 Час": "1h",
-            "4 Часа": "4h",
-            "1 День": "1d",
-            "1 Неделя": "1w"
+            "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m", "30 Минут": "30m",
+            "1 Час": "1h", "4 Часа": "4h", "1 День": "1d", "1 Неделя": "1w"
         }
     },
     "日本語": {
@@ -344,14 +313,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "インターフェース言語を選択:",
         "aviso_aquecimento": "⚠️ 計算にウォームアップローソクを使用",
         "intervalos": {
-            "1分": "1m",
-            "5分": "5m",
-            "15分": "15m",
-            "30分": "30m",
-            "1時間": "1h",
-            "4時間": "4h",
-            "1日": "1d",
-            "1週間": "1w"
+            "1分": "1m", "5分": "5m", "15分": "15m", "30分": "30m",
+            "1時間": "1h", "4時間": "4h", "1日": "1d", "1週間": "1w"
         }
     },
     "中文 (简体)": {
@@ -385,14 +348,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "选择界面语言：",
         "aviso_aquecimento": "⚠️ 计算中使用预热K线",
         "intervalos": {
-            "1分钟": "1m",
-            "5分钟": "5m",
-            "15分钟": "15m",
-            "30分钟": "30m",
-            "1小时": "1h",
-            "4小时": "4h",
-            "1天": "1d",
-            "1周": "1w"
+            "1分钟": "1m", "5分钟": "5m", "15分钟": "15m", "30分钟": "30m",
+            "1小时": "1h", "4小时": "4h", "1天": "1d", "1周": "1w"
         }
     },
     "हिन्दी": {
@@ -426,14 +383,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "इंटरफ़ेस भाषा चुनें:",
         "aviso_aquecimento": "⚠️ गणना में वार्म-अप मोमबत्तियों का उपयोग किया गया",
         "intervalos": {
-            "1 मिनट": "1m",
-            "5 मिनट": "5m",
-            "15 मिनट": "15m",
-            "30 मिनट": "30m",
-            "1 घंटा": "1h",
-            "4 घंटे": "4h",
-            "1 दिन": "1d",
-            "1 सप्ताह": "1w"
+            "1 मिनट": "1m", "5 मिनट": "5m", "15 मिनट": "15m", "30 मिनट": "30m",
+            "1 घंटा": "1h", "4 घंटे": "4h", "1 दिन": "1d", "1 सप्ताह": "1w"
         }
     },
     "বাংলা": {
@@ -467,14 +418,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "ইন্টারফেস ভাষা নির্বাচন করুন:",
         "aviso_aquecimento": "⚠️ গণনায় ওয়ার্ম-আপ মোমবাতি ব্যবহার করা হয়েছে",
         "intervalos": {
-            "১ মিনিট": "1m",
-            "৫ মিনিট": "5m",
-            "১৫ মিনিট": "15m",
-            "৩০ মিনিট": "30m",
-            "১ ঘন্টা": "1h",
-            "৪ ঘন্টা": "4h",
-            "১ দিন": "1d",
-            "১ সপ্তাহ": "1w"
+            "১ মিনিট": "1m", "৫ মিনিট": "5m", "১৫ মিনিট": "15m", "৩০ মিনিট": "30m",
+            "১ ঘন্টা": "1h", "৪ ঘন্টা": "4h", "১ দিন": "1d", "১ সপ্তাহ": "1w"
         }
     },
     "العربية": {
@@ -508,14 +453,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "اختر لغة الواجهة:",
         "aviso_aquecimento": "⚠️ تم استخدام شموع الإحماء في الحساب",
         "intervalos": {
-            "دقيقة واحدة": "1m",
-            "5 دقائق": "5m",
-            "15 دقيقة": "15m",
-            "30 دقيقة": "30m",
-            "ساعة واحدة": "1h",
-            "4 ساعات": "4h",
-            "يوم واحد": "1d",
-            "أسبوع واحد": "1w"
+            "دقيقة واحدة": "1m", "5 دقائق": "5m", "15 دقيقة": "15m", "30 دقيقة": "30m",
+            "ساعة واحدة": "1h", "4 ساعات": "4h", "يوم واحد": "1d", "أسبوع واحد": "1w"
         }
     },
     "한국어": {
@@ -549,14 +488,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "인터페이스 언어 선택:",
         "aviso_aquecimento": "⚠️ 계산에 워밍업 캔들 사용됨",
         "intervalos": {
-            "1분": "1m",
-            "5분": "5m",
-            "15분": "15m",
-            "30분": "30m",
-            "1시간": "1h",
-            "4시간": "4h",
-            "1일": "1d",
-            "1주": "1w"
+            "1분": "1m", "5분": "5m", "15분": "15m", "30분": "30m",
+            "1시간": "1h", "4시간": "4h", "1일": "1d", "1주": "1w"
         }
     },
     "Tiếng Việt": {
@@ -590,14 +523,8 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Chọn ngôn ngữ giao diện:",
         "aviso_aquecimento": "⚠️ Nến làm nóng được sử dụng trong tính toán",
         "intervalos": {
-            "1 Phút": "1m",
-            "5 Phút": "5m",
-            "15 Phút": "15m",
-            "30 Phút": "30m",
-            "1 Giờ": "1h",
-            "4 Giờ": "4h",
-            "1 Ngày": "1d",
-            "1 Tuần": "1w"
+            "1 Phút": "1m", "5 Phút": "5m", "15 Phút": "15m", "30 Phút": "30m",
+            "1 Giờ": "1h", "4 Giờ": "4h", "1 Ngày": "1d", "1 Tuần": "1w"
         }
     },
     "Türkçe": {
@@ -631,25 +558,41 @@ DICIONARIO_LINGUAS = {
         "idioma_selecao": "Arayüz dilini seçin:",
         "aviso_aquecimento": "⚠️ Hesaplamada ısınma mumları kullanıldı",
         "intervalos": {
-            "1 Dakika": "1m",
-            "5 Dakika": "5m",
-            "15 Dakika": "15m",
-            "30 Dakika": "30m",
-            "1 Saat": "1h",
-            "4 Saat": "4h",
-            "1 Gün": "1d",
-            "1 Hafta": "1w"
+            "1 Dakika": "1m", "5 Dakika": "5m", "15 Dakika": "15m", "30 Dakika": "30m",
+            "1 Saat": "1h", "4 Saat": "4h", "1 Gün": "1d", "1 Hafta": "1w"
         }
     }
 }
+
+
+def construir_dicionario_com_fallback(traducoes, idioma_padrao=IDIOMA_PADRAO):
+    """
+    Monta o dicionário final de idiomas garantindo que TODO idioma tenha
+    TODAS as chaves. Se uma chave nova for adicionada só ao PT-BR no futuro
+    e alguém esquecer de traduzir, o app não quebra: cai no texto em
+    Português (BR) em vez de lançar KeyError.
+    """
+    base = traducoes[idioma_padrao]
+    dicionario_final = {}
+    for idioma, valores in traducoes.items():
+        completo = dict(base)
+        completo.update(valores)
+        dicionario_final[idioma] = completo
+    return dicionario_final
+
+
+DICIONARIO_LINGUAS = construir_dicionario_com_fallback(_TRADUCOES)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FORMATAÇÃO
 def formatar_preco(valor, prefixo="$ "):
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}—"
-    if valor <= 0:
-        return f"{prefixo}{valor}"
+    if valor == 0:
+        return f"{prefixo}0.00"
+    if valor < 0:
+        return f"-{formatar_preco(abs(valor), prefixo)}"
     if valor < 0.001:
         d = Decimal(str(valor))
         s = f"{d:.20f}".rstrip("0")
@@ -674,7 +617,7 @@ def formatar_market_cap(valor):
     if isinstance(valor, str):
         try:
             valor = float(valor.replace('$', '').replace(',', '').replace(' ', '').strip())
-        except:
+        except ValueError:
             return "$ —"
     if valor <= 0:
         return "$ —"
@@ -698,120 +641,88 @@ def formatar_volume_usdt(valor):
 # ─────────────────────────────────────────────────────────────────────────────
 # GERENCIADOR DE EXCHANGES (fallback interno)
 class ExchangeManager:
-    """Gerencia múltiplas exchanges com fallback e cache, sem exposição ao usuário."""
-    
+    """Gerencia múltiplas exchanges com fallback, sem exposição ao usuário.
+
+    IMPORTANTE: para chamadas via ccxt (fetch_ticker/fetch_ohlcv), o símbolo
+    deve ser mantido no formato unificado do ccxt (ex.: "BTC/USDT") em
+    QUALQUER exchange — é o próprio ccxt que faz o mapeamento interno para o
+    formato nativo de cada corretora. Reformatar o símbolo antes de passá-lo
+    ao ccxt (como "BTCUSDT" ou "BTC-USDT") faz as chamadas falharem
+    silenciosamente. O formato nativo só é necessário nas chamadas REST
+    diretas (usadas como último fallback, fora do ccxt).
+    """
+
     EXCHANGES = {
         "Gate.io": {
             "class": ccxt.gate,
-            "config": {"enableRateLimit": True, "options": {"defaultType": "spot"}},
-            "separator": "/",
-            "has_volume_usd": False
+            "config": {"enableRateLimit": True, "timeout": EXCHANGE_TIMEOUT_MS,
+                       "options": {"defaultType": "spot"}},
         },
         "Kraken": {
             "class": ccxt.kraken,
-            "config": {"enableRateLimit": True},
-            "separator": "/",
-            "has_volume_usd": False
+            "config": {"enableRateLimit": True, "timeout": EXCHANGE_TIMEOUT_MS},
         },
         "MEXC": {
             "class": ccxt.mexc,
-            "config": {"enableRateLimit": True},
-            "separator": "",
-            "has_volume_usd": True
+            "config": {"enableRateLimit": True, "timeout": EXCHANGE_TIMEOUT_MS},
         },
         "KuCoin": {
             "class": ccxt.kucoin,
-            "config": {"enableRateLimit": True},
-            "separator": "-",
-            "has_volume_usd": True
+            "config": {"enableRateLimit": True, "timeout": EXCHANGE_TIMEOUT_MS},
         }
     }
-    
+
     # Ordem de tentativa (primária primeiro, depois fallbacks)
     PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
-    
+
     def __init__(self):
         self.clients = {}
         self._init_clients()
-    
+
     def _init_clients(self):
         for name, config in self.EXCHANGES.items():
             try:
                 self.clients[name] = config["class"](config["config"])
-            except Exception as e:
-                # Não exibe erro para não poluir a interface
+            except Exception:
+                # Não exibe erro para não poluir a interface; exchange fica
+                # simplesmente indisponível e o fallback segue para a próxima
                 pass
-    
+
     def get_client(self, exchange_name):
         return self.clients.get(exchange_name)
-    
-    def get_separator(self, exchange_name):
-        return self.EXCHANGES.get(exchange_name, {}).get("separator", "/")
-    
-    def get_symbol_format(self, exchange_name, symbol):
-        sep = self.get_separator(exchange_name)
-        if exchange_name == "MEXC":
-            return symbol.replace("/", "")
-        elif exchange_name == "KuCoin":
-            return symbol.replace("/", "-")
-        else:
-            return symbol
+
+
+@st.cache_resource
+def obter_exchange_manager():
+    """Singleton cacheado pelo Streamlit — evita recriar clientes ccxt
+    (e reabrir conexões) a cada rerun/callback."""
+    return ExchangeManager()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNÇÕES DE MERCADO COM FALLBACK
 
+@st.cache_data(ttl=TTL_MERCADOS_SEGUNDOS)
 def obter_todos_pares_usdt():
-    """Obtém pares USDT da exchange primária (Gate.io) para a lista de seleção."""
-    manager = ExchangeManager()
+    """Obtém pares USDT da exchange primária (Gate.io) para a lista de
+    seleção. Cacheado por 1h: a lista de pares listados muda pouquíssimo,
+    então não há motivo para recarregar o mercado inteiro a cada rerun."""
+    manager = obter_exchange_manager()
     client = manager.get_client("Gate.io")
     if not client:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     try:
         markets = client.load_markets()
         pairs = [s for s in markets.keys() if s.endswith('/USDT')]
-        return sorted(pairs)
+        return sorted(pairs) if pairs else ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     except Exception:
         return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
 
-def obter_dados_24h(simbolo):
-    """
-    Tenta obter dados de 24h da exchange primária; se falhar, tenta as fallbacks.
-    Retorna o primeiro resultado bem-sucedido.
-    """
-    manager = ExchangeManager()
-    for exchange_name in manager.PRIORITY:
-        try:
-            client = manager.get_client(exchange_name)
-            if not client:
-                continue
-            # Ajusta o símbolo conforme a exchange
-            symbol = manager.get_symbol_format(exchange_name, simbolo)
-            ticker = client.fetch_ticker(symbol)
-            if ticker:
-                result = {
-                    "last": ticker.get("last"),
-                    "change": ticker.get("percentage"),
-                    "volume": ticker.get("quoteVolume") or ticker.get("baseVolume"),
-                    "high": ticker.get("high"),
-                    "low": ticker.get("low"),
-                    "bid": ticker.get("bid"),
-                    "ask": ticker.get("ask")
-                }
-                # Se o volume for None e a exchange tem volume em USD, tenta direto
-                if not result["volume"] and manager.EXCHANGES[exchange_name].get("has_volume_usd"):
-                    result["volume"] = obter_volume_usd_direto(exchange_name, simbolo)
-                # Se ainda for None, pula para a próxima exchange
-                if result["last"] is not None:
-                    return result
-        except Exception:
-            continue
-    return None
-
-
-def obter_dados_24h_direto(exchange_name, simbolo):
-    """Tenta obter via REST direta (fallback)."""
+def _obter_dados_24h_rest_direto(exchange_name, simbolo):
+    """Fallback via REST direta, usado apenas quando TODAS as tentativas via
+    ccxt falharam. Aqui sim o símbolo precisa do formato nativo da corretora,
+    pois estamos batendo direto no endpoint HTTP, sem passar pelo ccxt."""
     try:
         if exchange_name == "Gate.io":
             pair = simbolo.replace("/", "_")
@@ -819,7 +730,7 @@ def obter_dados_24h_direto(exchange_name, simbolo):
             resp = requests.get(url, timeout=10)
             if resp.status_code == 200:
                 data = resp.json()
-                if data and len(data) > 0:
+                if data:
                     d = data[0]
                     return {
                         "last": float(d.get("last", 0)),
@@ -862,29 +773,74 @@ def obter_dados_24h_direto(exchange_name, simbolo):
                         "bid": float(d.get("buy", 0)),
                         "ask": float(d.get("sell", 0))
                     }
+        elif exchange_name == "Kraken":
+            # Kraken usa XBT/USD internamente para BTC; ccxt normalmente já
+            # resolve isso, então este fallback direto é melhor-esforço.
+            pair = simbolo.replace("/", "")
+            url = f"https://api.kraken.com/0/public/Ticker?pair={pair}"
+            resp = requests.get(url, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json().get("result", {})
+                if data:
+                    d = list(data.values())[0]
+                    last = float(d["c"][0])
+                    open_ = float(d["o"])
+                    change = ((last - open_) / open_ * 100) if open_ else 0.0
+                    return {
+                        "last": last,
+                        "change": change,
+                        "volume": float(d["v"][1]),
+                        "high": float(d["h"][1]),
+                        "low": float(d["l"][1]),
+                        "bid": float(d["b"][0]),
+                        "ask": float(d["a"][0])
+                    }
     except Exception:
         pass
     return None
 
 
-def obter_volume_usd_direto(exchange_name, simbolo):
-    try:
-        if exchange_name == "MEXC":
-            pair = simbolo.replace("/", "")
-            url = f"https://api.mexc.com/api/v3/ticker/24hr?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                return float(resp.json().get("quoteVolume", 0))
-        elif exchange_name == "KuCoin":
-            pair = simbolo.replace("/", "-")
-            url = f"https://api.kucoin.com/api/v1/market/stats?symbol={pair}"
-            resp = requests.get(url, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                if data.get("code") == "200000":
-                    return float(data.get("data", {}).get("volValue", 0))
-    except:
-        pass
+@st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS)
+def obter_dados_24h(simbolo):
+    """
+    Tenta obter dados de 24h via ccxt na exchange primária; se falhar,
+    tenta as fallbacks via ccxt e, por fim, via REST direta.
+    Cache curto (TTL_DADOS_LIVE_SEGUNDOS) evita martelar as APIs em reruns
+    do Streamlit não relacionados (ex.: mudar outro widget da sidebar).
+    """
+    manager = obter_exchange_manager()
+
+    # 1ª tentativa: ccxt, mantendo o símbolo no formato unificado
+    for exchange_name in manager.PRIORITY:
+        try:
+            client = manager.get_client(exchange_name)
+            if not client:
+                continue
+            ticker = client.fetch_ticker(simbolo)
+            if ticker and ticker.get("last") is not None:
+                volume = ticker.get("quoteVolume") or ticker.get("baseVolume")
+                if volume is None:
+                    rest = _obter_dados_24h_rest_direto(exchange_name, simbolo)
+                    if rest:
+                        volume = rest.get("volume")
+                return {
+                    "last": ticker.get("last"),
+                    "change": ticker.get("percentage"),
+                    "volume": volume,
+                    "high": ticker.get("high"),
+                    "low": ticker.get("low"),
+                    "bid": ticker.get("bid"),
+                    "ask": ticker.get("ask")
+                }
+        except Exception:
+            continue
+
+    # 2ª tentativa: REST direta em todas as exchanges, como último recurso
+    for exchange_name in manager.PRIORITY:
+        resultado = _obter_dados_24h_rest_direto(exchange_name, simbolo)
+        if resultado and resultado.get("last"):
+            return resultado
+
     return None
 
 
@@ -932,7 +888,7 @@ def obter_market_cap_coingecko(simbolo):
         resp = requests.get(url, params=params, headers=headers, timeout=10)
         if resp.status_code == 200:
             dados = resp.json()
-            if dados and len(dados) > 0:
+            if dados:
                 mc = dados[0].get("market_cap")
                 if mc and float(mc) > 1_000_000:
                     return float(mc)
@@ -972,18 +928,16 @@ def obter_market_cap_coincap(simbolo):
 
 
 def obter_market_cap_robusto(simbolo_id):
+    """Cascata de 2 fontes: CoinGecko primeiro, CoinCap como fallback."""
     simbolo = simbolo_id.split('/')[0]
     mc = obter_market_cap_coingecko(simbolo)
     if mc is not None:
         return mc
-    mc = obter_market_cap_coincap(simbolo)
-    if mc is not None:
-        return mc
-    return None
+    return obter_market_cap_coincap(simbolo)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# INDICADORES TÉCNICOS (mesmos do código original)
+# INDICADORES TÉCNICOS
 
 def calcular_rsi(serie, periodo=14):
     delta = serie.diff()
@@ -1110,20 +1064,22 @@ def calcular_retracao_fibonacci(df_analise):
 # ─────────────────────────────────────────────────────────────────────────────
 # CARREGAMENTO DE DADOS COM FALLBACK
 
+@st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS)
 def carregar_dados(simbolo_id, timeframe_selecionado):
     """
-    Tenta carregar dados da exchange primária; se falhar, tenta as fallbacks.
-    Retorna o primeiro DataFrame bem-sucedido.
+    Tenta carregar OHLCV da exchange primária (mantendo o símbolo no formato
+    unificado do ccxt); se falhar, tenta as fallbacks na ordem de PRIORITY.
+    Cache curto para não recarregar 500 velas a cada interação de UI que não
+    mude o ativo/timeframe selecionado.
     """
-    manager = ExchangeManager()
+    manager = obter_exchange_manager()
     for exchange_name in manager.PRIORITY:
         try:
             client = manager.get_client(exchange_name)
             if not client:
                 continue
-            symbol = manager.get_symbol_format(exchange_name, simbolo_id)
             velas = client.fetch_ohlcv(
-                symbol,
+                simbolo_id,
                 timeframe=timeframe_selecionado,
                 limit=VELAS_TOTAL
             )
@@ -1289,12 +1245,13 @@ def renderizar_grafico_plotly(df_completo, simbolo_id):
 # ─────────────────────────────────────────────────────────────────────────────
 # SIDEBAR
 idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
+indice_idioma_padrao = idiomas_disponiveis.index(IDIOMA_PADRAO) if IDIOMA_PADRAO in idiomas_disponiveis else 0
 
-st.sidebar.markdown(f"### {DICIONARIO_LINGUAS['Português (BR)']['idioma_label']}")
+st.sidebar.markdown(f"### {DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_label']}")
 idioma_selecionado = st.sidebar.selectbox(
-    DICIONARIO_LINGUAS['Português (BR)']['idioma_selecao'],
+    DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_selecao'],
     options=idiomas_disponiveis,
-    index=0
+    index=indice_idioma_padrao
 )
 txt = DICIONARIO_LINGUAS[idioma_selecionado]
 st.title(txt["titulo"])
@@ -1302,8 +1259,6 @@ st.sidebar.header(txt["config_globais"])
 
 # Lista de criptomoedas (obtida da Gate.io, que é a primária)
 lista_criptos = obter_todos_pares_usdt()
-if not lista_criptos:
-    lista_criptos = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
 
 simbolo_id = st.sidebar.selectbox(
     txt["selecione_cripto"],
@@ -1312,10 +1267,14 @@ simbolo_id = st.sidebar.selectbox(
 )
 
 intervalos = txt["intervalos"]
+valores_intervalos = list(intervalos.values())
+# Índice padrão calculado pelo valor ("4h"), não pela posição fixa na lista —
+# assim a seleção padrão não quebra se a ordem/composição do dicionário mudar.
+indice_padrao_timeframe = valores_intervalos.index("4h") if "4h" in valores_intervalos else 0
 intervalo_escolhido = st.sidebar.selectbox(
     txt["tempo_grafico"],
     list(intervalos.keys()),
-    index=5  # padrão 4h
+    index=indice_padrao_timeframe
 )
 timeframe = intervalos[intervalo_escolhido]
 
@@ -1344,9 +1303,9 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     ultimo_reg = df_analise.iloc[-1]
     preco_atual = ultimo_reg['close']
 
-    # Dados de 24h com fallback automático
+    # Dados de 24h com fallback automático (ccxt -> REST direta)
     dados_24h = obter_dados_24h(simbolo_id)
-    variacao_24h = dados_24h.get("change") if dados_24h else 0.0
+    variacao_24h = dados_24h.get("change") if dados_24h else None
     volume_24h = dados_24h.get("volume") if dados_24h else None
 
     market_cap = obter_market_cap_robusto(simbolo_id)
