@@ -21,7 +21,23 @@ PERIODO_AQUECIMENTO = 100
 IDIOMA_PADRAO = "Português (BR)"
 TTL_MERCADOS_SEGUNDOS = 3600     # lista de pares muda raramente
 TTL_DADOS_LIVE_SEGUNDOS = 15     # cache curto para não martelar as exchanges
+TTL_BOOK_SEGUNDOS = 12           # book muda rápido, mas 12s protege o rate limit
 EXCHANGE_TIMEOUT_MS = 10000
+
+# Book de ofertas -------------------------------------------------------------
+# limit=100 é aceito por Gate.io, Kraken, MEXC e KuCoin. Valores maiores são
+# rejeitados por alguma delas (cada corretora tem um teto diferente), então
+# 100 é o maior denominador comum seguro.
+LIMITE_BOOK = 100
+FAIXA_BOOK = 0.015               # considera apenas ordens a ±1,5% do mid
+PASSO_AGRUPAMENTO = 0.0005       # agrupa níveis a cada 0,05% para formar muralhas
+
+# Wyckoff ---------------------------------------------------------------------
+JANELA_BASE_WYCKOFF = 60         # velas usadas para desenhar o Trading Range
+JANELA_EVENTO_WYCKOFF = 15       # velas recentes onde procuramos o evento
+
+# Escores ---------------------------------------------------------------------
+LIMIAR_SINAL_LIQUIDO = 32.0      # % do escore líquido para disparar sinal forte
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DICIONÁRIO DE IDIOMAS – Português (BR) é a base/fallback.
@@ -38,7 +54,7 @@ _TEXTOS_BASE_PT_BR = {
     "preco_spot": "Preço Spot Real",
     "variacao_24h": "Variação 24h",
     "volume_24h": "Volume 24h (USDT)",
-    "market_cap": "Market Cap (USD)",
+    "market_cap": "Market Cap (USDT)",
     "stop_atr": "Preço Stop ATR",
     "compra_forte": "🟢  COMPRA FORTE (SMC + FIBONACCI ALINHADOS)",
     "venda_forte": "🔴  VENDA FORTE (SMC + FIBONACCI ALINHADOS)",
@@ -58,6 +74,39 @@ _TEXTOS_BASE_PT_BR = {
     "idioma_label": "🌐  Idioma / Language",
     "idioma_selecao": "Selecione o idioma da interface:",
     "aviso_aquecimento": "⚠️ Velas de aquecimento usadas no cálculo",
+    # ---- Novas chaves (book, Wyckoff, plano de trade) ----
+    "escore_liquido": "Escore Líquido",
+    "plano_trade": "🎯  Plano de Trade",
+    "entrada": "Entrada",
+    "stop_loss": "STOP LOSS",
+    "alvo": "Alvo",
+    "risco_retorno": "Risco/Retorno no Alvo 1",
+    "base_stop": "Base do stop",
+    "book_titulo": "📊  Livro de Ofertas Agregado",
+    "zonas_compra": "MAIORES ZONAS DE COMPRA",
+    "zonas_venda": "MAIORES ZONAS DE VENDA",
+    "pressao_global": "PRESSÃO GLOBAL DE MERCADO",
+    "compra": "COMPRA",
+    "venda": "VENDA",
+    "desequilibrio": "Desequilíbrio",
+    "book_equilibrado": "MERCADO EQUILIBRADO",
+    "book_comprador": "PRESSÃO COMPRADORA",
+    "book_vendedor": "PRESSÃO VENDEDORA",
+    "book_indisponivel": "Livro de ofertas indisponível no momento (nenhuma corretora respondeu). O escore segue válido sem este fator.",
+    "profundidade": "PROFUNDIDADE AGREGADA (±1,5% do mid)",
+    "wyckoff_titulo": "🧭  Estrutura Wyckoff",
+    "wyckoff_sem_evento": "Nenhum evento de Fase C/D identificado na janela recente. Range em construção (Fase B) ou preço fora de range.",
+    "wyckoff_range": "Trading Range",
+    "wyckoff_evento": "Evento",
+    "wyckoff_fase": "Fase",
+    "wyckoff_teste": "Teste Secundário",
+    "wyckoff_sos": "SOS / SOW",
+    "wyckoff_lps": "LPS / LPSY",
+    "confirmado": "confirmado",
+    "nao_confirmado": "não confirmado",
+    "alerta_muralha": "⚠️ Muralha de liquidez contrária relevante logo à frente do preço — sinal rebaixado para NEUTRO até o rompimento.",
+    "valor_memorizado": "último valor conhecido",
+    "fontes_book": "Corretoras no book",
     "intervalos": {
         "1 Minuto": "1m",
         "5 Minutos": "5m",
@@ -82,7 +131,7 @@ _TRADUCOES = {
         "preco_spot": "Real Spot Price",
         "variacao_24h": "24h Variation",
         "volume_24h": "24h Volume (USDT)",
-        "market_cap": "Market Cap (USD)",
+        "market_cap": "Market Cap (USDT)",
         "stop_atr": "ATR Stop Price",
         "compra_forte": "🟢  STRONG BUY (SMC + FIBONACCI ALIGNED)",
         "venda_forte": "🔴  STRONG SELL (SMC + FIBONACCI ALIGNED)",
@@ -102,6 +151,38 @@ _TRADUCOES = {
         "idioma_label": "🌐  Language / Idioma",
         "idioma_selecao": "Select Interface Language:",
         "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
+        "escore_liquido": "Net Score",
+        "plano_trade": "🎯  Trade Plan",
+        "entrada": "Entry",
+        "stop_loss": "STOP LOSS",
+        "alvo": "Target",
+        "risco_retorno": "Risk/Reward at Target 1",
+        "base_stop": "Stop basis",
+        "book_titulo": "📊  Aggregated Order Book",
+        "zonas_compra": "LARGEST BUY ZONES",
+        "zonas_venda": "LARGEST SELL ZONES",
+        "pressao_global": "GLOBAL MARKET PRESSURE",
+        "compra": "BUY",
+        "venda": "SELL",
+        "desequilibrio": "Imbalance",
+        "book_equilibrado": "BALANCED MARKET",
+        "book_comprador": "BUYING PRESSURE",
+        "book_vendedor": "SELLING PRESSURE",
+        "book_indisponivel": "Order book unavailable right now (no exchange responded). The score remains valid without this factor.",
+        "profundidade": "AGGREGATED DEPTH (±1.5% of mid)",
+        "wyckoff_titulo": "🧭  Wyckoff Structure",
+        "wyckoff_sem_evento": "No Phase C/D event found in the recent window. Range still building (Phase B) or price outside a range.",
+        "wyckoff_range": "Trading Range",
+        "wyckoff_evento": "Event",
+        "wyckoff_fase": "Phase",
+        "wyckoff_teste": "Secondary Test",
+        "wyckoff_sos": "SOS / SOW",
+        "wyckoff_lps": "LPS / LPSY",
+        "confirmado": "confirmed",
+        "nao_confirmado": "not confirmed",
+        "alerta_muralha": "⚠️ Significant opposing liquidity wall right ahead of price — signal downgraded to NEUTRAL until it breaks.",
+        "valor_memorizado": "last known value",
+        "fontes_book": "Exchanges in book",
         "intervalos": {
             "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m", "30 Minutes": "30m",
             "1 Hour": "1h", "4 Hours": "4h", "1 Day": "1d", "1 Week": "1w"
@@ -117,7 +198,7 @@ _TRADUCOES = {
         "preco_spot": "Precio Spot Real",
         "variacao_24h": "Variación 24h",
         "volume_24h": "Volumen 24h (USDT)",
-        "market_cap": "Capitalización (USD)",
+        "market_cap": "Capitalización (USDT)",
         "stop_atr": "Precio Stop ATR",
         "compra_forte": "🟢  COMPRA FUERTE (SMC + FIBONACCI ALINEADOS)",
         "venda_forte": "🔴  VENTA FUERTE (SMC + FIBONACCI ALINEADOS)",
@@ -152,7 +233,7 @@ _TRADUCOES = {
         "preco_spot": "Cours Spot réel",
         "variacao_24h": "Variation 24h",
         "volume_24h": "Volume 24h (USDT)",
-        "market_cap": "Capitalisation (USD)",
+        "market_cap": "Capitalisation (USDT)",
         "stop_atr": "Prix Stop ATR",
         "compra_forte": "🟢  ACHAT FORT (SMC + FIBONACCI ALIGNÉS)",
         "venda_forte": "🔴  VENTE FORTE (SMC + FIBONACCI ALIGNÉS)",
@@ -187,7 +268,7 @@ _TRADUCOES = {
         "preco_spot": "Echter Spot-Preis",
         "variacao_24h": "24h-Veränderung",
         "volume_24h": "24h-Volumen (USDT)",
-        "market_cap": "Marktkapitalisierung (USD)",
+        "market_cap": "Marktkapitalisierung (USDT)",
         "stop_atr": "ATR-Stop-Preis",
         "compra_forte": "🟢  STARKER KAUF (SMC + FIBONACCI AUSGERICHTET)",
         "venda_forte": "🔴  STARKER VERKAUF (SMC + FIBONACCI AUSGERICHTET)",
@@ -222,7 +303,7 @@ _TRADUCOES = {
         "preco_spot": "Prezzo Spot Reale",
         "variacao_24h": "Variazione 24h",
         "volume_24h": "Volume 24h (USDT)",
-        "market_cap": "Capitalizzazione (USD)",
+        "market_cap": "Capitalizzazione (USDT)",
         "stop_atr": "Prezzo Stop ATR",
         "compra_forte": "🟢  ACQUISTO FORTE (SMC + FIBONACCI ALLINEATI)",
         "venda_forte": "🔴  VENDITA FORTE (SMC + FIBONACCI ALLINEATI)",
@@ -257,7 +338,7 @@ _TRADUCOES = {
         "preco_spot": "Реальная спот-цена",
         "variacao_24h": "Изменение за 24ч",
         "volume_24h": "Объем за 24ч (USDT)",
-        "market_cap": "Рыночная капитализация (USD)",
+        "market_cap": "Рыночная капитализация (USDT)",
         "stop_atr": "Цена стоп-лосса ATR",
         "compra_forte": "🟢  СИЛЬНАЯ ПОКУПКА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
         "venda_forte": "🔴  СИЛЬНАЯ ПРОДАЖА (SMC + ФИБОНАЧЧИ СОГЛАСОВАНЫ)",
@@ -292,7 +373,7 @@ _TRADUCOES = {
         "preco_spot": "実勢スポット価格",
         "variacao_24h": "24時間変動",
         "volume_24h": "24時間出来高（USDT）",
-        "market_cap": "時価総額（USD）",
+        "market_cap": "時価総額（USDT）",
         "stop_atr": "ATRストップ価格",
         "compra_forte": "🟢  強い買い（SMC＋フィボナッチ整合）",
         "venda_forte": "🔴  強い売り（SMC＋フィボナッチ整合）",
@@ -327,7 +408,7 @@ _TRADUCOES = {
         "preco_spot": "实时现货价格",
         "variacao_24h": "24小时变化",
         "volume_24h": "24小时成交量（USDT）",
-        "market_cap": "市值（美元）",
+        "market_cap": "市值（USDT）",
         "stop_atr": "ATR止损价",
         "compra_forte": "🟢  强烈买入（SMC + 斐波那契一致）",
         "venda_forte": "🔴  强烈卖出（SMC + 斐波那契一致）",
@@ -362,7 +443,7 @@ _TRADUCOES = {
         "preco_spot": "वास्तविक स्पॉट मूल्य",
         "variacao_24h": "24 घंटे का बदलाव",
         "volume_24h": "24 घंटे का वॉल्यूम (USDT)",
-        "market_cap": "बाजार पूंजीकरण (USD)",
+        "market_cap": "बाजार पूंजीकरण (USDT)",
         "stop_atr": "ATR स्टॉप मूल्य",
         "compra_forte": "🟢  मजबूत खरीद (SMC + फिबोनाची संरेखित)",
         "venda_forte": "🔴  मजबूत बिक्री (SMC + फिबोनाची संरेखित)",
@@ -397,7 +478,7 @@ _TRADUCOES = {
         "preco_spot": "প্রকৃত স্পট মূল্য",
         "variacao_24h": "২৪ ঘণ্টার পরিবর্তন",
         "volume_24h": "২৪ ঘণ্টার ভলিউম (USDT)",
-        "market_cap": "বাজার মূলধন (USD)",
+        "market_cap": "বাজার মূলধন (USDT)",
         "stop_atr": "ATR স্টপ মূল্য",
         "compra_forte": "🟢  শক্তিশালী ক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
         "venda_forte": "🔴  শক্তিশালী বিক্রয় (SMC + ফিবোনাচি সারিবদ্ধ)",
@@ -432,7 +513,7 @@ _TRADUCOES = {
         "preco_spot": "سعر الفوري الحقيقي",
         "variacao_24h": "تغير 24 ساعة",
         "volume_24h": "حجم التداول 24 ساعة (USDT)",
-        "market_cap": "القيمة السوقية (USD)",
+        "market_cap": "القيمة السوقية (USDT)",
         "stop_atr": "سعر وقف ATR",
         "compra_forte": "🟢  شراء قوي (SMC + فيبوناتشي متوافقة)",
         "venda_forte": "🔴  بيع قوي (SMC + فيبوناتشي متوافقة)",
@@ -467,7 +548,7 @@ _TRADUCOES = {
         "preco_spot": "실제 현물 가격",
         "variacao_24h": "24시간 변동",
         "volume_24h": "24시간 거래량 (USDT)",
-        "market_cap": "시가총액 (USD)",
+        "market_cap": "시가총액 (USDT)",
         "stop_atr": "ATR 스탑 가격",
         "compra_forte": "🟢  강한 매수 (SMC + 피보나치 정렬)",
         "venda_forte": "🔴  강한 매도 (SMC + 피보나치 정렬)",
@@ -502,7 +583,7 @@ _TRADUCOES = {
         "preco_spot": "Giá spot thực tế",
         "variacao_24h": "Biến động 24h",
         "volume_24h": "Khối lượng 24h (USDT)",
-        "market_cap": "Vốn hóa thị trường (USD)",
+        "market_cap": "Vốn hóa thị trường (USDT)",
         "stop_atr": "Giá dừng ATR",
         "compra_forte": "🟢  MUA MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
         "venda_forte": "🔴  BÁN MẠNH (SMC + FIBONACCI CĂN CHỈNH)",
@@ -537,7 +618,7 @@ _TRADUCOES = {
         "preco_spot": "Gerçek Spot Fiyat",
         "variacao_24h": "24 Saatlik Değişim",
         "volume_24h": "24 Saatlik Hacim (USDT)",
-        "market_cap": "Piyasa Değeri (USD)",
+        "market_cap": "Piyasa Değeri (USDT)",
         "stop_atr": "ATR Durdurma Fiyatı",
         "compra_forte": "🟢  GÜÇLÜ ALIM (SMC + FIBONACCI UYUMLU)",
         "venda_forte": "🔴  GÜÇLÜ SATIM (SMC + FIBONACCI UYUMLU)",
@@ -568,8 +649,8 @@ _TRADUCOES = {
 def construir_dicionario_com_fallback(traducoes, idioma_padrao=IDIOMA_PADRAO):
     """
     Monta o dicionário final de idiomas garantindo que TODO idioma tenha
-    TODAS as chaves. Se uma chave nova for adicionada só ao PT-BR no futuro
-    e alguém esquecer de traduzir, o app não quebra: cai no texto em
+    TODAS as chaves. As chaves novas (book, Wyckoff, plano de trade) foram
+    traduzidas em PT-BR e EN; nos demais idiomas elas caem no texto em
     Português (BR) em vez de lançar KeyError.
     """
     base = traducoes[idioma_padrao]
@@ -611,31 +692,45 @@ def formatar_preco(valor, prefixo="$ "):
         return f"{prefixo}{valor:,.2f}"
 
 
-def formatar_market_cap(valor):
-    if valor is None:
-        return "$ —"
-    if isinstance(valor, str):
-        try:
-            valor = float(valor.replace('$', '').replace(',', '').replace(' ', '').strip())
-        except ValueError:
-            return "$ —"
-    if valor <= 0:
-        return "$ —"
-    if valor >= 1_000_000_000_000:
-        return f"$ {valor / 1_000_000_000_000:.2f}T"
-    elif valor >= 1_000_000_000:
-        return f"$ {valor / 1_000_000_000:.2f}B"
-    elif valor >= 1_000_000:
-        return f"$ {valor / 1_000_000:.2f}M"
-    else:
-        return "$ —"
+def formatar_usdt_compacto(valor, sufixo=" USDT"):
+    """Formata qualquer grandeza monetária em USDT com sufixo K/M/B/T.
 
-
-def formatar_volume_usdt(valor):
-    """Exibe o volume em USDT com duas casas decimais e sufixo."""
-    if valor is None or (isinstance(valor, float) and math.isnan(valor)):
+    Usado tanto para Market Cap quanto para Volume 24h — os dois passam a
+    falar a mesma língua (USDT), como pedido.
+    """
+    if valor is None or (isinstance(valor, float) and math.isnan(valor)) or valor <= 0:
         return "—"
-    return f"{valor:,.2f} USDT"
+    if valor >= 1_000_000_000_000:
+        return f"{valor / 1_000_000_000_000:.2f}T{sufixo}"
+    if valor >= 1_000_000_000:
+        return f"{valor / 1_000_000_000:.2f}B{sufixo}"
+    if valor >= 1_000_000:
+        return f"{valor / 1_000_000:.2f}M{sufixo}"
+    if valor >= 1_000:
+        return f"{valor / 1_000:.2f}K{sufixo}"
+    return f"{valor:,.2f}{sufixo}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MEMÓRIA DE SESSÃO (salvaguarda contra "buracos" nas métricas)
+def valor_com_memoria(chave, valor):
+    """Devolve (valor, veio_da_memoria).
+
+    Se a API respondeu, memoriza e devolve o valor fresco. Se falhou, devolve
+    o último valor bom conhecido nesta sessão — assim Market Cap e Volume não
+    "somem" da tela por causa de uma falha momentânea de rede.
+
+    Ressalva honesta: se NENHUMA fonte responder desde o início da sessão,
+    não há o que memorizar e a métrica aparecerá como "—". Não existe forma
+    de garantir 100% um dado que vem de terceiros.
+    """
+    memoria = st.session_state.setdefault("_memoria_metricas", {})
+    if valor is not None and not (isinstance(valor, float) and math.isnan(valor)) and valor > 0:
+        memoria[chave] = float(valor)
+        return float(valor), False
+    if chave in memoria:
+        return memoria[chave], True
+    return None, False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -643,13 +738,16 @@ def formatar_volume_usdt(valor):
 class ExchangeManager:
     """Gerencia múltiplas exchanges com fallback, sem exposição ao usuário.
 
-    IMPORTANTE: para chamadas via ccxt (fetch_ticker/fetch_ohlcv), o símbolo
-    deve ser mantido no formato unificado do ccxt (ex.: "BTC/USDT") em
-    QUALQUER exchange — é o próprio ccxt que faz o mapeamento interno para o
-    formato nativo de cada corretora. Reformatar o símbolo antes de passá-lo
-    ao ccxt (como "BTCUSDT" ou "BTC-USDT") faz as chamadas falharem
-    silenciosamente. O formato nativo só é necessário nas chamadas REST
-    diretas (usadas como último fallback, fora do ccxt).
+    Binance NÃO entra na lista de propósito: a API dela responde HTTP 451 para
+    IPs dos EUA, e o Streamlit Cloud roda lá. Incluí-la geraria falhas
+    silenciosas em produção. Gate.io, Kraken, MEXC e KuCoin respondem sem
+    restrição geográfica.
+
+    IMPORTANTE: para chamadas via ccxt (fetch_ticker/fetch_ohlcv/
+    fetch_order_book), o símbolo deve permanecer no formato unificado do ccxt
+    (ex.: "BTC/USDT") em QUALQUER exchange — é o próprio ccxt que mapeia para o
+    formato nativo de cada corretora. O formato nativo só é necessário nas
+    chamadas REST diretas (último fallback, fora do ccxt).
     """
 
     EXCHANGES = {
@@ -675,6 +773,9 @@ class ExchangeManager:
     # Ordem de tentativa (primária primeiro, depois fallbacks)
     PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
 
+    # Rótulos curtos usados nos chips do painel de book
+    SIGLAS = {"Gate.io": "GATE", "Kraken": "KRK", "MEXC": "MEXC", "KuCoin": "KUC"}
+
     def __init__(self):
         self.clients = {}
         self._init_clients()
@@ -684,8 +785,8 @@ class ExchangeManager:
             try:
                 self.clients[name] = config["class"](config["config"])
             except Exception:
-                # Não exibe erro para não poluir a interface; exchange fica
-                # simplesmente indisponível e o fallback segue para a próxima
+                # Não exibe erro para não poluir a interface; a exchange fica
+                # indisponível e o fallback segue para a próxima
                 pass
 
     def get_client(self, exchange_name):
@@ -702,27 +803,26 @@ def obter_exchange_manager():
 # ─────────────────────────────────────────────────────────────────────────────
 # FUNÇÕES DE MERCADO COM FALLBACK
 
-@st.cache_data(ttl=TTL_MERCADOS_SEGUNDOS)
+@st.cache_data(ttl=TTL_MERCADOS_SEGUNDOS, show_spinner=False)
 def obter_todos_pares_usdt():
-    """Obtém pares USDT da exchange primária (Gate.io) para a lista de
-    seleção. Cacheado por 1h: a lista de pares listados muda pouquíssimo,
-    então não há motivo para recarregar o mercado inteiro a cada rerun."""
+    """Pares USDT da exchange primária (Gate.io) para a lista de seleção.
+    Cacheado por 1h: a lista de pares listados muda pouquíssimo."""
     manager = obter_exchange_manager()
     client = manager.get_client("Gate.io")
+    padrao = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     if not client:
-        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+        return padrao
     try:
         markets = client.load_markets()
         pairs = [s for s in markets.keys() if s.endswith('/USDT')]
-        return sorted(pairs) if pairs else ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+        return sorted(pairs) if pairs else padrao
     except Exception:
-        return ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
+        return padrao
 
 
 def _obter_dados_24h_rest_direto(exchange_name, simbolo):
     """Fallback via REST direta, usado apenas quando TODAS as tentativas via
-    ccxt falharam. Aqui sim o símbolo precisa do formato nativo da corretora,
-    pois estamos batendo direto no endpoint HTTP, sem passar pelo ccxt."""
+    ccxt falharam. Aqui o símbolo precisa do formato nativo da corretora."""
     try:
         if exchange_name == "Gate.io":
             pair = simbolo.replace("/", "_")
@@ -735,11 +835,10 @@ def _obter_dados_24h_rest_direto(exchange_name, simbolo):
                     return {
                         "last": float(d.get("last", 0)),
                         "change": float(d.get("change_percentage", 0)),
-                        "volume": float(d.get("quote_volume", 0)),
+                        "quote_volume": float(d.get("quote_volume", 0)),
+                        "base_volume": float(d.get("base_volume", 0)),
                         "high": float(d.get("high_24h", 0)),
-                        "low": float(d.get("low_24h", 0)),
-                        "bid": float(d.get("highest_bid", 0)),
-                        "ask": float(d.get("lowest_ask", 0))
+                        "low": float(d.get("low_24h", 0))
                     }
         elif exchange_name == "MEXC":
             pair = simbolo.replace("/", "")
@@ -750,11 +849,10 @@ def _obter_dados_24h_rest_direto(exchange_name, simbolo):
                 return {
                     "last": float(d.get("lastPrice", 0)),
                     "change": float(d.get("priceChangePercent", 0)),
-                    "volume": float(d.get("quoteVolume", 0)) or float(d.get("volume", 0)),
+                    "quote_volume": float(d.get("quoteVolume", 0)),
+                    "base_volume": float(d.get("volume", 0)),
                     "high": float(d.get("highPrice", 0)),
-                    "low": float(d.get("lowPrice", 0)),
-                    "bid": float(d.get("bidPrice", 0)),
-                    "ask": float(d.get("askPrice", 0))
+                    "low": float(d.get("lowPrice", 0))
                 }
         elif exchange_name == "KuCoin":
             pair = simbolo.replace("/", "-")
@@ -767,15 +865,12 @@ def _obter_dados_24h_rest_direto(exchange_name, simbolo):
                     return {
                         "last": float(d.get("last", 0)),
                         "change": float(d.get("changeRate", 0)) * 100,
-                        "volume": float(d.get("volValue", 0)),
+                        "quote_volume": float(d.get("volValue", 0)),
+                        "base_volume": float(d.get("vol", 0)),
                         "high": float(d.get("high", 0)),
-                        "low": float(d.get("low", 0)),
-                        "bid": float(d.get("buy", 0)),
-                        "ask": float(d.get("sell", 0))
+                        "low": float(d.get("low", 0))
                     }
         elif exchange_name == "Kraken":
-            # Kraken usa XBT/USD internamente para BTC; ccxt normalmente já
-            # resolve isso, então este fallback direto é melhor-esforço.
             pair = simbolo.replace("/", "")
             url = f"https://api.kraken.com/0/public/Ticker?pair={pair}"
             resp = requests.get(url, timeout=10)
@@ -786,31 +881,28 @@ def _obter_dados_24h_rest_direto(exchange_name, simbolo):
                     last = float(d["c"][0])
                     open_ = float(d["o"])
                     change = ((last - open_) / open_ * 100) if open_ else 0.0
+                    base_vol = float(d["v"][1])
                     return {
                         "last": last,
                         "change": change,
-                        "volume": float(d["v"][1]),
+                        # Kraken devolve apenas volume na moeda base; convertemos
+                        "quote_volume": base_vol * last,
+                        "base_volume": base_vol,
                         "high": float(d["h"][1]),
-                        "low": float(d["l"][1]),
-                        "bid": float(d["b"][0]),
-                        "ask": float(d["a"][0])
+                        "low": float(d["l"][1])
                     }
     except Exception:
         pass
     return None
 
 
-@st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS)
+@st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
 def obter_dados_24h(simbolo):
-    """
-    Tenta obter dados de 24h via ccxt na exchange primária; se falhar,
-    tenta as fallbacks via ccxt e, por fim, via REST direta.
-    Cache curto (TTL_DADOS_LIVE_SEGUNDOS) evita martelar as APIs em reruns
-    do Streamlit não relacionados (ex.: mudar outro widget da sidebar).
-    """
+    """Dados de 24h via ccxt na primária; se falhar, fallbacks via ccxt e,
+    por fim, REST direta. Devolve SEMPRE quote_volume e base_volume separados
+    para que o volume possa ser convertido em USDT com segurança."""
     manager = obter_exchange_manager()
 
-    # 1ª tentativa: ccxt, mantendo o símbolo no formato unificado
     for exchange_name in manager.PRIORITY:
         try:
             client = manager.get_client(exchange_name)
@@ -818,122 +910,470 @@ def obter_dados_24h(simbolo):
                 continue
             ticker = client.fetch_ticker(simbolo)
             if ticker and ticker.get("last") is not None:
-                volume = ticker.get("quoteVolume") or ticker.get("baseVolume")
-                if volume is None:
-                    rest = _obter_dados_24h_rest_direto(exchange_name, simbolo)
-                    if rest:
-                        volume = rest.get("volume")
                 return {
                     "last": ticker.get("last"),
                     "change": ticker.get("percentage"),
-                    "volume": volume,
+                    "quote_volume": ticker.get("quoteVolume"),
+                    "base_volume": ticker.get("baseVolume"),
                     "high": ticker.get("high"),
                     "low": ticker.get("low"),
-                    "bid": ticker.get("bid"),
-                    "ask": ticker.get("ask")
+                    "fonte": exchange_name
                 }
         except Exception:
             continue
 
-    # 2ª tentativa: REST direta em todas as exchanges, como último recurso
     for exchange_name in manager.PRIORITY:
         resultado = _obter_dados_24h_rest_direto(exchange_name, simbolo)
         if resultado and resultado.get("last"):
+            resultado["fonte"] = exchange_name
             return resultado
 
     return None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP (CoinGecko + CoinCap)
+def resolver_volume_usdt(dados_24h, preco_atual, dados_gecko):
+    """Cascata para garantir volume em USDT:
+    1) quoteVolume da corretora (já em USDT no par /USDT)
+    2) baseVolume × preço spot  (conversão explícita)
+    3) volume global 24h do CoinGecko (USD ≈ USDT)
+    """
+    if dados_24h:
+        qv = dados_24h.get("quote_volume")
+        if qv and qv > 0:
+            return float(qv)
+        bv = dados_24h.get("base_volume")
+        if bv and bv > 0 and preco_atual and preco_atual > 0:
+            return float(bv) * float(preco_atual)
+    if dados_gecko and dados_gecko.get("total_volume"):
+        return float(dados_gecko["total_volume"])
+    return None
 
-@st.cache_data(ttl=3600)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MARKET CAP — cascata de fontes
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def obter_id_coingecko(simbolo):
     try:
-        url = "https://api.coingecko.com/api/v3/search"
-        params = {"query": simbolo}
-        headers = {"Accept": "application/json"}
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        resp = requests.get(
+            "https://api.coingecko.com/api/v3/search",
+            params={"query": simbolo},
+            headers={"Accept": "application/json"},
+            timeout=10
+        )
         if resp.status_code != 200:
             return None
-        data = resp.json()
-        coins = data.get("coins", [])
-        simbolo_upper = simbolo.upper()
+        coins = resp.json().get("coins", [])
+        alvo = simbolo.upper()
         for coin in coins:
-            if coin.get("symbol", "").upper() == simbolo_upper:
+            if coin.get("symbol", "").upper() == alvo:
                 return coin.get("id")
-        if coins:
-            return coins[0].get("id")
-        return None
+        return coins[0].get("id") if coins else None
     except Exception:
         return None
 
 
-@st.cache_data(ttl=600)
-def obter_market_cap_coingecko(simbolo):
+@st.cache_data(ttl=600, show_spinner=False)
+def obter_dados_coingecko(simbolo):
+    """Uma única chamada devolve market cap, volume global e supply — o supply
+    serve de rede de segurança para reconstruir o market cap (preço × supply)
+    caso o campo market_cap venha nulo (comum em ativos recém-listados)."""
     coin_id = obter_id_coingecko(simbolo)
     if not coin_id:
         return None
     try:
-        url = "https://api.coingecko.com/api/v3/coins/markets"
-        params = {
-            "vs_currency": "usd",
-            "ids": coin_id,
-            "order": "market_cap_desc",
-            "per_page": 1,
-            "page": 1,
-            "sparkline": "false"
+        resp = requests.get(
+            "https://api.coingecko.com/api/v3/coins/markets",
+            params={
+                "vs_currency": "usd",
+                "ids": coin_id,
+                "order": "market_cap_desc",
+                "per_page": 1,
+                "page": 1,
+                "sparkline": "false"
+            },
+            headers={"Accept": "application/json"},
+            timeout=10
+        )
+        if resp.status_code != 200:
+            return None
+        dados = resp.json()
+        if not dados:
+            return None
+        d = dados[0]
+        return {
+            "market_cap": float(d["market_cap"]) if d.get("market_cap") else None,
+            "total_volume": float(d["total_volume"]) if d.get("total_volume") else None,
+            "circulating_supply": float(d["circulating_supply"]) if d.get("circulating_supply") else None,
+            "current_price": float(d["current_price"]) if d.get("current_price") else None,
         }
-        headers = {"Accept": "application/json"}
-        resp = requests.get(url, params=params, headers=headers, timeout=10)
-        if resp.status_code == 200:
-            dados = resp.json()
-            if dados:
-                mc = dados[0].get("market_cap")
-                if mc and float(mc) > 1_000_000:
-                    return float(mc)
-        return None
     except Exception:
         return None
 
 
-@st.cache_data(ttl=600)
-def obter_market_cap_coincap(simbolo):
+@st.cache_data(ttl=3600, show_spinner=False)
+def obter_id_coinpaprika(simbolo):
+    """Segunda fonte, chamada só quando o CoinGecko falha (rate limit é o caso
+    mais comum). A lista completa é grande, por isso fica 1h em cache."""
     try:
-        asset_id = simbolo.lower()
-        url = f"https://api.coincap.io/v2/assets/{asset_id}"
-        resp = requests.get(url, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            mc = data.get("data", {}).get("marketCapUsd")
-            if mc:
-                mc_float = float(mc)
-                if mc_float > 1_000_000:
-                    return mc_float
-        url_list = "https://api.coincap.io/v2/assets"
-        params = {"limit": 2000}
-        resp = requests.get(url_list, params=params, timeout=10)
-        if resp.status_code == 200:
-            data = resp.json()
-            for item in data.get("data", []):
-                if item.get("symbol", "").upper() == simbolo.upper():
-                    mc = item.get("marketCapUsd")
-                    if mc:
-                        mc_float = float(mc)
-                        if mc_float > 1_000_000:
-                            return mc_float
-        return None
+        resp = requests.get("https://api.coinpaprika.com/v1/coins", timeout=12)
+        if resp.status_code != 200:
+            return None
+        alvo = simbolo.upper()
+        candidatos = [
+            c for c in resp.json()
+            if c.get("symbol", "").upper() == alvo and c.get("is_active")
+        ]
+        if not candidatos:
+            return None
+        candidatos.sort(key=lambda c: c.get("rank") or 10**9)
+        return candidatos[0].get("id")
     except Exception:
         return None
 
 
-def obter_market_cap_robusto(simbolo_id):
-    """Cascata de 2 fontes: CoinGecko primeiro, CoinCap como fallback."""
-    simbolo = simbolo_id.split('/')[0]
-    mc = obter_market_cap_coingecko(simbolo)
-    if mc is not None:
-        return mc
-    return obter_market_cap_coincap(simbolo)
+@st.cache_data(ttl=600, show_spinner=False)
+def obter_dados_coinpaprika(simbolo):
+    coin_id = obter_id_coinpaprika(simbolo)
+    if not coin_id:
+        return None
+    try:
+        resp = requests.get(
+            f"https://api.coinpaprika.com/v1/tickers/{coin_id}",
+            timeout=12
+        )
+        if resp.status_code != 200:
+            return None
+        quotes = resp.json().get("quotes", {}).get("USD", {})
+        mc = quotes.get("market_cap")
+        vol = quotes.get("volume_24h")
+        return {
+            "market_cap": float(mc) if mc else None,
+            "total_volume": float(vol) if vol else None,
+            "circulating_supply": None,
+            "current_price": None,
+        }
+    except Exception:
+        return None
+
+
+def resolver_market_cap(simbolo_base, preco_atual, dados_gecko, dados_paprika):
+    """Cascata: CoinGecko → (preço × supply do CoinGecko) → CoinPaprika.
+    Se tudo falhar, quem cobre é a memória de sessão (valor_com_memoria)."""
+    if dados_gecko:
+        mc = dados_gecko.get("market_cap")
+        if mc and mc > 0:
+            return mc
+        supply = dados_gecko.get("circulating_supply")
+        if supply and supply > 0 and preco_atual and preco_atual > 0:
+            return float(supply) * float(preco_atual)
+    if dados_paprika:
+        mc = dados_paprika.get("market_cap")
+        if mc and mc > 0:
+            return mc
+    return None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LIVRO DE OFERTAS AGREGADO
+#
+# Este é o único fator do escore que NÃO é derivado da série de fechamentos.
+# Todos os indicadores clássicos (RSI, MACD, MFI, SSL, ATR, PPO, Fibonacci)
+# leem a mesma informação de preço passado — são correlacionados entre si. O
+# book traz liquidez real parada agora, ou seja, informação ortogonal. É por
+# isso que ele entra com peso relevante, mas moderado: paredes de book podem
+# ser spoofing (ordens grandes e falsas que somem quando o preço chega perto),
+# então ele nunca decide o trade sozinho.
+
+@st.cache_data(ttl=TTL_BOOK_SEGUNDOS, show_spinner=False)
+def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
+    manager = obter_exchange_manager()
+    livros = []
+
+    for nome in manager.PRIORITY:
+        cliente = manager.get_client(nome)
+        if cliente is None:
+            continue
+        try:
+            ob = cliente.fetch_order_book(simbolo, limit=LIMITE_BOOK)
+        except Exception:
+            continue
+        bids = [b for b in (ob.get("bids") or []) if b and b[0] and b[1]]
+        asks = [a for a in (ob.get("asks") or []) if a and a[0] and a[1]]
+        if not bids or not asks:
+            continue
+        livros.append((nome, bids, asks))
+
+    if not livros:
+        return None
+
+    mids = [(b[0][0] + a[0][0]) / 2.0 for _, b, a in livros]
+    mid = float(np.median(mids))
+    if mid <= 0:
+        return None
+
+    piso, teto = mid * (1 - faixa), mid * (1 + faixa)
+    passo = max(mid * PASSO_AGRUPAMENTO, 1e-12)
+
+    baldes_bid, baldes_ask = {}, {}
+    total_bid = 0.0
+    total_ask = 0.0
+
+    for nome, bids, asks in livros:
+        sigla = manager.SIGLAS.get(nome, nome[:4].upper())
+        for preco, qtd in bids:
+            if preco < piso or preco > mid:
+                continue
+            notional = preco * qtd
+            total_bid += notional
+            chave = round(preco / passo) * passo
+            b = baldes_bid.setdefault(chave, {"usdt": 0.0, "base": 0.0, "fontes": set()})
+            b["usdt"] += notional
+            b["base"] += qtd
+            b["fontes"].add(sigla)
+        for preco, qtd in asks:
+            if preco > teto or preco < mid:
+                continue
+            notional = preco * qtd
+            total_ask += notional
+            chave = round(preco / passo) * passo
+            a = baldes_ask.setdefault(chave, {"usdt": 0.0, "base": 0.0, "fontes": set()})
+            a["usdt"] += notional
+            a["base"] += qtd
+            a["fontes"].add(sigla)
+
+    if total_bid <= 0 or total_ask <= 0:
+        return None
+
+    def _muralhas(baldes, n=4):
+        itens = [
+            {
+                "preco": float(p),
+                "usdt": float(v["usdt"]),
+                "base": float(v["base"]),
+                "fontes": sorted(v["fontes"])
+            }
+            for p, v in baldes.items()
+        ]
+        itens.sort(key=lambda x: x["usdt"], reverse=True)
+        return itens[:n]
+
+    desequilibrio = (total_bid - total_ask) / (total_bid + total_ask)
+
+    return {
+        "mid": mid,
+        "total_bid": total_bid,
+        "total_ask": total_ask,
+        "desequilibrio": desequilibrio,
+        "pct_bid": total_bid / (total_bid + total_ask) * 100,
+        "pct_ask": total_ask / (total_bid + total_ask) * 100,
+        "muralhas_compra": _muralhas(baldes_bid),
+        "muralhas_venda": _muralhas(baldes_ask),
+        "fontes": [manager.SIGLAS.get(n, n) for n, _, _ in livros],
+    }
+
+
+def detectar_muralha_bloqueante(book, direcao, preco, limite_pct=0.006, fator=2.5):
+    """Retorna True se houver uma muralha contrária relevante entre o preço e
+    0,6% à frente dele, com notional pelo menos `fator`× maior que a maior
+    muralha a favor. É o filtro que evita comprar embaixo de um paredão."""
+    if not book:
+        return False
+    if direcao == "long":
+        contrarias = book["muralhas_venda"]
+        favoraveis = book["muralhas_compra"]
+        proximas = [m for m in contrarias if 0 < (m["preco"] - preco) / preco <= limite_pct]
+    else:
+        contrarias = book["muralhas_compra"]
+        favoraveis = book["muralhas_venda"]
+        proximas = [m for m in contrarias if 0 < (preco - m["preco"]) / preco <= limite_pct]
+    if not proximas or not favoraveis:
+        return False
+    maior_contraria = max(m["usdt"] for m in proximas)
+    maior_favoravel = max(m["usdt"] for m in favoraveis)
+    return maior_favoravel > 0 and maior_contraria >= fator * maior_favoravel
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ESTRUTURA WYCKOFF — Spring, Terminal Shakeout (TSO) e LPS
+#
+# Definições adotadas (literatura clássica de Wyckoff / Robert Evans):
+#
+# • SPRING  — penetração MENOR do suporte do Trading Range (tipicamente até
+#   ~2%), com fechamento de volta DENTRO do range e volume contido. Bear trap:
+#   varre os stops dos comprados, atrai vendedores atrasados, e a mão forte
+#   absorve. É a versão refinada do Terminal Shakeout.
+#
+# • TERMINAL SHAKEOUT (TSO) — a mesma ideia, porém violenta: penetração ampla
+#   (≥ ~3%) e/ou volume expansivo (≥ 2× a média do range). É "um spring com
+#   fogos de artifício". Exige teste secundário antes de operar e stop largo.
+#
+# • SHAKEOUT ORDINÁRIO — caso intermediário entre os dois acima.
+#
+# • LPS (Last Point of Support) — o pullback de volume/amplitude reduzidos que
+#   ocorre DEPOIS do SOS (Sign of Strength), fazendo fundo mais alto sobre o
+#   suporte antes rompido. É a entrada de menor risco da Fase D.
+#
+# Espelhos de distribuição: UT / UTAD / LPSY.
+#
+# NOTA: você escreveu "IPS". Não existe esse evento na nomenclatura Wyckoff
+# padrão; assumi LPS (Last Point of Support), que é o evento que completa a
+# tríade com Spring e TSO. Se "IPS" for termo de outra escola, me diga a
+# definição que eu troco a regra.
+
+_PONTOS_EVENTO = {
+    "SPRING": 2.0,      # entrada mais limpa, penetração contida
+    "SHAKEOUT": 1.5,
+    "TSO": 1.0,         # sozinho vale pouco: exige confirmação
+    "UT": 2.0,
+    "UPTHRUST": 1.5,
+    "UTAD": 1.0,
+}
+
+_BUFFER_STOP_EVENTO = {
+    "SPRING": 0.005,    # stop logo abaixo da mínima do spring
+    "SHAKEOUT": 0.015,
+    "TSO": 0.035,       # stop largo: o TSO costuma varrer fundo
+    "UT": 0.005,
+    "UPTHRUST": 0.015,
+    "UTAD": 0.035,
+}
+
+PONTOS_MAX_WYCKOFF = 3.0
+
+
+def detectar_wyckoff(df, janela_base=JANELA_BASE_WYCKOFF, janela_evento=JANELA_EVENTO_WYCKOFF):
+    if len(df) < janela_base + janela_evento + 5:
+        return None
+
+    base = df.iloc[-(janela_base + janela_evento):-janela_evento]
+    recentes = df.iloc[-janela_evento:].reset_index(drop=True)
+
+    suporte = float(base['low'].min())
+    resistencia = float(base['high'].max())
+    if suporte <= 0 or resistencia <= suporte:
+        return None
+
+    altura = resistencia - suporte
+    meio = (resistencia + suporte) / 2.0
+    vol_base = float(base['volume'].mean())
+    if vol_base <= 0:
+        vol_base = 1e-9
+
+    # Um range largo demais não é range: é tendência. Nesse caso os conceitos
+    # de Fase C não se aplicam e não forçamos leitura.
+    if altura / meio > 0.40:
+        return {
+            "range_valido": False, "suporte": suporte, "resistencia": resistencia,
+            "meio": meio, "evento": None, "pontos": 0.0, "direcao": 0
+        }
+
+    evento = None
+    for i in range(len(recentes)):
+        v = recentes.iloc[i]
+        vol_rel = float(v['volume']) / vol_base
+
+        # ---- Acumulação: rompe o suporte e volta para dentro do range ----
+        if float(v['low']) < suporte and float(v['close']) > suporte:
+            pen = (suporte - float(v['low'])) / suporte
+            if pen >= 0.03 or vol_rel >= 2.0:
+                tipo = "TSO"
+            elif pen >= 0.01:
+                tipo = "SHAKEOUT"
+            else:
+                tipo = "SPRING"
+            evento = {
+                "tipo": tipo, "direcao": 1, "idx": i,
+                "extremo": float(v['low']), "penetracao": pen,
+                "vol_rel": vol_rel
+            }
+
+        # ---- Distribuição: rompe a resistência e volta para dentro ----
+        if float(v['high']) > resistencia and float(v['close']) < resistencia:
+            pen = (float(v['high']) - resistencia) / resistencia
+            if pen >= 0.03 or vol_rel >= 2.0:
+                tipo = "UTAD"
+            elif pen >= 0.01:
+                tipo = "UPTHRUST"
+            else:
+                tipo = "UT"
+            evento = {
+                "tipo": tipo, "direcao": -1, "idx": i,
+                "extremo": float(v['high']), "penetracao": pen,
+                "vol_rel": vol_rel
+            }
+
+    if evento is None:
+        return {
+            "range_valido": True, "suporte": suporte, "resistencia": resistencia,
+            "meio": meio, "evento": None, "pontos": 0.0, "direcao": 0
+        }
+
+    vol_evento = float(recentes.iloc[evento["idx"]]['volume'])
+    depois = recentes.iloc[evento["idx"] + 1:]
+
+    teste_ok = False
+    sos = False
+    lps = False
+
+    for j in range(len(depois)):
+        c = depois.iloc[j]
+        vol = float(c['volume'])
+        if evento["direcao"] == 1:
+            # Teste secundário: fundo mais alto que o do evento, volume reduzido
+            if float(c['low']) > evento["extremo"] and vol < 0.6 * vol_evento and float(c['close']) > suporte:
+                teste_ok = True
+            # SOS: fecha acima do meio do range com volume expansivo
+            if float(c['close']) > meio and vol > 1.2 * vol_base:
+                sos = True
+            # LPS: após o SOS, recuo de volume baixo que segura acima do suporte
+            if sos and float(c['close']) > suporte and vol < 0.8 * vol_base and float(c['close']) < float(c['open']):
+                lps = True
+        else:
+            if float(c['high']) < evento["extremo"] and vol < 0.6 * vol_evento and float(c['close']) < resistencia:
+                teste_ok = True
+            if float(c['close']) < meio and vol > 1.2 * vol_base:
+                sos = True  # aqui é SOW (Sign of Weakness)
+            if sos and float(c['close']) < resistencia and vol < 0.8 * vol_base and float(c['close']) > float(c['open']):
+                lps = True  # aqui é LPSY
+
+    pontos = _PONTOS_EVENTO.get(evento["tipo"], 1.0)
+    if teste_ok:
+        pontos += 1.0
+    if sos:
+        pontos += 1.0
+    if lps:
+        pontos = PONTOS_MAX_WYCKOFF
+    pontos = min(pontos, PONTOS_MAX_WYCKOFF)
+
+    buffer_stop = _BUFFER_STOP_EVENTO.get(evento["tipo"], 0.02)
+    if evento["direcao"] == 1:
+        stop_estrutural = evento["extremo"] * (1 - buffer_stop)
+    else:
+        stop_estrutural = evento["extremo"] * (1 + buffer_stop)
+
+    if lps:
+        fase = "D (LPS/LPSY)"
+    elif sos:
+        fase = "D (SOS/SOW)"
+    else:
+        fase = "C"
+
+    return {
+        "range_valido": True,
+        "suporte": suporte,
+        "resistencia": resistencia,
+        "meio": meio,
+        "altura": altura,
+        "evento": evento,
+        "teste_ok": teste_ok,
+        "sos": sos,
+        "lps": lps,
+        "fase": fase,
+        "pontos": float(pontos),
+        "direcao": evento["direcao"],
+        "stop_estrutural": float(stop_estrutural),
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -946,6 +1386,17 @@ def calcular_rsi(serie, periodo=14):
     ma_ganho = ganho.ewm(span=periodo, adjust=False).mean()
     ma_perda = perda.ewm(span=periodo, adjust=False).mean()
     return 100 - (100 / (1 + (ma_ganho / ma_perda.replace(0, 1e-10))))
+
+
+def calcular_rsi_estocastico(serie, periodo_rsi=14, periodo_stoch=14, suavizacao=3):
+    """RSI Stochastic (%K e %D) — pedido explícito no seu setup padrão."""
+    rsi = calcular_rsi(serie, periodo_rsi)
+    minimo = rsi.rolling(window=periodo_stoch).min()
+    maximo = rsi.rolling(window=periodo_stoch).max()
+    stoch = 100 * (rsi - minimo) / (maximo - minimo).replace(0, 1e-10)
+    k = stoch.rolling(window=suavizacao).mean()
+    d = k.rolling(window=suavizacao).mean()
+    return k, d
 
 
 def calcular_macd(serie):
@@ -1030,6 +1481,7 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
                 atr_stop[i] = min(atr_stop[i - 1], close_arr[i] + (atr_arr[i] * multiplicador))
 
     df = df.copy()
+    df['ATR'] = atr
     df['ATR_Stop'] = atr_stop
     df['atr_dir'] = tendencia
     return df
@@ -1044,8 +1496,6 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
     return df
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FIBONACCI
 def calcular_retracao_fibonacci(df_analise):
     maxima = df_analise['high'].max()
     minima = df_analise['low'].min()
@@ -1064,14 +1514,8 @@ def calcular_retracao_fibonacci(df_analise):
 # ─────────────────────────────────────────────────────────────────────────────
 # CARREGAMENTO DE DADOS COM FALLBACK
 
-@st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS)
+@st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
 def carregar_dados(simbolo_id, timeframe_selecionado):
-    """
-    Tenta carregar OHLCV da exchange primária (mantendo o símbolo no formato
-    unificado do ccxt); se falhar, tenta as fallbacks na ordem de PRIORITY.
-    Cache curto para não recarregar 500 velas a cada interação de UI que não
-    mude o ativo/timeframe selecionado.
-    """
     manager = obter_exchange_manager()
     for exchange_name in manager.PRIORITY:
         try:
@@ -1091,6 +1535,9 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
                 df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
 
                 df['RSI_14'] = calcular_rsi(df['close'], 14)
+                k, d = calcular_rsi_estocastico(df['close'])
+                df['STOCH_K'] = k
+                df['STOCH_D'] = d
                 macd, sinal, hist = calcular_macd(df['close'])
                 df['MACD'] = macd
                 df['MACD_SIGNAL'] = sinal
@@ -1110,136 +1557,481 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA SMC
-def analisar_confluencia(df_completo, txt):
-    df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
+# ANÁLISE DE CONFLUÊNCIA (escore normalizado)
+#
+# Mudança estrutural em relação à versão anterior: o corte deixa de ser um
+# número mágico (8,5 pontos) e passa a ser o ESCORE LÍQUIDO NORMALIZADO —
+# (alta − baixa) / máximo possível × 100. Assim, acrescentar ou remover
+# fatores não desregula o gatilho: ele se recalibra sozinho.
 
+PESOS = {
+    "rsi": 2.0,
+    "stoch": 1.5,
+    "macd": 2.0,
+    "mfi": 1.0,
+    "ssl": 1.0,
+    "atr": 1.0,
+    "ppo": 1.5,
+    "fib": 2.0,
+    "book": 2.0,
+    "wyckoff": PONTOS_MAX_WYCKOFF,
+}
+MAXIMO_POSSIVEL = sum(PESOS.values())
+
+
+def analisar_confluencia(df_completo, txt, book, wyk):
+    df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
     if df_analise.empty:
-        return txt["neutro"], "#ffcc00", txt["ctx_neutro"], 0.0, 0.0
+        return {
+            "recomendacao": txt["neutro"], "cor": "#ffcc00", "contexto": txt["ctx_neutro"],
+            "alta": 0.0, "baixa": 0.0, "liquido": 0.0, "direcao": "neutro",
+            "bloqueado": False
+        }
 
     u = df_analise.iloc[-1]
-    preco_atual = u['close']
-    fib_niveis = calcular_retracao_fibonacci(df_analise)
+    preco_atual = float(u['close'])
+    fib = calcular_retracao_fibonacci(df_analise)
 
-    pontos_alta = 0.0
-    pontos_baixa = 0.0
+    alta = 0.0
+    baixa = 0.0
 
     rsi_val = u['RSI_14']
     if not math.isnan(rsi_val):
         if rsi_val < 40:
-            pontos_alta += 2
+            alta += PESOS["rsi"]
         elif rsi_val > 60:
-            pontos_baixa += 2
+            baixa += PESOS["rsi"]
+
+    k, d = u['STOCH_K'], u['STOCH_D']
+    if not (math.isnan(k) or math.isnan(d)):
+        if k < 20 and k > d:
+            alta += PESOS["stoch"]
+        elif k > 80 and k < d:
+            baixa += PESOS["stoch"]
+        elif k > d:
+            alta += PESOS["stoch"] / 2
+        else:
+            baixa += PESOS["stoch"] / 2
 
     macd_hist = u['MACD_HIST']
     if not math.isnan(macd_hist):
         if macd_hist > 0:
-            pontos_alta += 2
+            alta += PESOS["macd"]
         else:
-            pontos_baixa += 2
+            baixa += PESOS["macd"]
 
     mfi_val = u['MFI']
     if not math.isnan(mfi_val):
         if mfi_val > 50:
-            pontos_alta += 1
+            alta += PESOS["mfi"]
         else:
-            pontos_baixa += 1
+            baixa += PESOS["mfi"]
 
     if u['ssl_dir'] == 1:
-        pontos_alta += 1
+        alta += PESOS["ssl"]
     else:
-        pontos_baixa += 1
+        baixa += PESOS["ssl"]
 
     if u['atr_dir'] == 1:
-        pontos_alta += 1
+        alta += PESOS["atr"]
     else:
-        pontos_baixa += 1
+        baixa += PESOS["atr"]
 
-    ppo_val = u['PPO']
-    ppo_sig = u['PPO_Signal']
+    ppo_val, ppo_sig = u['PPO'], u['PPO_Signal']
     if not (math.isnan(ppo_val) or math.isnan(ppo_sig)):
         if ppo_val > ppo_sig:
-            pontos_alta += 1.5
+            alta += PESOS["ppo"]
         else:
-            pontos_baixa += 1.5
+            baixa += PESOS["ppo"]
 
-    if preco_atual >= fib_niveis['fib_382']:
-        pontos_baixa += 2.0
-        contexto_fib = txt["ctx_premium"]
-    elif preco_atual <= fib_niveis['fib_618']:
-        pontos_alta += 2.0
-        contexto_fib = txt["ctx_desconto"]
+    if preco_atual >= fib['fib_382']:
+        baixa += PESOS["fib"]
+        contexto = txt["ctx_premium"]
+    elif preco_atual <= fib['fib_618']:
+        alta += PESOS["fib"]
+        contexto = txt["ctx_desconto"]
     else:
-        contexto_fib = txt["ctx_neutro"]
+        contexto = txt["ctx_neutro"]
 
-    if pontos_alta >= 8.5:
-        return (
-            txt["compra_forte"], "#00cc66",
-            f"{contexto_fib} SMC + PPO Order Flow Bullish.",
-            pontos_alta, pontos_baixa
-        )
-    elif pontos_baixa >= 8.5:
-        return (
-            txt["venda_forte"], "#ff3333",
-            f"{contexto_fib} SMC + PPO Order Flow Bearish.",
-            pontos_alta, pontos_baixa
-        )
+    # ---- Fator ortogonal: livro de ofertas ----
+    if book:
+        des = book["desequilibrio"]
+        if des >= 0.10:
+            alta += PESOS["book"]
+        elif des >= 0.04:
+            alta += PESOS["book"] / 2
+        elif des <= -0.10:
+            baixa += PESOS["book"]
+        elif des <= -0.04:
+            baixa += PESOS["book"] / 2
+
+    # ---- Fator estrutural: Wyckoff (Spring / TSO / LPS) ----
+    if wyk and wyk.get("evento"):
+        if wyk["direcao"] == 1:
+            alta += wyk["pontos"]
+        elif wyk["direcao"] == -1:
+            baixa += wyk["pontos"]
+
+    liquido = (alta - baixa) / MAXIMO_POSSIVEL * 100.0
+
+    if liquido >= LIMIAR_SINAL_LIQUIDO:
+        direcao = "long"
+        recomendacao, cor = txt["compra_forte"], "#00cc66"
+    elif liquido <= -LIMIAR_SINAL_LIQUIDO:
+        direcao = "short"
+        recomendacao, cor = txt["venda_forte"], "#ff3333"
     else:
-        return txt["neutro"], "#ffcc00", contexto_fib, pontos_alta, pontos_baixa
+        direcao = "neutro"
+        recomendacao, cor = txt["neutro"], "#ffcc00"
+
+    # ---- Filtro de muralha: não compra embaixo de paredão ----
+    bloqueado = False
+    if direcao in ("long", "short") and detectar_muralha_bloqueante(book, direcao, preco_atual):
+        bloqueado = True
+        direcao = "neutro"
+        recomendacao, cor = txt["neutro"], "#ffcc00"
+
+    return {
+        "recomendacao": recomendacao,
+        "cor": cor,
+        "contexto": contexto,
+        "alta": alta,
+        "baixa": baixa,
+        "liquido": liquido,
+        "direcao": direcao,
+        "bloqueado": bloqueado,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GRÁFICO
-def renderizar_grafico_plotly(df_completo, simbolo_id):
+# PLANO DE TRADE: STOP E 8 ALVOS ANCORADOS EM ESTRUTURA REAL
+
+def escolher_stop(direcao, entrada, atr, atr_stop_val, wyk, book):
+    """Prioridade: stop estrutural de Wyckoff → muralha de liquidez → ATR.
+    Exige distância mínima de 0,8×ATR para não morrer no ruído."""
+    base = "ATR"
+    candidatos = []
+
+    if wyk and wyk.get("evento") and wyk.get("stop_estrutural"):
+        if (direcao == "long" and wyk["direcao"] == 1) or (direcao == "short" and wyk["direcao"] == -1):
+            candidatos.append((wyk["stop_estrutural"], f"Wyckoff {wyk['evento']['tipo']}"))
+
+    if book:
+        if direcao == "long":
+            abaixo = [m["preco"] for m in book["muralhas_compra"] if m["preco"] < entrada]
+            if abaixo:
+                candidatos.append((max(abaixo) * 0.997, "Muralha de liquidez"))
+        else:
+            acima = [m["preco"] for m in book["muralhas_venda"] if m["preco"] > entrada]
+            if acima:
+                candidatos.append((min(acima) * 1.003, "Muralha de liquidez"))
+
+    if atr_stop_val and not math.isnan(atr_stop_val):
+        if (direcao == "long" and atr_stop_val < entrada) or (direcao == "short" and atr_stop_val > entrada):
+            candidatos.append((float(atr_stop_val), "ATR Trailing Stop"))
+
+    distancia_minima = 0.8 * atr if atr and atr > 0 else entrada * 0.01
+
+    if direcao == "long":
+        validos = [(p, b) for p, b in candidatos if entrada - p >= distancia_minima]
+    else:
+        validos = [(p, b) for p, b in candidatos if p - entrada >= distancia_minima]
+
+    if validos:
+        # `candidatos` já foi montado na ordem de prioridade, então o primeiro
+        # válido é o escolhido. O stop estrutural de Wyckoff vence o ATR mesmo
+        # quando fica mais longe — no TSO, stop apertado é stop estopado.
+        stop, base = validos[0]
+    else:
+        folga = max(distancia_minima, 2 * atr if atr else entrada * 0.02)
+        stop = entrada - folga if direcao == "long" else entrada + folga
+
+    return float(stop), base
+
+
+def construir_alvos(direcao, entrada, atr, wyk, book, n=8):
+    """Combina extensões do range de Wyckoff, muralhas reais do book, múltiplos
+    de ATR e degraus percentuais. Depois deduplica níveis a menos de 0,6% um do
+    outro e devolve os 8 primeiros na direção do trade."""
+    candidatos = set()
+    atr = atr if (atr and atr > 0 and not math.isnan(atr)) else entrada * 0.01
+
+    if direcao == "long":
+        if wyk and wyk.get("range_valido") and wyk.get("altura"):
+            res, altura = wyk["resistencia"], wyk["altura"]
+            for k in (0.0, 0.382, 0.618, 1.0, 1.618, 2.618):
+                candidatos.add(res + altura * k)
+        if book:
+            for m in book["muralhas_venda"]:
+                candidatos.add(m["preco"])
+        for k in (1, 1.5, 2, 3, 4, 5, 6.5, 8, 10, 13):
+            candidatos.add(entrada + k * atr)
+        for k in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55, 0.89):
+            candidatos.add(entrada * (1 + k))
+        niveis = sorted(x for x in candidatos if x > entrada * 1.004)
+    else:
+        if wyk and wyk.get("range_valido") and wyk.get("altura"):
+            sup, altura = wyk["suporte"], wyk["altura"]
+            for k in (0.0, 0.382, 0.618, 1.0, 1.618, 2.618):
+                candidatos.add(max(sup - altura * k, entrada * 0.02))
+        if book:
+            for m in book["muralhas_compra"]:
+                candidatos.add(m["preco"])
+        for k in (1, 1.5, 2, 3, 4, 5, 6.5, 8, 10, 13):
+            candidatos.add(entrada - k * atr)
+        for k in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55):
+            candidatos.add(entrada * (1 - k))
+        niveis = sorted((x for x in candidatos if 0 < x < entrada * 0.996), reverse=True)
+
+    finais = []
+    for x in niveis:
+        if not finais or abs(x / finais[-1] - 1) > 0.006:
+            finais.append(float(x))
+        if len(finais) == n:
+            break
+    return finais
+
+
+def lucro_percentual(direcao, entrada, alvo):
+    if entrada <= 0:
+        return 0.0
+    if direcao == "long":
+        return (alvo / entrada - 1) * 100
+    return (entrada / alvo - 1) * 100
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RENDERIZAÇÃO
+
+def renderizar_card_plano(txt, simbolo_id, direcao, entrada, stop, alvos, base_stop, preco_atual):
+    lado = "LONG" if direcao == "long" else "SHORT"
+    cor = "#22c55e" if direcao == "long" else "#f43f5e"
+    ticker = simbolo_id.replace("/", "")
+
+    risco = abs(entrada - stop)
+    rr = (abs(alvos[0] - entrada) / risco) if (alvos and risco > 0) else 0.0
+
+    linhas = []
+    for i, alvo in enumerate(alvos, start=1):
+        atingido = (direcao == "long" and preco_atual >= alvo) or (direcao == "short" and preco_atual <= alvo)
+        marca = " ✓" if atingido else ""
+        estilo_borda = f"1px solid {cor}55" if atingido else "1px solid #ffffff14"
+        fundo = f"{cor}14" if atingido else "#ffffff05"
+        cor_txt = cor if atingido else "#94a3b8"
+        linhas.append(
+            f'<div style="background:{fundo};border:{estilo_borda};border-radius:12px;'
+            f'padding:12px 16px;display:flex;justify-content:space-between;'
+            f'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">'
+            f'<span style="color:#64748b;">{txt["alvo"]} {i}</span>'
+            f'<span style="color:{cor_txt};font-weight:600;">'
+            f'{formatar_preco(alvo, "")}{marca} '
+            f'<span style="color:#475569;font-size:0.85em;">'
+            f'({lucro_percentual(direcao, entrada, alvo):+.2f}%)</span></span></div>'
+        )
+
+    grade = (
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">'
+        + "".join(linhas) + "</div>"
+    )
+
+    st.markdown(
+        f"""
+<div style="background:#0b0f19;border:1px solid #1e293b;border-radius:18px;padding:22px;">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+    <div style="border:1px solid {cor};color:{cor};border-radius:12px;padding:10px 18px;
+                font-family:ui-monospace,monospace;font-weight:700;letter-spacing:1px;">{lado}</div>
+    <div style="font-size:1.5em;font-weight:700;color:#e2e8f0;
+                font-family:ui-monospace,monospace;letter-spacing:1px;">{ticker}</div>
+  </div>
+  <div style="background:#ffffff06;border:1px solid #ffffff10;border-radius:14px;padding:16px;
+              font-family:ui-monospace,monospace;">
+    <div style="display:flex;justify-content:space-between;color:#94a3b8;">
+      <span>{txt["entrada"]}</span><span style="color:#e2e8f0;">{formatar_preco(entrada)}</span></div>
+    <div style="display:flex;justify-content:space-between;color:#94a3b8;margin-top:6px;">
+      <span>{txt["risco_retorno"]}</span><span style="color:{cor};">{rr:.2f} : 1</span></div>
+    <div style="display:flex;justify-content:space-between;color:#94a3b8;margin-top:6px;">
+      <span>{txt["base_stop"]}</span><span style="color:#e2e8f0;">{base_stop}</span></div>
+  </div>
+  {grade}
+  <div style="margin-top:14px;background:#f43f5e12;border:1px solid #f43f5e40;border-radius:14px;
+              padding:14px 18px;display:flex;justify-content:space-between;
+              font-family:ui-monospace,monospace;">
+    <span style="color:#fb7185;letter-spacing:1px;">{txt["stop_loss"]}</span>
+    <span style="color:#fb7185;font-weight:700;font-size:1.15em;">{formatar_preco(stop, "")}
+      <span style="font-size:0.75em;color:#9f1239;">
+      ({lucro_percentual(direcao, entrada, stop):+.2f}%)</span></span>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
+
+def _chips(fontes):
+    return "".join(
+        f'<span style="border:1px solid #ffffff18;border-radius:6px;padding:2px 6px;'
+        f'margin-right:4px;font-size:0.7em;color:#94a3b8;'
+        f'font-family:ui-monospace,monospace;">{f}</span>'
+        for f in fontes
+    )
+
+
+def renderizar_book(txt, book):
+    if not book:
+        st.info(txt["book_indisponivel"])
+        return
+
+    des_pct = abs(book["desequilibrio"]) * 100
+    if book["desequilibrio"] > 0.06:
+        veredicto, cor_v = txt["book_comprador"], "#22c55e"
+    elif book["desequilibrio"] < -0.06:
+        veredicto, cor_v = txt["book_vendedor"], "#f43f5e"
+    else:
+        veredicto, cor_v = txt["book_equilibrado"], "#94a3b8"
+
+    st.markdown(
+        f"""
+<div style="background:#0b0f19;border:1px solid #1e293b;border-radius:18px;padding:22px;margin-bottom:16px;">
+  <div style="color:#64748b;letter-spacing:2px;font-size:0.75em;
+              font-family:ui-monospace,monospace;">VEREDICTO · PRESSÃO DO BOOK</div>
+  <div style="font-size:1.9em;font-weight:800;color:{cor_v};margin:6px 0 4px 0;">● {veredicto}</div>
+  <div style="color:#64748b;font-family:ui-monospace,monospace;">
+      {txt["desequilibrio"]}: {des_pct:.1f}%</div>
+  <div style="display:flex;justify-content:space-between;margin-top:18px;
+              font-family:ui-monospace,monospace;">
+    <div><div style="color:#22c55e;font-size:0.75em;letter-spacing:1px;">{txt["compra"]}</div>
+         <div style="color:#22c55e;font-size:1.3em;font-weight:700;">
+         {formatar_usdt_compacto(book["total_bid"], "")}</div></div>
+    <div style="text-align:right;">
+         <div style="color:#f43f5e;font-size:0.75em;letter-spacing:1px;">{txt["venda"]}</div>
+         <div style="color:#f43f5e;font-size:1.3em;font-weight:700;">
+         {formatar_usdt_compacto(book["total_ask"], "")}</div></div>
+  </div>
+  <div style="height:8px;border-radius:6px;margin-top:12px;background:linear-gradient(90deg,
+       #22c55e 0%, #22c55e {book["pct_bid"]:.1f}%, #f43f5e {book["pct_bid"]:.1f}%, #f43f5e 100%);"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:0.75em;
+              color:#64748b;font-family:ui-monospace,monospace;">
+    <span>BID {book["pct_bid"]:.1f}%</span>
+    <span>{txt["profundidade"]}</span>
+    <span>ASK {book["pct_ask"]:.1f}%</span>
+  </div>
+  <div style="margin-top:12px;font-size:0.75em;color:#475569;">
+      {txt["fontes_book"]}: {_chips(book["fontes"])}</div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
+    col_c, col_v = st.columns(2)
+
+    def _bloco(coluna, titulo, muralhas, cor):
+        with coluna:
+            html = (f'<div style="color:{cor};letter-spacing:2px;font-size:0.75em;'
+                    f'font-family:ui-monospace,monospace;margin-bottom:8px;">● {titulo}</div>')
+            for i, m in enumerate(muralhas):
+                tag = ('<span style="background:%s22;color:%s;border-radius:6px;padding:1px 7px;'
+                       'font-size:0.65em;margin-left:8px;">MAIOR</span>' % (cor, cor)) if i == 0 else ""
+                html += (
+                    f'<div style="background:{cor}0d;border:1px solid {cor}33;border-radius:14px;'
+                    f'padding:14px;margin-bottom:8px;font-family:ui-monospace,monospace;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+                    f'<span style="color:{cor};font-size:1.15em;font-weight:700;">'
+                    f'{formatar_preco(m["preco"], "$ ")}{tag}</span>'
+                    f'<span style="color:#e2e8f0;font-weight:600;">'
+                    f'{formatar_usdt_compacto(m["usdt"], "")}</span></div>'
+                    f'<div style="margin-top:8px;">{_chips(m["fontes"])}</div></div>'
+                )
+            st.markdown(html, unsafe_allow_html=True)
+
+    _bloco(col_c, txt["zonas_compra"], book["muralhas_compra"], "#22c55e")
+    _bloco(col_v, txt["zonas_venda"], book["muralhas_venda"], "#f43f5e")
+
+
+def renderizar_wyckoff(txt, wyk):
+    if not wyk or not wyk.get("evento"):
+        st.info(txt["wyckoff_sem_evento"])
+        return
+
+    ev = wyk["evento"]
+    cor = "#22c55e" if wyk["direcao"] == 1 else "#f43f5e"
+    st.markdown(
+        f"""
+<div style="background:#0b0f19;border:1px solid #1e293b;border-radius:18px;padding:20px;
+            font-family:ui-monospace,monospace;">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div><div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_evento"]}</div>
+         <div style="color:{cor};font-size:1.4em;font-weight:800;">{ev["tipo"]}</div></div>
+    <div><div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_fase"]}</div>
+         <div style="color:#e2e8f0;font-size:1.2em;">{wyk["fase"]}</div></div>
+    <div><div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_range"]}</div>
+         <div style="color:#e2e8f0;">{formatar_preco(wyk["suporte"], "")} —
+              {formatar_preco(wyk["resistencia"], "")}</div></div>
+  </div>
+  <div style="display:flex;gap:22px;margin-top:16px;flex-wrap:wrap;font-size:0.85em;">
+    <span style="color:#94a3b8;">Penetração: <b style="color:#e2e8f0;">
+        {ev["penetracao"]*100:.2f}%</b></span>
+    <span style="color:#94a3b8;">Volume rel.: <b style="color:#e2e8f0;">
+        {ev["vol_rel"]:.2f}×</b></span>
+    <span style="color:#94a3b8;">{txt["wyckoff_teste"]}: <b style="color:#e2e8f0;">
+        {txt["confirmado"] if wyk["teste_ok"] else txt["nao_confirmado"]}</b></span>
+    <span style="color:#94a3b8;">{txt["wyckoff_sos"]}: <b style="color:#e2e8f0;">
+        {txt["confirmado"] if wyk["sos"] else txt["nao_confirmado"]}</b></span>
+    <span style="color:#94a3b8;">{txt["wyckoff_lps"]}: <b style="color:#e2e8f0;">
+        {txt["confirmado"] if wyk["lps"] else txt["nao_confirmado"]}</b></span>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True
+    )
+
+
+def renderizar_grafico_plotly(df_completo, simbolo_id, wyk, book):
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
 
     fig = go.Figure()
-
     fig.add_trace(go.Candlestick(
-        x=df_grafico['time'],
-        open=df_grafico['open'],
-        high=df_grafico['high'],
-        low=df_grafico['low'],
-        close=df_grafico['close'],
-        name=simbolo_id,
-        increasing_line_color='#10b981',
-        decreasing_line_color='#ef4444',
-        increasing_fillcolor='#10b981',
-        decreasing_fillcolor='#ef4444'
+        x=df_grafico['time'], open=df_grafico['open'], high=df_grafico['high'],
+        low=df_grafico['low'], close=df_grafico['close'], name=simbolo_id,
+        increasing_line_color='#10b981', decreasing_line_color='#ef4444',
+        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef4444'
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_grafico['time'], y=df_grafico['SSL_Baseline'], mode='lines',
+        name='SMC Baseline (SSL)', line=dict(color='#00aaff', width=2)
+    ))
+    fig.add_trace(go.Scatter(
+        x=df_grafico['time'], y=df_grafico['ATR_Stop'], mode='lines',
+        name='ATR Trailing Stop', line=dict(color='#ffaa00', width=1, dash='dash')
     ))
 
-    fig.add_trace(go.Scatter(
-        x=df_grafico['time'],
-        y=df_grafico['SSL_Baseline'],
-        mode='lines',
-        name='SMC Baseline (SSL)',
-        line=dict(color='#00aaff', width=2)
-    ))
+    if wyk and wyk.get("range_valido"):
+        fig.add_hline(y=wyk["suporte"], line=dict(color="#22c55e", width=1, dash="dot"),
+                      annotation_text="TR Suporte", annotation_position="bottom left",
+                      annotation_font_color="#22c55e")
+        fig.add_hline(y=wyk["resistencia"], line=dict(color="#f43f5e", width=1, dash="dot"),
+                      annotation_text="TR Resistência", annotation_position="top left",
+                      annotation_font_color="#f43f5e")
 
-    fig.add_trace(go.Scatter(
-        x=df_grafico['time'],
-        y=df_grafico['ATR_Stop'],
-        mode='lines',
-        name='ATR Trailing Stop',
-        line=dict(color='#ffaa00', width=1, dash='dash')
-    ))
+    if book:
+        maior_compra = book["muralhas_compra"][0]["preco"] if book["muralhas_compra"] else None
+        maior_venda = book["muralhas_venda"][0]["preco"] if book["muralhas_venda"] else None
+        if maior_compra:
+            fig.add_hline(y=maior_compra, line=dict(color="#22c55e", width=2),
+                          annotation_text="Muralha bid", annotation_position="bottom right",
+                          annotation_font_color="#22c55e")
+        if maior_venda:
+            fig.add_hline(y=maior_venda, line=dict(color="#f43f5e", width=2),
+                          annotation_text="Muralha ask", annotation_position="top right",
+                          annotation_font_color="#f43f5e")
 
     fig.update_layout(
-        paper_bgcolor='#0b0f19',
-        plot_bgcolor='#0b0f19',
-        font=dict(color='#e2e8f0'),
-        xaxis=dict(
-            gridcolor='#1e293b',
-            showgrid=True,
-            rangeslider=dict(visible=False)
-        ),
+        paper_bgcolor='#0b0f19', plot_bgcolor='#0b0f19', font=dict(color='#e2e8f0'),
+        xaxis=dict(gridcolor='#1e293b', showgrid=True, rangeslider=dict(visible=False)),
         yaxis=dict(gridcolor='#1e293b', showgrid=True),
         legend=dict(bgcolor='#1e293b', bordercolor='#475569', borderwidth=1),
-        margin=dict(l=10, r=10, t=30, b=10),
-        height=520
+        margin=dict(l=10, r=10, t=30, b=10), height=520
     )
-
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1257,9 +2049,7 @@ txt = DICIONARIO_LINGUAS[idioma_selecionado]
 st.title(txt["titulo"])
 st.sidebar.header(txt["config_globais"])
 
-# Lista de criptomoedas (obtida da Gate.io, que é a primária)
 lista_criptos = obter_todos_pares_usdt()
-
 simbolo_id = st.sidebar.selectbox(
     txt["selecione_cripto"],
     lista_criptos,
@@ -1268,8 +2058,6 @@ simbolo_id = st.sidebar.selectbox(
 
 intervalos = txt["intervalos"]
 valores_intervalos = list(intervalos.values())
-# Índice padrão calculado pelo valor ("4h"), não pela posição fixa na lista —
-# assim a seleção padrão não quebra se a ordem/composição do dicionário mudar.
 indice_padrao_timeframe = valores_intervalos.index("4h") if "4h" in valores_intervalos else 0
 intervalo_escolhido = st.sidebar.selectbox(
     txt["tempo_grafico"],
@@ -1280,8 +2068,10 @@ timeframe = intervalos[intervalo_escolhido]
 
 st.sidebar.markdown("---")
 modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
+# Mínimo de 20s: em modo vivo cada ciclo consulta OHLCV + ticker + 4 books.
+# Abaixo disso o risco de bater o rate limit das corretoras cresce muito.
 intervalo_refresh = st.sidebar.slider(
-    txt["intervalo_refresh"], min_value=15, max_value=120, value=30
+    txt["intervalo_refresh"], min_value=20, max_value=120, value=30
 )
 
 
@@ -1290,7 +2080,6 @@ intervalo_refresh = st.sidebar.slider(
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
 def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     df_dados = carregar_dados(simbolo_id, timeframe)
-
     if df_dados is None or df_dados.empty:
         st.warning(txt["erro_dados"])
         return
@@ -1300,77 +2089,101 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         st.warning(txt["erro_dados"])
         return
 
-    ultimo_reg = df_analise.iloc[-1]
-    preco_atual = ultimo_reg['close']
+    ultimo = df_analise.iloc[-1]
+    preco_atual = float(ultimo['close'])
+    atr_atual = float(ultimo['ATR']) if not math.isnan(ultimo['ATR']) else preco_atual * 0.01
+    simbolo_base = simbolo_id.split('/')[0]
 
-    # Dados de 24h com fallback automático (ccxt -> REST direta)
+    book = obter_book_agregado(simbolo_id)
+    wyk = detectar_wyckoff(df_analise.reset_index(drop=True))
+
     dados_24h = obter_dados_24h(simbolo_id)
     variacao_24h = dados_24h.get("change") if dados_24h else None
-    volume_24h = dados_24h.get("volume") if dados_24h else None
 
-    market_cap = obter_market_cap_robusto(simbolo_id)
+    dados_gecko = obter_dados_coingecko(simbolo_base)
+    dados_paprika = None
+    if not dados_gecko or not dados_gecko.get("market_cap"):
+        dados_paprika = obter_dados_coinpaprika(simbolo_base)
 
-    recomendacao, cor_sinal, analise, pontos_alta, pontos_baixa = analisar_confluencia(
-        df_dados, txt
+    volume_bruto = resolver_volume_usdt(dados_24h, preco_atual, dados_gecko)
+    volume_usdt, volume_da_memoria = valor_com_memoria(f"vol::{simbolo_id}", volume_bruto)
+
+    mc_bruto = resolver_market_cap(simbolo_base, preco_atual, dados_gecko, dados_paprika)
+    market_cap, mc_da_memoria = valor_com_memoria(f"mc::{simbolo_id}", mc_bruto)
+
+    res = analisar_confluencia(df_dados, txt, book, wyk)
+
+    st.markdown(
+        f"""
+<div style="background:{res['cor']}22;padding:20px;border-radius:10px;
+            border:2px solid {res['cor']};margin-bottom:20px;">
+<h2 style="margin:0;color:{res['cor']};">{res['recomendacao']}</h2>
+<p style="margin:8px 0 0 0;color:#ddd;">{res['contexto']}
+   | <b>{txt['escore_liquido']}: {res['liquido']:+.1f} / 100</b></p>
+</div>
+""",
+        unsafe_allow_html=True
     )
-
-    ppo_line = ultimo_reg['PPO']
-    ppo_sig = ultimo_reg['PPO_Signal']
-    ppo_txt = (
-        f"PPO: {ppo_line:.3f} / Signal: {ppo_sig:.3f}"
-        if not (math.isnan(ppo_line) or math.isnan(ppo_sig))
-        else "PPO: —"
-    )
-
-    st.markdown(f"""
-    <div style="background:{cor_sinal}22;padding:20px;border-radius:10px;
-                border:2px solid {cor_sinal};margin-bottom:20px;">
-    <h2 style="margin:0;color:{cor_sinal};">{recomendacao}</h2>
-    <p style="margin:8px 0 0 0;color:#ddd;">{analise} | <b>{ppo_txt}</b></p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    nome_completo_ativo = simbolo_id.split('/')[0]
-    label_preco = f"{nome_completo_ativo} | {txt['preco_spot']}"
+    if res["bloqueado"]:
+        st.warning(txt["alerta_muralha"])
 
     m1, m2, m3, m4, m5, m6 = st.columns(6)
-    m1.metric(label_preco, formatar_preco(preco_atual))
+    m1.metric(f"{simbolo_base} | {txt['preco_spot']}", formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "—")
-    m3.metric(txt["volume_24h"], formatar_volume_usdt(volume_24h))
-
-    if market_cap is not None:
-        m4.metric(txt["market_cap"], formatar_market_cap(market_cap))
-    else:
-        m4.metric(txt["market_cap"], txt["marketcap_nao_disponivel"])
-
-    m5.metric(txt["pontos_compra"], f"{pontos_alta:.1f}")
-    m6.metric(txt["pontos_venda"], f"{pontos_baixa:.1f}")
-
-    atr_stop_val = ultimo_reg['ATR_Stop']
-    st.markdown(
-        f"**{txt['stop_atr']}:** {formatar_preco(atr_stop_val)}"
-        f"  |  RSI: **{ultimo_reg['RSI_14']:.1f}**"
-        f"  |  MFI: **{ultimo_reg['MFI']:.1f}**"
+    m3.metric(
+        txt["volume_24h"],
+        formatar_usdt_compacto(volume_usdt),
+        delta=txt["valor_memorizado"] if volume_da_memoria else None,
+        delta_color="off"
     )
+    m4.metric(
+        txt["market_cap"],
+        formatar_usdt_compacto(market_cap) if market_cap else txt["marketcap_nao_disponivel"],
+        delta=txt["valor_memorizado"] if mc_da_memoria else None,
+        delta_color="off"
+    )
+    m5.metric(txt["pontos_compra"], f"{res['alta']:.1f}")
+    m6.metric(txt["pontos_venda"], f"{res['baixa']:.1f}")
+
+    stoch_k = float(ultimo['STOCH_K']) if not math.isnan(ultimo['STOCH_K']) else None
+    partes = [f"**{txt['stop_atr']}:** {formatar_preco(ultimo['ATR_Stop'])}"]
+    if not math.isnan(ultimo['RSI_14']):
+        partes.append(f"RSI: **{ultimo['RSI_14']:.1f}**")
+    if stoch_k is not None:
+        partes.append(f"RSI Stoch %K: **{stoch_k:.1f}**")
+    if not math.isnan(ultimo['MFI']):
+        partes.append(f"MFI: **{ultimo['MFI']:.1f}**")
+    if not math.isnan(ultimo['MACD_HIST']):
+        partes.append(f"MACD Hist: **{ultimo['MACD_HIST']:+.4f}**")
+    partes.append(f"SSL: **{'ALTA' if ultimo['ssl_dir'] == 1 else 'BAIXA'}**")
+    st.markdown("  |  ".join(partes))
+
+    st.markdown(f"### {txt['wyckoff_titulo']}")
+    renderizar_wyckoff(txt, wyk)
+
+    st.markdown(f"### {txt['book_titulo']}")
+    renderizar_book(txt, book)
+
+    if res["direcao"] in ("long", "short"):
+        st.markdown(f"### {txt['plano_trade']}")
+        stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
+                                        ultimo['ATR_Stop'], wyk, book)
+        alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
+        if alvos:
+            renderizar_card_plano(txt, simbolo_id, res["direcao"], preco_atual,
+                                  stop, alvos, base_stop, preco_atual)
 
     st.markdown(f"### {txt['grafico_titulo']}")
-    renderizar_grafico_plotly(df_dados, simbolo_id)
+    renderizar_grafico_plotly(df_dados, simbolo_id, wyk, book)
 
-    hora_atual = pd.Timestamp.now().strftime("%H:%M:%S")
-    n_velas = len(df_analise)
-    if modo_vivo:
-        st.info(
-            f"🟢 {txt['ultima_atualizacao']}: {hora_atual} | "
-            f"{txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']} | "
-            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas}"
-        )
-    else:
-        st.info(
-            f"⏸ {txt['ultima_atualizacao']}: {hora_atual} | "
-            f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-            f"Velas analisadas: {n_velas}"
-        )
+    hora = pd.Timestamp.now().strftime("%H:%M:%S")
+    prefixo = "🟢" if modo_vivo else "⏸"
+    extra = f" | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}" if modo_vivo else ""
+    st.info(
+        f"{prefixo} {txt['ultima_atualizacao']}: {hora}{extra} | "
+        f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+        f"Velas analisadas: {len(df_analise)}"
+    )
 
 
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
