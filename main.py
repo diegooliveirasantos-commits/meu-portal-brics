@@ -735,6 +735,25 @@ def valor_com_memoria(chave, valor):
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GERENCIADOR DE EXCHANGES (fallback interno)
+#
+# PRIORITY e SIGLAS ficam FORA da classe de propósito. O @st.cache_resource
+# mantém a instância viva entre reruns e o Streamlit Cloud NÃO a descarta num
+# hot-reload de código: se um atributo novo for adicionado à classe, a instância
+# antiga em cache continua sem ele e o app quebra com AttributeError. Como
+# constantes de módulo, elas são relidas a cada execução do script e nenhuma
+# instância velha consegue quebrá-las.
+
+# Ordem de tentativa (primária primeiro, depois fallbacks)
+PRIORITY_EXCHANGES = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
+
+# Rótulos curtos usados nos chips do painel de book
+SIGLAS_EXCHANGES = {"Gate.io": "GATE", "Kraken": "KRK", "MEXC": "MEXC", "KuCoin": "KUC"}
+
+# Suba este número sempre que mudar a classe ExchangeManager: ele entra na
+# chave do cache e força a criação de uma instância nova no próximo deploy.
+VERSAO_MANAGER = 2
+
+
 class ExchangeManager:
     """Gerencia múltiplas exchanges com fallback, sem exposição ao usuário.
 
@@ -770,12 +789,6 @@ class ExchangeManager:
         }
     }
 
-    # Ordem de tentativa (primária primeiro, depois fallbacks)
-    PRIORITY = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
-
-    # Rótulos curtos usados nos chips do painel de book
-    SIGLAS = {"Gate.io": "GATE", "Kraken": "KRK", "MEXC": "MEXC", "KuCoin": "KUC"}
-
     def __init__(self):
         self.clients = {}
         self._init_clients()
@@ -794,10 +807,15 @@ class ExchangeManager:
 
 
 @st.cache_resource
-def obter_exchange_manager():
+def _construir_exchange_manager(versao: int):
     """Singleton cacheado pelo Streamlit — evita recriar clientes ccxt
-    (e reabrir conexões) a cada rerun/callback."""
+    (e reabrir conexões) a cada rerun/callback. O parâmetro `versao` entra na
+    chave do cache: mudou a classe, muda a chave, nasce instância nova."""
     return ExchangeManager()
+
+
+def obter_exchange_manager():
+    return _construir_exchange_manager(VERSAO_MANAGER)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -903,7 +921,7 @@ def obter_dados_24h(simbolo):
     para que o volume possa ser convertido em USDT com segurança."""
     manager = obter_exchange_manager()
 
-    for exchange_name in manager.PRIORITY:
+    for exchange_name in PRIORITY_EXCHANGES:
         try:
             client = manager.get_client(exchange_name)
             if not client:
@@ -922,7 +940,7 @@ def obter_dados_24h(simbolo):
         except Exception:
             continue
 
-    for exchange_name in manager.PRIORITY:
+    for exchange_name in PRIORITY_EXCHANGES:
         resultado = _obter_dados_24h_rest_direto(exchange_name, simbolo)
         if resultado and resultado.get("last"):
             resultado["fonte"] = exchange_name
@@ -1090,7 +1108,7 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
     manager = obter_exchange_manager()
     livros = []
 
-    for nome in manager.PRIORITY:
+    for nome in PRIORITY_EXCHANGES:
         cliente = manager.get_client(nome)
         if cliente is None:
             continue
@@ -1120,7 +1138,7 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
     total_ask = 0.0
 
     for nome, bids, asks in livros:
-        sigla = manager.SIGLAS.get(nome, nome[:4].upper())
+        sigla = SIGLAS_EXCHANGES.get(nome, nome[:4].upper())
         for preco, qtd in bids:
             if preco < piso or preco > mid:
                 continue
@@ -1169,7 +1187,7 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
         "pct_ask": total_ask / (total_bid + total_ask) * 100,
         "muralhas_compra": _muralhas(baldes_bid),
         "muralhas_venda": _muralhas(baldes_ask),
-        "fontes": [manager.SIGLAS.get(n, n) for n, _, _ in livros],
+        "fontes": [SIGLAS_EXCHANGES.get(n, n) for n, _, _ in livros],
     }
 
 
@@ -1517,7 +1535,7 @@ def calcular_retracao_fibonacci(df_analise):
 @st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
 def carregar_dados(simbolo_id, timeframe_selecionado):
     manager = obter_exchange_manager()
-    for exchange_name in manager.PRIORITY:
+    for exchange_name in PRIORITY_EXCHANGES:
         try:
             client = manager.get_client(exchange_name)
             if not client:
