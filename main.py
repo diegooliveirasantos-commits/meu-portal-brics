@@ -1116,8 +1116,10 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
             ob = cliente.fetch_order_book(simbolo, limit=LIMITE_BOOK)
         except Exception:
             continue
-        bids = [b for b in (ob.get("bids") or []) if b and b[0] and b[1]]
-        asks = [a for a in (ob.get("asks") or []) if a and a[0] and a[1]]
+        bids = [[float(b[0]), float(b[1])] for b in (ob.get("bids") or [])
+                if b and len(b) >= 2 and b[0] and b[1]]
+        asks = [[float(a[0]), float(a[1])] for a in (ob.get("asks") or [])
+                if a and len(a) >= 2 and a[0] and a[1]]
         if not bids or not asks:
             continue
         livros.append((nome, bids, asks))
@@ -1139,7 +1141,11 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
 
     for nome, bids, asks in livros:
         sigla = SIGLAS_EXCHANGES.get(nome, nome[:4].upper())
-        for preco, qtd in bids:
+        # A Kraken devolve cada nível como [preço, quantidade, timestamp]; as
+        # demais devolvem [preço, quantidade]. Lemos sempre os dois primeiros
+        # campos e ignoramos o resto — assim qualquer corretora entra.
+        for nivel in bids:
+            preco, qtd = float(nivel[0]), float(nivel[1])
             if preco < piso or preco > mid:
                 continue
             notional = preco * qtd
@@ -1149,7 +1155,8 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
             b["usdt"] += notional
             b["base"] += qtd
             b["fontes"].add(sigla)
-        for preco, qtd in asks:
+        for nivel in asks:
+            preco, qtd = float(nivel[0]), float(nivel[1])
             if preco > teto or preco < mid:
                 continue
             notional = preco * qtd
