@@ -34,84 +34,66 @@ JANELA_EVENTO_WYCKOFF = 15
 LIMIAR_SINAL_LIQUIDO = 32.0
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (mantido integralmente, igual à versão anterior)
-# ... (insira aqui todo o dicionário _TRADUCOES e a função de fallback)
-# Para não alongar, mantenha o mesmo bloco de idiomas do código anterior.
+# DICIONÁRIO DE IDIOMAS (mesmo da versão anterior, omitido para economia)
+# ... (insira aqui o dicionário completo _TEXTOS_BASE_PT_BR e _TRADUCOES)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# (O restante das funções auxiliares, ExchangeManager, market data, book,
-#  Wyckoff, indicadores e carregamento de dados permanecem idênticos à versão
-#  que já incluía as médias móveis e volume. Para evitar repetição, assuma que
-#  todo o código anterior até a função `analisar_confluencia` está presente.)
+# (Aqui vão todas as funções auxiliares: formatar_preco, formatar_usdt_compacto,
+#  valor_com_memoria, ExchangeManager, obter_todos_pares_usdt, obter_dados_24h,
+#  resolver_volume_usdt, obter_id_coingecko, obter_dados_coingecko,
+#  obter_id_coinpaprika, obter_dados_coinpaprika, resolver_market_cap,
+#  obter_book_agregado, detectar_muralha_bloqueante, detectar_wyckoff,
+#  calcular_rsi, calcular_rsi_estocastico, calcular_macd, calcular_mfi,
+#  calcular_ssl_hybrid, calcular_atr_stop, calcular_ppo, calcular_retracao_fibonacci,
+#  carregar_dados (com médias móveis e volume médio), analisar_confluencia (com os novos pesos),
+#  escolher_stop, construir_alvos, lucro_percentual,
+#  renderizar_card_plano, _chips, renderizar_book, renderizar_wyckoff,
+#  renderizar_grafico_plotly (com suporte a stop_loss) )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA (com os novos indicadores) - já implementada antes
-# ─────────────────────────────────────────────────────────────────────────────
+# SIDEBAR ────────────────────────────────────────────────────────────────────
+
+# Preparar lista de idiomas
+idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
+indice_idioma_padrao = idiomas_disponiveis.index(IDIOMA_PADRAO) if IDIOMA_PADRAO in idiomas_disponiveis else 0
+
+st.sidebar.markdown(f"### {DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_label']}")
+idioma_selecionado = st.sidebar.selectbox(
+    DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_selecao'],
+    options=idiomas_disponiveis,
+    index=indice_idioma_padrao
+)
+txt = DICIONARIO_LINGUAS[idioma_selecionado]
+st.title(txt["titulo"])
+st.sidebar.header(txt["config_globais"])
+
+# Seleção de par
+lista_criptos = obter_todos_pares_usdt()
+simbolo_id = st.sidebar.selectbox(
+    txt["selecione_cripto"],
+    lista_criptos,
+    index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
+)
+
+# Timeframe
+intervalos = txt["intervalos"]
+valores_intervalos = list(intervalos.values())
+indice_padrao_timeframe = valores_intervalos.index("4h") if "4h" in valores_intervalos else 0
+intervalo_escolhido = st.sidebar.selectbox(
+    txt["tempo_grafico"],
+    list(intervalos.keys()),
+    index=indice_padrao_timeframe
+)
+timeframe = intervalos[intervalo_escolhido]
+
+st.sidebar.markdown("---")
+modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
+intervalo_refresh = st.sidebar.slider(
+    txt["intervalo_refresh"], min_value=20, max_value=120, value=30
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PLANO DE TRADE (funções escolher_stop, construir_alvos, lucro_percentual)
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ─────────────────────────────────────────────────────────────────────────────
-# RENDERIZAÇÃO DO GRÁFICO (MODIFICADA: agora aceita stop_loss opcional)
-def renderizar_grafico_plotly(df_completo, simbolo_id, wyk, book, stop_loss=None):
-    df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=df_grafico['time'], open=df_grafico['open'], high=df_grafico['high'],
-        low=df_grafico['low'], close=df_grafico['close'], name=simbolo_id,
-        increasing_line_color='#10b981', decreasing_line_color='#ef4444',
-        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef4444'
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_grafico['time'], y=df_grafico['SSL_Baseline'], mode='lines',
-        name='SMC Baseline (SSL)', line=dict(color='#00aaff', width=2)
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_grafico['time'], y=df_grafico['ATR_Stop'], mode='lines',
-        name='ATR Trailing Stop', line=dict(color='#ffaa00', width=1, dash='dash')
-    ))
-    if wyk and wyk.get("range_valido"):
-        fig.add_hline(y=wyk["suporte"], line=dict(color="#22c55e", width=1, dash="dot"),
-                      annotation_text="TR Suporte", annotation_position="bottom left",
-                      annotation_font_color="#22c55e")
-        fig.add_hline(y=wyk["resistencia"], line=dict(color="#f43f5e", width=1, dash="dot"),
-                      annotation_text="TR Resistência", annotation_position="top left",
-                      annotation_font_color="#f43f5e")
-    if book:
-        maior_compra = book["muralhas_compra"][0]["preco"] if book["muralhas_compra"] else None
-        maior_venda = book["muralhas_venda"][0]["preco"] if book["muralhas_venda"] else None
-        if maior_compra:
-            fig.add_hline(y=maior_compra, line=dict(color="#22c55e", width=2),
-                          annotation_text="Muralha bid", annotation_position="bottom right",
-                          annotation_font_color="#22c55e")
-        if maior_venda:
-            fig.add_hline(y=maior_venda, line=dict(color="#f43f5e", width=2),
-                          annotation_text="Muralha ask", annotation_position="top right",
-                          annotation_font_color="#f43f5e")
-
-    # ----- NOVO: exibir stop loss se fornecido -----
-    if stop_loss is not None and not math.isnan(stop_loss):
-        fig.add_hline(y=stop_loss, line=dict(color="#f43f5e", width=2, dash="dash"),
-                      annotation_text="Stop Loss", annotation_position="top right",
-                      annotation_font_color="#f43f5e")
-
-    fig.update_layout(
-        paper_bgcolor='#0b0f19', plot_bgcolor='#0b0f19', font=dict(color='#e2e8f0'),
-        xaxis=dict(gridcolor='#1e293b', showgrid=True, rangeslider=dict(visible=False)),
-        yaxis=dict(gridcolor='#1e293b', showgrid=True),
-        legend=dict(bgcolor='#1e293b', bordercolor='#475569', borderwidth=1),
-        margin=dict(l=10, r=10, t=30, b=10), height=520
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# RENDERIZAÇÃO DOS DEMAIS COMPONENTES (book, wyckoff, card de trade)
-# (mantidos exatamente como antes)
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PAINEL PRINCIPAL (MODIFICADO: calcula stop e passa para o gráfico)
+# PAINEL PRINCIPAL (definido APÓS a sidebar, para ter acesso a modo_vivo e intervalo_refresh)
 @st.fragment(run_every=intervalo_refresh if modo_vivo else None)
 def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     df_dados = carregar_dados(simbolo_id, timeframe)
@@ -195,7 +177,7 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     st.markdown(f"### {txt['book_titulo']}")
     renderizar_book(txt, book)
 
-    # ----- CALCULAR STOP E ALVOS (se houver direção) -----
+    # Plano de trade e stop
     stop = None
     alvos = []
     base_stop = ""
@@ -209,7 +191,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
                                   stop, alvos, base_stop, preco_atual)
 
     st.markdown(f"### {txt['grafico_titulo']}")
-    # Passamos o stop (ou None) para o gráfico
     renderizar_grafico_plotly(df_dados, simbolo_id, wyk, book, stop_loss=stop)
 
     hora = pd.Timestamp.now().strftime("%H:%M:%S")
@@ -221,4 +202,6 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         f"Velas analisadas: {len(df_analise)}"
     )
 
+# ─────────────────────────────────────────────────────────────────────────────
+# EXECUÇÃO
 painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
