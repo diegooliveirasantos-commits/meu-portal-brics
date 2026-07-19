@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - Streamlit Dashboard (SEM GRÁFICO + RESUMO WYCKOFF)
+# Versão 2.0 - Streamlit Dashboard (SEM GRÁFICO + RESUMO WYCKOFF PARA LEIGOS)
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
 # -----------------------------------------------------------------------------
 
@@ -46,15 +46,15 @@ LIMIAR_SINAL_LIQUIDO: float = 32.0
 PONTOS_MAX_WYCKOFF: float = 3.0
 
 # ==========================================================================
-# NOVO: DICIONÁRIO DE RESUMOS PARA EVENTOS WYCKOFF (até 11 palavras)
+# DICIONÁRIO DE RESUMOS WYCKOFF EM LINGUAGEM LEIGA (máximo 20 palavras)
 # ==========================================================================
 RESUMOS_WYCKOFF = {
-    "SPRING": "Falsa ruptura de suporte com reversão forte",
-    "SHAKEOUT": "Liquidação de stops seguida de recuperação",
-    "TSO": "Teste de suporte com volume elevado",
-    "UT": "Falsa ruptura de resistência com rejeição",
-    "UPTHRUST": "Ruptura de resistência com rejeição e volume",
-    "UTAD": "Teste de resistência com volume e rejeição"
+    "SPRING": "O preço furou o suporte, mas voltou rápido, indicando que compradores estão no controle.",
+    "SHAKEOUT": "O preço caiu forte para derrubar stops, mas se recuperou, mostrando que a queda foi falsa.",
+    "TSO": "O preço testou o suporte com alto volume, mas não conseguiu romper, sinal de força.",
+    "UT": "O preço tentou subir acima da resistência, mas foi rejeitado, mostrando pressão de venda.",
+    "UPTHRUST": "O preço rompeu a resistência, mas voltou para baixo, indicando fraqueza dos compradores.",
+    "UTAD": "O preço testou a resistência com volume alto e caiu, sinal de que a alta foi falsa."
 }
 # ==========================================================================
 
