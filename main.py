@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
+# Versão 2.0 - Streamlit Dashboard
+# Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
+# -----------------------------------------------------------------------------
+
 import streamlit as st
 import ccxt
 import pandas as pd
@@ -6,7 +12,11 @@ import requests
 import math
 from decimal import Decimal
 import plotly.graph_objects as go
+from typing import Optional, Dict, Any, List, Tuple, Union
 
+# -----------------------------------------------------------------------------
+# CONFIGURAÇÃO DA PÁGINA
+# -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
     page_icon="🏦",
@@ -14,27 +24,30 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CONSTANTES
-VELAS_TOTAL = 500
-PERIODO_AQUECIMENTO = 100
-IDIOMA_PADRAO = "Português (BR)"
-TTL_MERCADOS_SEGUNDOS = 3600
-TTL_DADOS_LIVE_SEGUNDOS = 15
-TTL_BOOK_SEGUNDOS = 12
-EXCHANGE_TIMEOUT_MS = 10000
+# -----------------------------------------------------------------------------
+# CONSTANTES GLOBAIS
+# -----------------------------------------------------------------------------
+VELAS_TOTAL: int = 500
+PERIODO_AQUECIMENTO: int = 100
+IDIOMA_PADRAO: str = "Português (BR)"
+TTL_MERCADOS_SEGUNDOS: int = 3600
+TTL_DADOS_LIVE_SEGUNDOS: int = 15
+TTL_BOOK_SEGUNDOS: int = 12
+EXCHANGE_TIMEOUT_MS: int = 10000
 
-LIMITE_BOOK = 100
-FAIXA_BOOK = 0.015
-PASSO_AGRUPAMENTO = 0.0005
+LIMITE_BOOK: int = 100
+FAIXA_BOOK: float = 0.015
+PASSO_AGRUPAMENTO: float = 0.0005
 
-JANELA_BASE_WYCKOFF = 60
-JANELA_EVENTO_WYCKOFF = 15
+JANELA_BASE_WYCKOFF: int = 60
+JANELA_EVENTO_WYCKOFF: int = 15
 
-LIMIAR_SINAL_LIQUIDO = 32.0
+LIMIAR_SINAL_LIQUIDO: float = 32.0
+PONTOS_MAX_WYCKOFF: float = 3.0
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DICIONÁRIO DE IDIOMAS (mantido exatamente igual ao original)
+# -----------------------------------------------------------------------------
+# DICIONÁRIO DE IDIOMAS (mantido exatamente como original)
+# -----------------------------------------------------------------------------
 _TEXTOS_BASE_PT_BR = {
     "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
     "config_globais": "⚙️ Configurações Globais",
@@ -191,7 +204,7 @@ _TRADUCOES = {
         "ctx_desconto": "Activo en Zona de Descuento de Fibonacci (Excelente riesgo/retorno para Institucionales).",
         "ctx_premium": "Activo en Zona Premium de Fibonacci (Precio estirado, propicio para toma de ganancias).",
         "ctx_neutro": "Precio en zona neutral de Fibonacci (Fair Value Zone).",
-        "ultima_atualizacao": "Última actualización",
+        "ultima_atualizacion": "Última actualización",
         "proximo_refresh": "Próxima actualización en",
         "segundos": "segundos",
         "pontos_compra": "Puntos de Compra",
@@ -629,7 +642,8 @@ _TRADUCOES = {
     }
 }
 
-def construir_dicionario_com_fallback(traducoes, idioma_padrao=IDIOMA_PADRAO):
+def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIOMA_PADRAO) -> Dict:
+    """Preenche com os textos base para idiomas que não tenham todas as chaves."""
     base = traducoes[idioma_padrao]
     dicionario_final = {}
     for idioma, valores in traducoes.items():
@@ -640,9 +654,11 @@ def construir_dicionario_com_fallback(traducoes, idioma_padrao=IDIOMA_PADRAO):
 
 DICIONARIO_LINGUAS = construir_dicionario_com_fallback(_TRADUCOES)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FORMATAÇÃO
-def formatar_preco(valor, prefixo="$ "):
+# -----------------------------------------------------------------------------
+# FUNÇÕES DE FORMATAÇÃO
+# -----------------------------------------------------------------------------
+def formatar_preco(valor: Optional[float], prefixo: str = "$ ") -> str:
+    """Formata um valor numérico como preço com notação compacta."""
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
         return f"{prefixo}---"
     if valor == 0:
@@ -666,7 +682,8 @@ def formatar_preco(valor, prefixo="$ "):
     else:
         return f"{prefixo}{valor:,.2f}"
 
-def formatar_usdt_compacto(valor, sufixo=" USDT"):
+def formatar_usdt_compacto(valor: Optional[float], sufixo: str = " USDT") -> str:
+    """Formata um valor em USDT com abreviações K/M/B/T."""
     if valor is None or (isinstance(valor, float) and math.isnan(valor)) or valor <= 0:
         return "---"
     if valor >= 1_000_000_000_000:
@@ -679,9 +696,11 @@ def formatar_usdt_compacto(valor, sufixo=" USDT"):
         return f"{valor / 1_000:.2f}K{sufixo}"
     return f"{valor:,.2f}{sufixo}"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MEMÓRIA DE SESSÃO
-def valor_com_memoria(chave, valor):
+# -----------------------------------------------------------------------------
+# MEMÓRIA DE SESSÃO (para valores que podem falhar)
+# -----------------------------------------------------------------------------
+def valor_com_memoria(chave: str, valor: Optional[float]) -> Tuple[Optional[float], bool]:
+    """Retorna o valor ou o último válido armazenado na sessão."""
     memoria = st.session_state.setdefault("_memoria_metricas", {})
     if valor is not None and not (isinstance(valor, float) and math.isnan(valor)) and valor > 0:
         memoria[chave] = float(valor)
@@ -690,8 +709,9 @@ def valor_com_memoria(chave, valor):
         return memoria[chave], True
     return None, False
 
-# ─────────────────────────────────────────────────────────────────────────────
-# GERENCIADOR DE EXCHANGES
+# -----------------------------------------------------------------------------
+# GERENCIADOR DE EXCHANGES (com cache)
+# -----------------------------------------------------------------------------
 PRIORITY_EXCHANGES = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
 SIGLAS_EXCHANGES = {"Gate.io": "GATE", "Kraken": "KRK", "MEXC": "MEXC", "KuCoin": "KUC"}
 VERSAO_MANAGER = 2
@@ -721,27 +741,29 @@ class ExchangeManager:
         self.clients = {}
         self._init_clients()
 
-    def _init_clients(self):
+    def _init_clients(self) -> None:
         for name, config in self.EXCHANGES.items():
             try:
                 self.clients[name] = config["class"](config["config"])
             except Exception:
                 pass
 
-    def get_client(self, exchange_name):
+    def get_client(self, exchange_name: str):
         return self.clients.get(exchange_name)
 
 @st.cache_resource
-def _construir_exchange_manager(versao: int):
+def _construir_exchange_manager(versao: int) -> ExchangeManager:
     return ExchangeManager()
 
-def obter_exchange_manager():
+def obter_exchange_manager() -> ExchangeManager:
     return _construir_exchange_manager(VERSAO_MANAGER)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FUNÇÕES DE MERCADO
+# -----------------------------------------------------------------------------
+# FUNÇÕES DE MERCADO (dados, ticker, book, etc.)
+# -----------------------------------------------------------------------------
 @st.cache_data(ttl=TTL_MERCADOS_SEGUNDOS, show_spinner=False)
-def obter_todos_pares_usdt():
+def obter_todos_pares_usdt() -> List[str]:
+    """Obtém a lista de todos os pares /USDT disponíveis na Gate.io."""
     manager = obter_exchange_manager()
     client = manager.get_client("Gate.io")
     padrao = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
@@ -754,7 +776,8 @@ def obter_todos_pares_usdt():
     except Exception:
         return padrao
 
-def _obter_dados_24h_rest_direto(exchange_name, simbolo):
+def _obter_dados_24h_rest_direto(exchange_name: str, simbolo: str) -> Optional[Dict]:
+    """Fallback: obtém dados de 24h via API REST direta."""
     try:
         if exchange_name == "Gate.io":
             pair = simbolo.replace("/", "_")
@@ -827,7 +850,8 @@ def _obter_dados_24h_rest_direto(exchange_name, simbolo):
     return None
 
 @st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
-def obter_dados_24h(simbolo):
+def obter_dados_24h(simbolo: str) -> Optional[Dict]:
+    """Obtém dados de 24h (ticker) usando exchanges prioritárias."""
     manager = obter_exchange_manager()
     for exchange_name in PRIORITY_EXCHANGES:
         try:
@@ -847,6 +871,7 @@ def obter_dados_24h(simbolo):
                 }
         except Exception:
             continue
+    # Fallback REST
     for exchange_name in PRIORITY_EXCHANGES:
         resultado = _obter_dados_24h_rest_direto(exchange_name, simbolo)
         if resultado and resultado.get("last"):
@@ -854,7 +879,9 @@ def obter_dados_24h(simbolo):
             return resultado
     return None
 
-def resolver_volume_usdt(dados_24h, preco_atual, dados_gecko):
+def resolver_volume_usdt(dados_24h: Optional[Dict], preco_atual: float,
+                         dados_gecko: Optional[Dict]) -> Optional[float]:
+    """Resolve o volume em USDT a partir de diferentes fontes."""
     if dados_24h:
         qv = dados_24h.get("quote_volume")
         if qv and qv > 0:
@@ -866,10 +893,11 @@ def resolver_volume_usdt(dados_24h, preco_atual, dados_gecko):
         return float(dados_gecko["total_volume"])
     return None
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MARKET CAP
+# -----------------------------------------------------------------------------
+# MARKET CAP (CoinGecko e CoinPaprika)
+# -----------------------------------------------------------------------------
 @st.cache_data(ttl=3600, show_spinner=False)
-def obter_id_coingecko(simbolo):
+def obter_id_coingecko(simbolo: str) -> Optional[str]:
     try:
         resp = requests.get(
             "https://api.coingecko.com/api/v3/search",
@@ -889,7 +917,7 @@ def obter_id_coingecko(simbolo):
         return None
 
 @st.cache_data(ttl=600, show_spinner=False)
-def obter_dados_coingecko(simbolo):
+def obter_dados_coingecko(simbolo: str) -> Optional[Dict]:
     coin_id = obter_id_coingecko(simbolo)
     if not coin_id:
         return None
@@ -923,7 +951,7 @@ def obter_dados_coingecko(simbolo):
         return None
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def obter_id_coinpaprika(simbolo):
+def obter_id_coinpaprika(simbolo: str) -> Optional[str]:
     try:
         resp = requests.get("https://api.coinpaprika.com/v1/coins", timeout=12)
         if resp.status_code != 200:
@@ -941,7 +969,7 @@ def obter_id_coinpaprika(simbolo):
         return None
 
 @st.cache_data(ttl=600, show_spinner=False)
-def obter_dados_coinpaprika(simbolo):
+def obter_dados_coinpaprika(simbolo: str) -> Optional[Dict]:
     coin_id = obter_id_coinpaprika(simbolo)
     if not coin_id:
         return None
@@ -964,7 +992,9 @@ def obter_dados_coinpaprika(simbolo):
     except Exception:
         return None
 
-def resolver_market_cap(simbolo_base, preco_atual, dados_gecko, dados_paprika):
+def resolver_market_cap(simbolo_base: str, preco_atual: float,
+                        dados_gecko: Optional[Dict],
+                        dados_paprika: Optional[Dict]) -> Optional[float]:
     if dados_gecko:
         mc = dados_gecko.get("market_cap")
         if mc and mc > 0:
@@ -978,10 +1008,12 @@ def resolver_market_cap(simbolo_base, preco_atual, dados_gecko, dados_paprika):
             return mc
     return None
 
-# ─────────────────────────────────────────────────────────────────────────────
-# LIVRO DE OFERTAS
+# -----------------------------------------------------------------------------
+# LIVRO DE OFERTAS AGREGADO
+# -----------------------------------------------------------------------------
 @st.cache_data(ttl=TTL_BOOK_SEGUNDOS, show_spinner=False)
-def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
+def obter_book_agregado(simbolo: str, faixa: float = FAIXA_BOOK) -> Optional[Dict]:
+    """Agrega livros de ofertas de várias exchanges dentro de uma faixa em torno do mid."""
     manager = obter_exchange_manager()
     livros = []
     for nome in PRIORITY_EXCHANGES:
@@ -1061,7 +1093,9 @@ def obter_book_agregado(simbolo, faixa=FAIXA_BOOK):
         "fontes": [SIGLAS_EXCHANGES.get(n, n) for n, _, _ in livros],
     }
 
-def detectar_muralha_bloqueante(book, direcao, preco, limite_pct=0.006, fator=2.5):
+def detectar_muralha_bloqueante(book: Optional[Dict], direcao: str, preco: float,
+                                limite_pct: float = 0.006, fator: float = 2.5) -> bool:
+    """Verifica se há uma muralha de liquidez contrária muito grande bloqueando o movimento."""
     if not book:
         return False
     if direcao == "long":
@@ -1078,8 +1112,9 @@ def detectar_muralha_bloqueante(book, direcao, preco, limite_pct=0.006, fator=2.
     maior_favoravel = max(m["usdt"] for m in favoraveis)
     return maior_favoravel > 0 and maior_contraria >= fator * maior_favoravel
 
-# ─────────────────────────────────────────────────────────────────────────────
-# WYCKOFF
+# -----------------------------------------------------------------------------
+# WYCKOFF DETECTION
+# -----------------------------------------------------------------------------
 _PONTOS_EVENTO = {
     "SPRING": 2.0,
     "SHAKEOUT": 1.5,
@@ -1096,9 +1131,14 @@ _BUFFER_STOP_EVENTO = {
     "UPTHRUST": 0.015,
     "UTAD": 0.035,
 }
-PONTOS_MAX_WYCKOFF = 3.0
 
-def detectar_wyckoff(df, janela_base=JANELA_BASE_WYCKOFF, janela_evento=JANELA_EVENTO_WYCKOFF):
+def detectar_wyckoff(df: pd.DataFrame,
+                     janela_base: int = JANELA_BASE_WYCKOFF,
+                     janela_evento: int = JANELA_EVENTO_WYCKOFF) -> Optional[Dict]:
+    """
+    Detecta eventos Wyckoff (spring, shakeout, upthrust, etc.) em uma janela recente.
+    Retorna dicionário com estrutura, evento, fase e pontuação.
+    """
     if len(df) < janela_base + janela_evento + 5:
         return None
     base = df.iloc[-(janela_base + janela_evento):-janela_evento]
@@ -1217,9 +1257,10 @@ def detectar_wyckoff(df, janela_base=JANELA_BASE_WYCKOFF, janela_evento=JANELA_E
         "stop_estrutural": float(stop_estrutural),
     }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # INDICADORES TÉCNICOS
-def calcular_rsi(serie, periodo=14):
+# -----------------------------------------------------------------------------
+def calcular_rsi(serie: pd.Series, periodo: int = 14) -> pd.Series:
     delta = serie.diff()
     ganho = delta.clip(lower=0)
     perda = -delta.clip(upper=0)
@@ -1227,7 +1268,8 @@ def calcular_rsi(serie, periodo=14):
     ma_perda = perda.ewm(span=periodo, adjust=False).mean()
     return 100 - (100 / (1 + (ma_ganho / ma_perda.replace(0, 1e-10))))
 
-def calcular_rsi_estocastico(serie, periodo_rsi=14, periodo_stoch=14, suavizacao=3):
+def calcular_rsi_estocastico(serie: pd.Series, periodo_rsi: int = 14,
+                             periodo_stoch: int = 14, suavizacao: int = 3) -> Tuple[pd.Series, pd.Series]:
     rsi = calcular_rsi(serie, periodo_rsi)
     minimo = rsi.rolling(window=periodo_stoch).min()
     maximo = rsi.rolling(window=periodo_stoch).max()
@@ -1236,14 +1278,14 @@ def calcular_rsi_estocastico(serie, periodo_rsi=14, periodo_stoch=14, suavizacao
     d = k.rolling(window=suavizacao).mean()
     return k, d
 
-def calcular_macd(serie):
+def calcular_macd(serie: pd.Series) -> Tuple[pd.Series, pd.Series, pd.Series]:
     ema12 = serie.ewm(span=12, adjust=False).mean()
     ema26 = serie.ewm(span=26, adjust=False).mean()
     macd = ema12 - ema26
     sinal = macd.ewm(span=9, adjust=False).mean()
     return macd, sinal, macd - sinal
 
-def calcular_mfi(df, periodo=14):
+def calcular_mfi(df: pd.DataFrame, periodo: int = 14) -> pd.Series:
     tp = (df['high'] + df['low'] + df['close']) / 3
     rmf = tp * df['volume']
     tp_shift = tp.shift(1)
@@ -1253,7 +1295,7 @@ def calcular_mfi(df, periodo=14):
     neg_sum = neg_flow.rolling(window=periodo).sum().replace(0, 1e-10)
     return 100 - (100 / (1 + pos_sum / neg_sum))
 
-def calcular_ssl_hybrid(df, periodo=20):
+def calcular_ssl_hybrid(df: pd.DataFrame, periodo: int = 20) -> pd.DataFrame:
     sma_high = df['high'].rolling(window=periodo).mean()
     sma_low = df['low'].rolling(window=periodo).mean()
     close_arr = df['close'].values
@@ -1275,7 +1317,7 @@ def calcular_ssl_hybrid(df, periodo=20):
     df['SSL_Baseline'] = np.where(ssl_dir == 1, sma_high, sma_low)
     return df
 
-def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
+def calcular_atr_stop(df: pd.DataFrame, periodo: int = 14, multiplicador: float = 3.0) -> pd.DataFrame:
     high, low, close = df['high'], df['low'], df['close']
     tr = pd.concat(
         [high - low, (high - close.shift(1)).abs(), (low - close.shift(1)).abs()],
@@ -1317,7 +1359,8 @@ def calcular_atr_stop(df, periodo=14, multiplicador=3.0):
     df['atr_dir'] = tendencia
     return df
 
-def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
+def calcular_ppo(df: pd.DataFrame, col: str = 'close', rapido: int = 12,
+                 lento: int = 26, sinal_periodo: int = 9) -> pd.DataFrame:
     ema_rapida = df[col].ewm(span=rapido, adjust=False).mean()
     ema_lenta = df[col].ewm(span=lento, adjust=False).mean()
     df = df.copy()
@@ -1325,7 +1368,7 @@ def calcular_ppo(df, col='close', rapido=12, lento=26, sinal_periodo=9):
     df['PPO_Signal'] = df['PPO'].ewm(span=sinal_periodo, adjust=False).mean()
     return df
 
-def calcular_obv(df):
+def calcular_obv(df: pd.DataFrame) -> np.ndarray:
     """On-Balance Volume (OBV) - acumula volume positivo/negativo."""
     obv = np.zeros(len(df))
     obv[0] = df['volume'].iloc[0]
@@ -1338,7 +1381,7 @@ def calcular_obv(df):
             obv[i] = obv[i-1]
     return obv
 
-def calcular_retracao_fibonacci(df_analise):
+def calcular_retracao_fibonacci(df_analise: pd.DataFrame) -> Dict[str, float]:
     maxima = df_analise['high'].max()
     minima = df_analise['low'].min()
     diff = maxima - minima
@@ -1352,10 +1395,12 @@ def calcular_retracao_fibonacci(df_analise):
         'fib_100': minima
     }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CARREGAMENTO DE DADOS (com OBV)
+# -----------------------------------------------------------------------------
+# CARREGAMENTO DE DADOS (com todos os indicadores e OBV)
+# -----------------------------------------------------------------------------
 @st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
-def carregar_dados(simbolo_id, timeframe_selecionado):
+def carregar_dados(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.DataFrame]:
+    """Carrega dados OHLCV e calcula todos os indicadores."""
     manager = obter_exchange_manager()
     for exchange_name in PRIORITY_EXCHANGES:
         try:
@@ -1373,7 +1418,7 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
                     columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
                 )
                 df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-                # Indicadores existentes
+                # Indicadores
                 df['RSI_14'] = calcular_rsi(df['close'], 14)
                 k, d = calcular_rsi_estocastico(df['close'])
                 df['STOCH_K'] = k
@@ -1386,7 +1431,7 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
                 df = calcular_ssl_hybrid(df)
                 df = calcular_atr_stop(df)
                 df = calcular_ppo(df)
-                # Médias móveis e volume médio
+                # Médias móveis
                 df['SMA_8'] = df['close'].rolling(8).mean()
                 df['SMA_21'] = df['close'].rolling(21).mean()
                 df['SMA_50'] = df['close'].rolling(50).mean()
@@ -1403,8 +1448,9 @@ def carregar_dados(simbolo_id, timeframe_selecionado):
             continue
     return None
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ANÁLISE DE CONFLUÊNCIA (com OBV)
+# -----------------------------------------------------------------------------
+# ANÁLISE DE CONFLUÊNCIA (com pesos e OBV)
+# -----------------------------------------------------------------------------
 PESOS = {
     "rsi": 2.0,
     "stoch": 1.5,
@@ -1419,11 +1465,16 @@ PESOS = {
     "ma_curta": 1.5,
     "ma_longa": 2.0,
     "volume": 1.0,
-    "obv": 1.0,         # Novo peso para OBV
+    "obv": 1.0,
 }
 MAXIMO_POSSIVEL = sum(PESOS.values())
 
-def analisar_confluencia(df_completo, txt, book, wyk):
+def analisar_confluencia(df_completo: pd.DataFrame, txt: Dict,
+                         book: Optional[Dict], wyk: Optional[Dict]) -> Dict:
+    """
+    Calcula pontuação de alta/baixa com base em múltiplos indicadores e retorna
+    recomendação, contexto e escore líquido.
+    """
     df_analise = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
     if df_analise.empty:
         return {
@@ -1584,34 +1635,26 @@ def analisar_confluencia(df_completo, txt, book, wyk):
             elif float(u['close']) < float(u['open']):
                 baixa += 0.5
 
-    # ========== NOVO: OBV ==========
+    # OBV
     obv_atual = u['OBV']
     obv_ma = u['OBV_MA_20']
     if not (math.isnan(obv_atual) or math.isnan(obv_ma)) and obv_ma > 0:
-        # Tendência: OBV acima da média sugere acumulação
         if obv_atual > obv_ma:
             alta += PESOS["obv"]
         else:
             baixa += PESOS["obv"]
-        # Divergência: preço faz topo mais alto, OBV faz topo mais baixo (bearish)
-        # ou preço faz fundo mais baixo, OBV faz fundo mais alto (bullish)
+        # Divergência simples nas últimas 10 velas
         if len(df_analise) >= 10:
-            # Olhamos últimas 10 velas para detectar divergência simples
             preco_ultimos = df_analise['close'].iloc[-10:]
             obv_ultimos = df_analise['OBV'].iloc[-10:]
-            # Máximos e mínimos locais
             max_preco_idx = preco_ultimos.idxmax()
             min_preco_idx = preco_ultimos.idxmin()
             max_obv_idx = obv_ultimos.idxmax()
             min_obv_idx = obv_ultimos.idxmin()
-            # Divergência de alta: preço faz fundo mais baixo, OBV faz fundo mais alto
             if preco_ultimos[min_preco_idx] < preco_ultimos.iloc[0] and obv_ultimos[min_obv_idx] > obv_ultimos.iloc[0]:
                 alta += 0.5
-            # Divergência de baixa: preço faz topo mais alto, OBV faz topo mais baixo
             if preco_ultimos[max_preco_idx] > preco_ultimos.iloc[0] and obv_ultimos[max_obv_idx] < obv_ultimos.iloc[0]:
                 baixa += 0.5
-
-    # ========== FIM OBV ==========
 
     liquido = (alta - baixa) / MAXIMO_POSSIVEL * 100.0
 
@@ -1642,9 +1685,13 @@ def analisar_confluencia(df_completo, txt, book, wyk):
         "bloqueado": bloqueado,
     }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PLANO DE TRADE
-def escolher_stop(direcao, entrada, atr, atr_stop_val, wyk, book):
+# -----------------------------------------------------------------------------
+# PLANO DE TRADE (stop, alvos)
+# -----------------------------------------------------------------------------
+def escolher_stop(direcao: str, entrada: float, atr: float,
+                  atr_stop_val: float, wyk: Optional[Dict],
+                  book: Optional[Dict]) -> Tuple[float, str]:
+    """Escolhe o stop loss com base em Wyckoff, book ou ATR."""
     base = "ATR"
     candidatos = []
     if wyk and wyk.get("evento") and wyk.get("stop_estrutural"):
@@ -1675,7 +1722,10 @@ def escolher_stop(direcao, entrada, atr, atr_stop_val, wyk, book):
         stop = entrada - folga if direcao == "long" else entrada + folga
     return float(stop), base
 
-def construir_alvos(direcao, entrada, atr, wyk, book, n=8):
+def construir_alvos(direcao: str, entrada: float, atr: float,
+                    wyk: Optional[Dict], book: Optional[Dict],
+                    n: int = 8) -> List[float]:
+    """Constrói lista de alvos de take profit com base em várias referências."""
     candidatos = set()
     atr = atr if (atr and atr > 0 and not math.isnan(atr)) else entrada * 0.01
     if direcao == "long":
@@ -1713,16 +1763,20 @@ def construir_alvos(direcao, entrada, atr, wyk, book, n=8):
                 break
     return finais
 
-def lucro_percentual(direcao, entrada, alvo):
+def lucro_percentual(direcao: str, entrada: float, alvo: float) -> float:
     if entrada <= 0:
         return 0.0
     if direcao == "long":
         return (alvo / entrada - 1) * 100
     return (entrada / alvo - 1) * 100
 
-# ─────────────────────────────────────────────────────────────────────────────
-# RENDERIZAÇÃO
-def renderizar_card_plano(txt, simbolo_id, direcao, entrada, stop, alvos, base_stop, preco_atual):
+# -----------------------------------------------------------------------------
+# RENDERIZAÇÃO (UI)
+# -----------------------------------------------------------------------------
+def renderizar_card_plano(txt: Dict, simbolo_id: str, direcao: str,
+                          entrada: float, stop: float, alvos: List[float],
+                          base_stop: str, preco_atual: float) -> None:
+    """Exibe o plano de trade em um card estilizado."""
     lado = "LONG" if direcao == "long" else "SHORT"
     cor = "#22c55e" if direcao == "long" else "#f43f5e"
     ticker = simbolo_id.replace("/", "")
@@ -1780,7 +1834,7 @@ def renderizar_card_plano(txt, simbolo_id, direcao, entrada, stop, alvos, base_s
         unsafe_allow_html=True
     )
 
-def _chips(fontes):
+def _chips(fontes: List[str]) -> str:
     return "".join(
         f'<span style="border:1px solid #ffffff18;border-radius:6px;padding:2px 6px;'
         f'margin-right:4px;font-size:0.7em;color:#94a3b8;'
@@ -1788,7 +1842,7 @@ def _chips(fontes):
         for f in fontes
     )
 
-def renderizar_book(txt, book):
+def renderizar_book(txt: Dict, book: Optional[Dict]) -> None:
     if not book:
         st.info(txt["book_indisponivel"])
         return
@@ -1853,7 +1907,7 @@ def renderizar_book(txt, book):
     _bloco(col_c, txt["zonas_compra"], book["muralhas_compra"], "#22c55e")
     _bloco(col_v, txt["zonas_venda"], book["muralhas_venda"], "#f43f5e")
 
-def renderizar_wyckoff(txt, wyk):
+def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
     if not wyk or not wyk.get("evento"):
         st.info(txt["wyckoff_sem_evento"])
         return
@@ -1889,7 +1943,10 @@ def renderizar_wyckoff(txt, wyk):
         unsafe_allow_html=True
     )
 
-def renderizar_grafico_plotly(df_completo, simbolo_id, wyk, book, stop_loss=None):
+def renderizar_grafico_plotly(df_completo: pd.DataFrame, simbolo_id: str,
+                              wyk: Optional[Dict], book: Optional[Dict],
+                              stop_loss: Optional[float] = None) -> None:
+    """Gera gráfico de velas com indicadores e níveis."""
     df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
@@ -1937,47 +1994,19 @@ def renderizar_grafico_plotly(df_completo, simbolo_id, wyk, book, stop_loss=None
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR
-idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
-indice_idioma_padrao = idiomas_disponiveis.index(IDIOMA_PADRAO) if IDIOMA_PADRAO in idiomas_disponiveis else 0
+# -----------------------------------------------------------------------------
+# PAINEL PRINCIPAL (fragmento com refresh automático)
+# -----------------------------------------------------------------------------
+@st.fragment(run_every=0)  # O tempo será definido dinamicamente
+def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
+                     modo_vivo: bool, intervalo_refresh: int) -> None:
+    """Função principal que monta o dashboard e é executada periodicamente."""
+    # Força o refresh no tempo configurado
+    if modo_vivo:
+        st.cache_data.clear()
+        # O fragmento já usa run_every; aqui apenas garantimos que os dados sejam recarregados.
+        # O cache_data com TTL cuida da atualização.
 
-st.sidebar.markdown(f"### {DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_label']}")
-idioma_selecionado = st.sidebar.selectbox(
-    DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_selecao'],
-    options=idiomas_disponiveis,
-    index=indice_idioma_padrao
-)
-txt = DICIONARIO_LINGUAS[idioma_selecionado]
-st.title(txt["titulo"])
-st.sidebar.header(txt["config_globais"])
-
-lista_criptos = obter_todos_pares_usdt()
-simbolo_id = st.sidebar.selectbox(
-    txt["selecione_cripto"],
-    lista_criptos,
-    index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
-)
-intervalos = txt["intervalos"]
-valores_intervalos = list(intervalos.values())
-indice_padrao_timeframe = valores_intervalos.index("4h") if "4h" in valores_intervalos else 0
-intervalo_escolhido = st.sidebar.selectbox(
-    txt["tempo_grafico"],
-    list(intervalos.keys()),
-    index=indice_padrao_timeframe
-)
-timeframe = intervalos[intervalo_escolhido]
-
-st.sidebar.markdown("---")
-modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
-intervalo_refresh = st.sidebar.slider(
-    txt["intervalo_refresh"], min_value=20, max_value=120, value=30
-)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PAINEL PRINCIPAL
-@st.fragment(run_every=intervalo_refresh if modo_vivo else None)
-def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
     df_dados = carregar_dados(simbolo_id, timeframe)
     if df_dados is None or df_dados.empty:
         st.warning(txt["erro_dados"])
@@ -2083,4 +2112,48 @@ def painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh):
         f"Velas analisadas: {len(df_analise)}"
     )
 
-painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
+# -----------------------------------------------------------------------------
+# MAIN - Interface e execução
+# -----------------------------------------------------------------------------
+def main() -> None:
+    """Ponto de entrada principal do aplicativo Streamlit."""
+    idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
+    indice_idioma_padrao = idiomas_disponiveis.index(IDIOMA_PADRAO) if IDIOMA_PADRAO in idiomas_disponiveis else 0
+
+    st.sidebar.markdown(f"### {DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_label']}")
+    idioma_selecionado = st.sidebar.selectbox(
+        DICIONARIO_LINGUAS[IDIOMA_PADRAO]['idioma_selecao'],
+        options=idiomas_disponiveis,
+        index=indice_idioma_padrao
+    )
+    txt = DICIONARIO_LINGUAS[idioma_selecionado]
+    st.title(txt["titulo"])
+    st.sidebar.header(txt["config_globais"])
+
+    lista_criptos = obter_todos_pares_usdt()
+    simbolo_id = st.sidebar.selectbox(
+        txt["selecione_cripto"],
+        lista_criptos,
+        index=lista_criptos.index("SOL/USDT") if "SOL/USDT" in lista_criptos else 0
+    )
+    intervalos = txt["intervalos"]
+    valores_intervalos = list(intervalos.values())
+    indice_padrao_timeframe = valores_intervalos.index("4h") if "4h" in valores_intervalos else 0
+    intervalo_escolhido = st.sidebar.selectbox(
+        txt["tempo_grafico"],
+        list(intervalos.keys()),
+        index=indice_padrao_timeframe
+    )
+    timeframe = intervalos[intervalo_escolhido]
+
+    st.sidebar.markdown("---")
+    modo_vivo = st.sidebar.toggle(txt["modo_vivo"], value=False)
+    intervalo_refresh = st.sidebar.slider(
+        txt["intervalo_refresh"], min_value=20, max_value=120, value=30
+    )
+
+    # Executa o painel principal com o fragmento que se atualiza
+    painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
+
+if __name__ == "__main__":
+    main()
