@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - Streamlit Dashboard (SEM GRÁFICO)
+# Versão 2.0 - Streamlit Dashboard (SEM GRÁFICO + RESUMO WYCKOFF)
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
 # -----------------------------------------------------------------------------
 
@@ -44,6 +44,19 @@ JANELA_EVENTO_WYCKOFF: int = 15
 
 LIMIAR_SINAL_LIQUIDO: float = 32.0
 PONTOS_MAX_WYCKOFF: float = 3.0
+
+# ==========================================================================
+# NOVO: DICIONÁRIO DE RESUMOS PARA EVENTOS WYCKOFF (até 11 palavras)
+# ==========================================================================
+RESUMOS_WYCKOFF = {
+    "SPRING": "Falsa ruptura de suporte com reversão forte",
+    "SHAKEOUT": "Liquidação de stops seguida de recuperação",
+    "TSO": "Teste de suporte com volume elevado",
+    "UT": "Falsa ruptura de resistência com rejeição",
+    "UPTHRUST": "Ruptura de resistência com rejeição e volume",
+    "UTAD": "Teste de resistência com volume e rejeição"
+}
+# ==========================================================================
 
 # -----------------------------------------------------------------------------
 # DICIONÁRIO DE IDIOMAS (mantido exatamente como original)
@@ -1972,13 +1985,24 @@ def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
         return
     ev = wyk["evento"]
     cor = "#22c55e" if wyk["direcao"] == 1 else "#f43f5e"
+    
+    # Obtém o resumo do evento (ou uma mensagem padrão se não encontrado)
+    resumo = RESUMOS_WYCKOFF.get(ev["tipo"], "Evento Wyckoff detectado")
+    
     st.markdown(
         f"""
         <div style="background:#0b0f19;border:1px solid #1e293b;border-radius:18px;padding:20px;
             font-family:ui-monospace,monospace;">
             <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                <div><div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_evento"]}</div>
-                <div style="color:{cor};font-size:1.4em;font-weight:800;">{ev["tipo"]}</div></div>
+                <div>
+                    <div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_evento"]}</div>
+                    <div style="color:{cor};font-size:1.4em;font-weight:800;">
+                        {ev["tipo"]}
+                        <span style="font-size:0.55em;font-weight:400;color:#94a3b8;margin-left:12px;">
+                            — {resumo}
+                        </span>
+                    </div>
+                </div>
                 <div><div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_fase"]}</div>
                 <div style="color:#e2e8f0;font-size:1.2em;">{wyk["fase"]}</div></div>
                 <div><div style="color:#64748b;font-size:0.75em;letter-spacing:1px;">{txt["wyckoff_range"]}</div>
