@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - Streamlit Dashboard
+# Versão 2.0 - Streamlit Dashboard (SEM GRÁFICO)
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
 # -----------------------------------------------------------------------------
 
@@ -113,7 +113,11 @@ _TEXTOS_BASE_PT_BR = {
     "intervalos": {
         "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m", "30 Minutos": "30m",
         "1 Hora": "1h", "4 Horas": "4h", "1 Dia": "1d", "1 Semana": "1w"
-    }
+    },
+    "medias_moveis": "📊 Médias Móveis (SMA)",
+    "acima": "acima",
+    "abaixo": "abaixo",
+    "preco_atual": "Preço atual"
 }
 
 _TRADUCOES = {
@@ -183,7 +187,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m", "30 Minutes": "30m",
             "1 Hour": "1h", "4 Hours": "4h", "1 Day": "1d", "1 Week": "1w"
-        }
+        },
+        "medias_moveis": "📊 Moving Averages (SMA)",
+        "acima": "above",
+        "abaixo": "below",
+        "preco_atual": "Current price"
     },
     "Español": {
         "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -218,7 +226,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Minuto": "1m", "5 Minutos": "5m", "15 Minutos": "15m", "30 Minutos": "30m",
             "1 Hora": "1h", "4 Horas": "4h", "1 Día": "1d", "1 Semana": "1w"
-        }
+        },
+        "medias_moveis": "📊 Medias Móviles (SMA)",
+        "acima": "por encima",
+        "abaixo": "por debajo",
+        "preco_atual": "Precio actual"
     },
     "Français": {
         "titulo": "🏦 BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
@@ -253,7 +265,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m", "30 Minutes": "30m",
             "1 Heure": "1h", "4 Heures": "4h", "1 Jour": "1d", "1 Semaine": "1w"
-        }
+        },
+        "medias_moveis": "📊 Moyennes Mobiles (SMA)",
+        "acima": "au-dessus",
+        "abaixo": "en dessous",
+        "preco_atual": "Prix actuel"
     },
     "Deutsch": {
         "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Motor",
@@ -288,7 +304,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Minute": "1m", "5 Minuten": "5m", "15 Minuten": "15m", "30 Minuten": "30m",
             "1 Stunde": "1h", "4 Stunden": "4h", "1 Tag": "1d", "1 Woche": "1w"
-        }
+        },
+        "medias_moveis": "📊 Gleitende Durchschnitte (SMA)",
+        "acima": "über",
+        "abaixo": "unter",
+        "preco_atual": "Aktueller Preis"
     },
     "Italiano": {
         "titulo": "🏦 BRICSVAULT PORTAL - Motore Smart Money Concepts (SMC)",
@@ -323,7 +343,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Minuto": "1m", "5 Minuti": "5m", "15 Minuti": "15m", "30 Minuti": "30m",
             "1 Ora": "1h", "4 Ore": "4h", "1 Giorno": "1d", "1 Settimana": "1w"
-        }
+        },
+        "medias_moveis": "📊 Medie Mobili (SMA)",
+        "acima": "sopra",
+        "abaixo": "sotto",
+        "preco_atual": "Prezzo attuale"
     },
     "Русский": {
         "titulo": "🏦 BRICSVAULT PORTAL - Двигатель Smart Money Concepts (SMC)",
@@ -358,7 +382,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Минута": "1m", "5 Минут": "5m", "15 Минут": "15m", "30 Минут": "30m",
             "1 Час": "1h", "4 Часа": "4h", "1 День": "1d", "1 Неделя": "1w"
-        }
+        },
+        "medias_moveis": "📊 Скользящие средние (SMA)",
+        "acima": "выше",
+        "abaixo": "ниже",
+        "preco_atual": "Текущая цена"
     },
     "日本語": {
         "titulo": "🏦 BRICSVAULT PORTAL - スマートマネーコンセプト（SMC）エンジン",
@@ -393,7 +421,11 @@ _TRADUCOES = {
         "intervalos": {
             "1分": "1m", "5分": "5m", "15分": "15m", "30分": "30m",
             "1時間": "1h", "4時間": "4h", "1日": "1d", "1週間": "1w"
-        }
+        },
+        "medias_moveis": "📊 移動平均線 (SMA)",
+        "acima": "上",
+        "abaixo": "下",
+        "preco_atual": "現在価格"
     },
     "中文 (简体)": {
         "titulo": "🏦 BRICSVAULT PORTAL - 智能资金概念（SMC）引擎",
@@ -428,7 +460,11 @@ _TRADUCOES = {
         "intervalos": {
             "1分钟": "1m", "5分钟": "5m", "15分钟": "15m", "30分钟": "30m",
             "1小时": "1h", "4小时": "4h", "1天": "1d", "1周": "1w"
-        }
+        },
+        "medias_moveis": "📊 移动平均线 (SMA)",
+        "acima": "上方",
+        "abaixo": "下方",
+        "preco_atual": "当前价格"
     },
     "हिन्दी": {
         "titulo": "🏦 BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
@@ -463,7 +499,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 मिनट": "1m", "5 मिनट": "5m", "15 मिनट": "15m", "30 मिनट": "30m",
             "1 घंटा": "1h", "4 घंटे": "4h", "1 दिन": "1d", "1 सप्ताह": "1w"
-        }
+        },
+        "medias_moveis": "📊 चलती औसत (SMA)",
+        "acima": "ऊपर",
+        "abaixo": "नीचे",
+        "preco_atual": "वर्तमान मूल्य"
     },
     "বাংলা": {
         "titulo": "🏦 BRICSVAULT PORTAL - স্মার্ট মানি কনসেপ্টস (SMC) ইঞ্জিন",
@@ -498,7 +538,11 @@ _TRADUCOES = {
         "intervalos": {
             "১ মিনিট": "1m", "৫ মিনিট": "5m", "১৫ মিনিট": "15m", "৩০ মিনিট": "30m",
             "১ ঘন্টা": "1h", "৪ ঘন্টা": "4h", "১ দিন": "1d", "১ সপ্তাহ": "1w"
-        }
+        },
+        "medias_moveis": "📊 মুভিং এভারেজ (SMA)",
+        "acima": "উপরে",
+        "abaixo": "নিচে",
+        "preco_atual": "বর্তমান মূল্য"
     },
     "العربية": {
         "titulo": "🏦 BRICSVAULT PORTAL - محرك مفاهيم الأموال الذكية (SMC)",
@@ -533,7 +577,11 @@ _TRADUCOES = {
         "intervalos": {
             "دقيقة واحدة": "1m", "5 دقائق": "5m", "15 دقيقة": "15m", "30 دقيقة": "30m",
             "ساعة واحدة": "1h", "4 ساعات": "4h", "يوم واحد": "1d", "أسبوع واحد": "1w"
-        }
+        },
+        "medias_moveis": "📊 المتوسطات المتحركة (SMA)",
+        "acima": "أعلى",
+        "abaixo": "أدنى",
+        "preco_atual": "السعر الحالي"
     },
     "한국어": {
         "titulo": "🏦 BRICSVAULT PORTAL - 스마트 머니 컨셉(SMC) 엔진",
@@ -568,7 +616,11 @@ _TRADUCOES = {
         "intervalos": {
             "1분": "1m", "5분": "5m", "15분": "15m", "30분": "30m",
             "1시간": "1h", "4시간": "4h", "1일": "1d", "1주": "1w"
-        }
+        },
+        "medias_moveis": "📊 이동 평균 (SMA)",
+        "acima": "위",
+        "abaixo": "아래",
+        "preco_atual": "현재 가격"
     },
     "Tiếng Việt": {
         "titulo": "🏦 BRICSVAULT PORTAL - Động cơ Khái niệm Tiền thông minh (SMC)",
@@ -603,7 +655,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Phút": "1m", "5 Phút": "5m", "15 Phút": "15m", "30 Phút": "30m",
             "1 Giờ": "1h", "4 Giờ": "4h", "1 Ngày": "1d", "1 Tuần": "1w"
-        }
+        },
+        "medias_moveis": "📊 Đường trung bình động (SMA)",
+        "acima": "trên",
+        "abaixo": "dưới",
+        "preco_atual": "Giá hiện tại"
     },
     "Türkçe": {
         "titulo": "🏦 BRICSVAULT PORTAL - Akıllı Para Kavramları (SMC) Motoru",
@@ -638,7 +694,11 @@ _TRADUCOES = {
         "intervalos": {
             "1 Dakika": "1m", "5 Dakika": "5m", "15 Dakika": "15m", "30 Dakika": "30m",
             "1 Saat": "1h", "4 Saat": "4h", "1 Gün": "1d", "1 Hafta": "1w"
-        }
+        },
+        "medias_moveis": "📊 Hareketli Ortalamalar (SMA)",
+        "acima": "yukarıda",
+        "abaixo": "aşağıda",
+        "preco_atual": "Güncel fiyat"
     }
 }
 
@@ -1400,7 +1460,7 @@ def calcular_retracao_fibonacci(df_analise: pd.DataFrame) -> Dict[str, float]:
 # -----------------------------------------------------------------------------
 @st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
 def carregar_dados(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.DataFrame]:
-    """Carrega dados OHLCV e calcula todos os indicadores."""
+    """Carrega dados OHLCV e calcula todos os indicadores, incluindo OBV e MAs."""
     manager = obter_exchange_manager()
     for exchange_name in PRIORITY_EXCHANGES:
         try:
@@ -1418,7 +1478,7 @@ def carregar_dados(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.D
                     columns=['timestamp', 'open', 'high', 'low', 'close', 'volume']
                 )
                 df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-                # Indicadores
+                # Indicadores padrão
                 df['RSI_14'] = calcular_rsi(df['close'], 14)
                 k, d = calcular_rsi_estocastico(df['close'])
                 df['STOCH_K'] = k
@@ -1431,7 +1491,7 @@ def carregar_dados(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.D
                 df = calcular_ssl_hybrid(df)
                 df = calcular_atr_stop(df)
                 df = calcular_ppo(df)
-                # Médias móveis
+                # ===== MÉDIAS MÓVEIS (8, 21, 50, 200) =====
                 df['SMA_8'] = df['close'].rolling(8).mean()
                 df['SMA_21'] = df['close'].rolling(21).mean()
                 df['SMA_50'] = df['close'].rolling(50).mean()
@@ -1643,7 +1703,6 @@ def analisar_confluencia(df_completo: pd.DataFrame, txt: Dict,
             alta += PESOS["obv"]
         else:
             baixa += PESOS["obv"]
-        # Divergência simples nas últimas 10 velas
         if len(df_analise) >= 10:
             preco_ultimos = df_analise['close'].iloc[-10:]
             obv_ultimos = df_analise['OBV'].iloc[-10:]
@@ -1943,69 +2002,15 @@ def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
         unsafe_allow_html=True
     )
 
-def renderizar_grafico_plotly(df_completo: pd.DataFrame, simbolo_id: str,
-                              wyk: Optional[Dict], book: Optional[Dict],
-                              stop_loss: Optional[float] = None) -> None:
-    """Gera gráfico de velas com indicadores e níveis."""
-    df_grafico = df_completo.iloc[PERIODO_AQUECIMENTO:].copy()
-    fig = go.Figure()
-    fig.add_trace(go.Candlestick(
-        x=df_grafico['time'], open=df_grafico['open'], high=df_grafico['high'],
-        low=df_grafico['low'], close=df_grafico['close'], name=simbolo_id,
-        increasing_line_color='#10b981', decreasing_line_color='#ef4444',
-        increasing_fillcolor='#10b981', decreasing_fillcolor='#ef4444'
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_grafico['time'], y=df_grafico['SSL_Baseline'], mode='lines',
-        name='SMC Baseline (SSL)', line=dict(color='#00aaff', width=2)
-    ))
-    fig.add_trace(go.Scatter(
-        x=df_grafico['time'], y=df_grafico['ATR_Stop'], mode='lines',
-        name='ATR Trailing Stop', line=dict(color='#ffaa00', width=1, dash='dash')
-    ))
-    if wyk and wyk.get("range_valido"):
-        fig.add_hline(y=wyk["suporte"], line=dict(color="#22c55e", width=1, dash="dot"),
-                      annotation_text="TR Suporte", annotation_position="bottom left",
-                      annotation_font_color="#22c55e")
-        fig.add_hline(y=wyk["resistencia"], line=dict(color="#f43f5e", width=1, dash="dot"),
-                      annotation_text="TR Resistência", annotation_position="top left",
-                      annotation_font_color="#f43f5e")
-    if book:
-        maior_compra = book["muralhas_compra"][0]["preco"] if book["muralhas_compra"] else None
-        maior_venda = book["muralhas_venda"][0]["preco"] if book["muralhas_venda"] else None
-        if maior_compra:
-            fig.add_hline(y=maior_compra, line=dict(color="#22c55e", width=2),
-                          annotation_text="Muralha bid", annotation_position="bottom right",
-                          annotation_font_color="#22c55e")
-        if maior_venda:
-            fig.add_hline(y=maior_venda, line=dict(color="#f43f5e", width=2),
-                          annotation_text="Muralha ask", annotation_position="top right",
-                          annotation_font_color="#f43f5e")
-    if stop_loss is not None and not math.isnan(stop_loss):
-        fig.add_hline(y=stop_loss, line=dict(color="#f43f5e", width=2, dash="dash"),
-                      annotation_text="Stop Loss", annotation_position="top right",
-                      annotation_font_color="#f43f5e")
-    fig.update_layout(
-        paper_bgcolor='#0b0f19', plot_bgcolor='#0b0f19', font=dict(color='#e2e8f0'),
-        xaxis=dict(gridcolor='#1e293b', showgrid=True, rangeslider=dict(visible=False)),
-        yaxis=dict(gridcolor='#1e293b', showgrid=True),
-        legend=dict(bgcolor='#1e293b', bordercolor='#475569', borderwidth=1),
-        margin=dict(l=10, r=10, t=30, b=10), height=520
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
 # -----------------------------------------------------------------------------
 # PAINEL PRINCIPAL (fragmento com refresh automático)
 # -----------------------------------------------------------------------------
-@st.fragment(run_every=0)  # O tempo será definido dinamicamente
+@st.fragment(run_every=0)
 def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
                      modo_vivo: bool, intervalo_refresh: int) -> None:
-    """Função principal que monta o dashboard e é executada periodicamente."""
-    # Força o refresh no tempo configurado
+    """Função principal que monta o dashboard (sem gráfico)."""
     if modo_vivo:
         st.cache_data.clear()
-        # O fragmento já usa run_every; aqui apenas garantimos que os dados sejam recarregados.
-        # O cache_data com TTL cuida da atualização.
 
     df_dados = carregar_dados(simbolo_id, timeframe)
     if df_dados is None or df_dados.empty:
@@ -2038,6 +2043,7 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
 
     res = analisar_confluencia(df_dados, txt, book, wyk)
 
+    # ---- Cabeçalho da recomendação ----
     st.markdown(
         f"""
         <div style="background:{res['cor']}22;padding:20px;border-radius:10px;
@@ -2052,6 +2058,7 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
     if res["bloqueado"]:
         st.warning(txt["alerta_muralha"])
 
+    # ---- Métricas principais ----
     m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric(f"{simbolo_base} | {txt['preco_spot']}", formatar_preco(preco_atual))
     m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "---")
@@ -2070,6 +2077,31 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
     m5.metric(txt["pontos_compra"], f"{res['alta']:.1f}")
     m6.metric(txt["pontos_venda"], f"{res['baixa']:.1f}")
 
+    # ---- Médias Móveis ----
+    st.markdown(f"### {txt['medias_moveis']}")
+    sma8 = ultimo['SMA_8']
+    sma21 = ultimo['SMA_21']
+    sma50 = ultimo['SMA_50']
+    sma200 = ultimo['SMA_200']
+
+    def _ma_label(valor, nome):
+        if math.isnan(valor):
+            return f"{nome}: ---"
+        status = txt["acima"] if preco_atual > valor else txt["abaixo"]
+        cor = "#22c55e" if preco_atual > valor else "#f43f5e"
+        return f"**{nome}** {formatar_preco(valor, '')}  <span style='color:{cor};font-size:0.9em;'>({status})</span>"
+
+    cols_ma = st.columns(4)
+    with cols_ma[0]:
+        st.markdown(_ma_label(sma8, "SMA 8"), unsafe_allow_html=True)
+    with cols_ma[1]:
+        st.markdown(_ma_label(sma21, "SMA 21"), unsafe_allow_html=True)
+    with cols_ma[2]:
+        st.markdown(_ma_label(sma50, "SMA 50"), unsafe_allow_html=True)
+    with cols_ma[3]:
+        st.markdown(_ma_label(sma200, "SMA 200"), unsafe_allow_html=True)
+
+    # ---- Outros indicadores resumidos ----
     stoch_k = float(ultimo['STOCH_K']) if not math.isnan(ultimo['STOCH_K']) else None
     partes = [f"**{txt['stop_atr']}:** {formatar_preco(ultimo['ATR_Stop'])}"]
     if not math.isnan(ultimo['RSI_14']):
@@ -2083,11 +2115,15 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
     partes.append(f"SSL: **{'ALTA' if ultimo['ssl_dir'] == 1 else 'BAIXA'}**")
     st.markdown(" | ".join(partes))
 
+    # ---- Wyckoff ----
     st.markdown(f"### {txt['wyckoff_titulo']}")
     renderizar_wyckoff(txt, wyk)
+
+    # ---- Livro de ofertas ----
     st.markdown(f"### {txt['book_titulo']}")
     renderizar_book(txt, book)
 
+    # ---- Plano de trade ----
     stop = None
     alvos = []
     base_stop = ""
@@ -2100,9 +2136,7 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
             renderizar_card_plano(txt, simbolo_id, res["direcao"], preco_atual,
                                   stop, alvos, base_stop, preco_atual)
 
-    st.markdown(f"### {txt['grafico_titulo']}")
-    renderizar_grafico_plotly(df_dados, simbolo_id, wyk, book, stop_loss=stop)
-
+    # ---- Rodapé com timestamp ----
     hora = pd.Timestamp.now().strftime("%H:%M:%S")
     prefixo = "🟢" if modo_vivo else "⏸"
     extra = f" | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}" if modo_vivo else ""
@@ -2152,7 +2186,6 @@ def main() -> None:
         txt["intervalo_refresh"], min_value=20, max_value=120, value=30
     )
 
-    # Executa o painel principal com o fragmento que se atualiza
     painel_principal(simbolo_id, timeframe, txt, modo_vivo, intervalo_refresh)
 
 if __name__ == "__main__":
