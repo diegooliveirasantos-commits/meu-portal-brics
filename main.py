@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - Streamlit Dashboard (SEM GRÁFICO + RESUMO WYCKOFF PARA LEIGOS)
+# Versão 2.0 - COM DISPARO DE SINAIS VIA TELEGRAM
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
 # -----------------------------------------------------------------------------
 
@@ -13,6 +13,13 @@ import math
 from decimal import Decimal
 import plotly.graph_objects as go
 from typing import Optional, Dict, Any, List, Tuple, Union
+
+# ==========================================================================
+# CONFIGURAÇÃO DO TELEGRAM (SUBSTITUA PELOS SEUS DADOS)
+# ==========================================================================
+TELEGRAM_TOKEN = "8923739480:AAH8WXthla04LrEv4tT5horPzM7P5SYTT9s"          # Ex: "123456:ABC-DEF1234ghIkl"
+TELEGRAM_CHAT_ID = "1143799141"      # Ex: "123456789"
+# ==========================================================================
 
 # -----------------------------------------------------------------------------
 # CONFIGURAÇÃO DA PÁGINA
@@ -726,6 +733,28 @@ def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIO
     return dicionario_final
 
 DICIONARIO_LINGUAS = construir_dicionario_com_fallback(_TRADUCOES)
+
+# ==========================================================================
+# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM
+# ==========================================================================
+def enviar_sinal_telegram(mensagem: str) -> None:
+    """Envia uma mensagem para o Telegram via Bot API."""
+    # Só tenta enviar se o token e o chat_id foram configurados
+    if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
+        return  # Configuração não realizada
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": mensagem,
+            "parse_mode": "HTML"
+        }
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code != 200:
+            st.warning(f"Erro ao enviar para Telegram: {response.text}")
+    except Exception as e:
+        st.warning(f"Falha ao enviar mensagem para Telegram: {e}")
+# ==========================================================================
 
 # -----------------------------------------------------------------------------
 # FUNÇÕES DE FORMATAÇÃO
@@ -2032,7 +2061,7 @@ def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
 @st.fragment(run_every=0)
 def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
                      modo_vivo: bool, intervalo_refresh: int) -> None:
-    """Função principal que monta o dashboard (sem gráfico)."""
+    """Função principal que monta o dashboard (sem gráfico) com disparo via Telegram."""
     if modo_vivo:
         st.cache_data.clear()
 
@@ -2066,6 +2095,52 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
     market_cap, mc_da_memoria = valor_com_memoria(f"mc::{simbolo_id}", mc_bruto)
 
     res = analisar_confluencia(df_dados, txt, book, wyk)
+
+    # ============================================================
+    # DISPARO DE SINAL VIA TELEGRAM (só em modo vivo)
+    # ============================================================
+    if modo_vivo:
+        estado_anterior = st.session_state.get("_ultimo_sinal", {}).get(simbolo_id)
+
+        if res["direcao"] in ("long", "short"):
+            sinal_atual = {
+                "direcao": res["direcao"],
+                "preco": preco_atual,
+                "liquido": res["liquido"]
+            }
+            
+            # Se mudou de direção OU é o primeiro sinal
+            if estado_anterior is None or estado_anterior.get("direcao") != res["direcao"]:
+                lado = "🟢 COMPRA (LONG)" if res["direcao"] == "long" else "🔴 VENDA (SHORT)"
+                mensagem = (
+                    f"<b>🚨 NOVO SINAL BRICSVAULT</b>\n\n"
+                    f"📌 <b>Ativo:</b> {simbolo_id}\n"
+                    f"📊 <b>Sinal:</b> {lado}\n"
+                    f"💰 <b>Preço:</b> {formatar_preco(preco_atual)}\n"
+                    f"📈 <b>Escore Líquido:</b> {res['liquido']:.1f}/100\n"
+                    f"📋 <b>Contexto:</b> {res['contexto']}\n\n"
+                    f"🕐 {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
+                )
+                enviar_sinal_telegram(mensagem)
+                
+                if "_ultimo_sinal" not in st.session_state:
+                    st.session_state["_ultimo_sinal"] = {}
+                st.session_state["_ultimo_sinal"][simbolo_id] = sinal_atual
+
+        elif estado_anterior is not None and estado_anterior.get("direcao") in ("long", "short"):
+            # Sinal voltou para NEUTRO
+            mensagem = (
+                f"<b>⏹️ SINAL ENCERRADO</b>\n\n"
+                f"📌 <b>Ativo:</b> {simbolo_id}\n"
+                f"📊 <b>Sinal anterior:</b> {'🟢 COMPRA' if estado_anterior['direcao'] == 'long' else '🔴 VENDA'}\n"
+                f"📈 <b>Escore atual:</b> {res['liquido']:.1f}/100 (NEUTRO)\n\n"
+                f"🕐 {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
+            )
+            enviar_sinal_telegram(mensagem)
+            if "_ultimo_sinal" not in st.session_state:
+                st.session_state["_ultimo_sinal"] = {}
+            st.session_state["_ultimo_sinal"][simbolo_id] = {"direcao": "neutro", "preco": preco_atual}
+    # ============================================================
 
     # ---- Cabeçalho da recomendação ----
     st.markdown(
