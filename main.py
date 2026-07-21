@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - MONITORAMENTO AUTOMÁTICO COM ENVIO DOS TOP 5 SINAIS A CADA 2H
+# Versão 2.0 - FILTRO DE STABLECOINS E DERIVATIVOS
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal, zoneinfo
 # -----------------------------------------------------------------------------
 
@@ -20,8 +20,8 @@ from zoneinfo import ZoneInfo
 # ==========================================================================
 # CONFIGURAÇÃO DO TELEGRAM (SUBSTITUA PELOS SEUS DADOS)
 # ==========================================================================
-TELEGRAM_TOKEN = "8923739480:AAH8WXthla04LrEv4tT5horPzM7P5SYTT9s"          # Ex: "123456:ABC-DEF1234ghIkl"
-TELEGRAM_CHAT_ID = "1143799141"      # Ex: "123456789"
+TELEGRAM_TOKEN = "8923739480:AAH8WXthla04LrEv4tT5horPzM7P5SYTT9s"
+TELEGRAM_CHAT_ID = "1143799141"
 # ==========================================================================
 
 # -----------------------------------------------------------------------------
@@ -41,15 +41,13 @@ VELAS_TOTAL: int = 500
 PERIODO_AQUECIMENTO: int = 100
 IDIOMA_PADRAO: str = "Português (BR)"
 
-# ===== OTIMIZAÇÃO: TTLs mais longos para reduzir chamadas =====
-TTL_MERCADOS_SEGUNDOS: int = 3600          # Lista de pares (1 hora)
-TTL_DADOS_LIVE_SEGUNDOS: int = 120         # Dados OHLCV (2 minutos) - para monitoramento
-TTL_DADOS_INTERFACE_SEGUNDOS: int = 30     # Dados para a interface (30s)
-TTL_BOOK_SEGUNDOS: int = 30                # Livro de ofertas (30s)
-TTL_TOP_ATIVOS: int = 7200                 # Top 50 ativos (2 horas)
-# ================================================================
+TTL_MERCADOS_SEGUNDOS: int = 3600
+TTL_DADOS_LIVE_SEGUNDOS: int = 120
+TTL_DADOS_INTERFACE_SEGUNDOS: int = 30
+TTL_BOOK_SEGUNDOS: int = 30
+TTL_TOP_ATIVOS: int = 7200
 
-EXCHANGE_TIMEOUT_MS: int = 15000           # Aumentado para 15 segundos
+EXCHANGE_TIMEOUT_MS: int = 15000
 
 LIMITE_BOOK: int = 100
 FAIXA_BOOK: float = 0.015
@@ -61,26 +59,130 @@ JANELA_EVENTO_WYCKOFF: int = 15
 LIMIAR_SINAL_LIQUIDO: float = 32.0
 PONTOS_MAX_WYCKOFF: float = 3.0
 
-TOP_ATIVOS_QTD: int = 50                    # Número de ativos a monitorar
-TIMEFRAME_MONITORAMENTO: str = "4h"         # Timeframe padrão para monitoramento
-INTERVALO_ENVIO_SINAIS: int = 7200          # 2 horas em segundos
-MAX_SINAIS_POR_ENVIO: int = 5               # Máximo de sinais por mensagem
+TOP_ATIVOS_QTD: int = 50
+TIMEFRAME_MONITORAMENTO: str = "4h"
+INTERVALO_ENVIO_SINAIS: int = 7200
+MAX_SINAIS_POR_ENVIO: int = 5
 
 # ==========================================================================
-# DICIONÁRIO DE RESUMOS WYCKOFF EM LINGUAGEM LEIGA
+# LISTA DE STABLECOINS E PALAVRAS-CHAVE DE DERIVATIVOS
+# ==========================================================================
+STABLECOINS = [
+    "USDC", "BUSD", "DAI", "TUSD", "USDP", "GUSD", "PAX", "UST", "MIM",
+    "LUSD", "FRAX", "USDN", "SUSD", "DOLA", "USDD", "CUSD", "USX", "USDT"
+]
+
+DERIVATIVE_KEYWORDS = ["PERP", "SWAP", "FUT", "FUNDING", "INDEX", "INV", "POOL"]
+
+def is_stablecoin(symbol: str) -> bool:
+    """Verifica se o par contém stablecoin."""
+    try:
+        base, quote = symbol.split('/')
+        if quote in STABLECOINS or base in STABLECOINS:
+            return True
+        for sc in STABLECOINS:
+            if sc in symbol:
+                return True
+        return False
+    except:
+        return False
+
+def is_derivative(symbol: str) -> bool:
+    """Verifica se o símbolo é de derivativos (perp, swap, etc.)."""
+    symbol_upper = symbol.upper()
+    for kw in DERIVATIVE_KEYWORDS:
+        if kw in symbol_upper:
+            return True
+    return False
+
+def is_valid_spot_pair(symbol: str) -> bool:
+    """Verifica se o par é válido (spot, sem stablecoin, sem derivativo)."""
+    if not symbol.endswith('/USDT'):
+        return False
+    if is_derivative(symbol):
+        return False
+    if is_stablecoin(symbol):
+        return False
+    return True
+
+# ==========================================================================
+# DICIONÁRIOS DE IDIOMAS E RESUMOS WYCKOFF (mantidos completos)
 # ==========================================================================
 RESUMOS_WYCKOFF = {
-    "SPRING": "O preço furou o suporte, mas voltou rápido, indicando que compradores estão no controle.",
-    "SHAKEOUT": "O preço caiu forte para derrubar stops, mas se recuperou, mostrando que a queda foi falsa.",
-    "TSO": "O preço testou o suporte com alto volume, mas não conseguiu romper, sinal de força.",
-    "UT": "O preço tentou subir acima da resistência, mas foi rejeitado, mostrando pressão de venda.",
-    "UPTHRUST": "O preço rompeu a resistência, mas voltou para baixo, indicando fraqueza dos compradores.",
-    "UTAD": "O preço testou a resistência com volume alto e caiu, sinal de que a alta foi falsa."
+    "SPRING": {
+        "pt": "O preço furou o suporte, mas voltou rápido, indicando que compradores estão no controle.",
+        "en": "Price broke support but quickly reversed, showing buyers are in control.",
+        "es": "El precio rompió el soporte pero rebotó rápido, indicando que los compradores controlan.",
+        "fr": "Le prix a cassé le support mais est revenu rapidement, montrant que les acheteurs contrôlent.",
+        "de": "Der Preis durchbrach die Unterstützung, kehrte aber schnell zurück, was Käuferkontrollé zeigt.",
+        "it": "Il prezzo ha rotto il supporto ma è tornato rapidamente, indicando che gli acquirenti controllano.",
+        "ru": "Цена пробила поддержку, но быстро вернулась, показывая контроль покупателей.",
+        "ja": "価格はサポートを割ったがすぐに戻り、買い手が支配していることを示す。",
+        "zh": "价格跌破支撑但迅速回升，表明买家占据主导。",
+        "hi": "कीमत समर्थन से नीचे गई लेकिन जल्दी वापस आ गई, दिखाता है कि खरीदार नियंत्रण में हैं।"
+    },
+    "SHAKEOUT": {
+        "pt": "O preço caiu forte para derrubar stops, mas se recuperou, mostrando que a queda foi falsa.",
+        "en": "Price dropped sharply to shake out stops, then recovered, showing the drop was false.",
+        "es": "El precio cayó fuerte para sacar stops, pero se recuperó, mostrando que la caída fue falsa.",
+        "fr": "Le prix a chuté fortement pour éliminer les stops, puis s'est repris, montrant que la baisse était fausse.",
+        "de": "Der Preis fiel stark, um Stops auszulösen, erholte sich dann – zeigt, dass der Fall falsch war.",
+        "it": "Il prezzo è sceso forte per far scattare gli stop, poi si è ripreso, mostrando che il calo era falso.",
+        "ru": "Цена резко упала, чтобы выбить стопы, затем восстановилась, показывая ложность падения.",
+        "ja": "価格はストップを取るために急落したが回復し、下落が偽物だったことを示す。",
+        "zh": "价格急跌以触发止损，然后反弹，表明下跌是虚假的。",
+        "hi": "कीमत स्टॉप हिट करने के लिए तेजी से गिरी, फिर वापस आई, दिखाता है कि गिरावट झूठी थी।"
+    },
+    "TSO": {
+        "pt": "O preço testou o suporte com alto volume, mas não conseguiu romper, sinal de força.",
+        "en": "Price tested support with high volume but failed to break, a sign of strength.",
+        "es": "El precio probó el soporte con alto volumen pero no logró romper, señal de fuerza.",
+        "fr": "Le prix a testé le support avec un volume élevé mais n'a pas réussi à casser, signe de force.",
+        "de": "Der Preis testete die Unterstützung mit hohem Volumen, konnte aber nicht brechen – ein Zeichen der Stärke.",
+        "it": "Il prezzo ha testato il supporto con alto volume ma non è riuscito a rompere, segno di forza.",
+        "ru": "Цена протестировала поддержку с высоким объемом, но не смогла пробить – признак силы.",
+        "ja": "価格は高ボリュームでサポートをテストしたが割れず、強さのサイン。",
+        "zh": "价格在高成交量下测试支撑但未能跌破，表明强势。",
+        "hi": "कीमत ने उच्च वॉल्यूम के साथ समर्थन का परीक्षण किया लेकिन तोड़ नहीं सकी, ताकत का संकेत।"
+    },
+    "UT": {
+        "pt": "O preço tentou subir acima da resistência, mas foi rejeitado, mostrando pressão de venda.",
+        "en": "Price tried to rise above resistance but was rejected, showing selling pressure.",
+        "es": "El precio intentó subir por encima de la resistencia pero fue rechazado, mostrando presión de venta.",
+        "fr": "Le prix a tenté de monter au-dessus de la résistance mais a été rejeté, montrant une pression de vente.",
+        "de": "Der Preis versuchte, über den Widerstand zu steigen, wurde aber abgewiesen – Verkaufsdruck.",
+        "it": "Il prezzo ha tentato di salire sopra la resistenza ma è stato respinto, mostrando pressione di vendita.",
+        "ru": "Цена попыталась подняться выше сопротивления, но была отклонена, показывая давление продавцов.",
+        "ja": "価格はレジスタンスを上抜けようとしたが跳ね返され、売り圧力を示す。",
+        "zh": "价格试图突破阻力但被拒绝，表明卖压。",
+        "hi": "कीमत ने प्रतिरोध से ऊपर जाने की कोशिश की लेकिन अस्वीकार कर दी गई, बिक्री दबाव दिखाता है।"
+    },
+    "UPTHRUST": {
+        "pt": "O preço rompeu a resistência, mas voltou para baixo, indicando fraqueza dos compradores.",
+        "en": "Price broke resistance but fell back, indicating buyer weakness.",
+        "es": "El precio rompió la resistencia pero volvió a bajar, indicando debilidad de los compradores.",
+        "fr": "Le prix a cassé la résistance mais est retombé, indiquant une faiblesse des acheteurs.",
+        "de": "Der Preis durchbrach den Widerstand, fiel aber zurück – Schwäche der Käufer.",
+        "it": "Il prezzo ha rotto la resistenza ma è risceso, indicando debolezza degli acquirenti.",
+        "ru": "Цена пробила сопротивление, но упала обратно, указывая на слабость покупателей.",
+        "ja": "価格はレジスタンスを抜けたが戻り、買い手の弱さを示す。",
+        "zh": "价格突破阻力但回落，表明买方疲软。",
+        "hi": "कीमत ने प्रतिरोध तोड़ा लेकिन वापस गिर गई, खरीदारों की कमजोरी दिखाता है।"
+    },
+    "UTAD": {
+        "pt": "O preço testou a resistência com volume alto e caiu, sinal de que a alta foi falsa.",
+        "en": "Price tested resistance with high volume and fell, signaling the rally was false.",
+        "es": "El precio probó la resistencia con alto volumen y cayó, señal de que el repunte fue falso.",
+        "fr": "Le prix a testé la résistance avec un volume élevé et a chuté, signalant une hausse fausse.",
+        "de": "Der Preis testete den Widerstand mit hohem Volumen und fiel – Zeichen für falsche Rallye.",
+        "it": "Il prezzo ha testato la resistenza con alto volume ed è caduto, segnale di un rialzo falso.",
+        "ru": "Цена протестировала сопротивление с высоким объемом и упала, сигнализируя о ложном росте.",
+        "ja": "価格は高ボリュームでレジスタンスをテストし下落、上昇が偽物だったサイン。",
+        "zh": "价格在高成交量下测试阻力然后下跌，表明反弹是虚假的。",
+        "hi": "कीमत ने उच्च वॉल्यूम के साथ प्रतिरोध का परीक्षण किया और गिर गई, संकेत है कि रैली झूठी थी।"
+    }
 }
 
-# -----------------------------------------------------------------------------
-# DICIONÁRIO DE IDIOMAS (resumido para este exemplo)
-# -----------------------------------------------------------------------------
 _TEXTOS_BASE_PT_BR = {
     "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
     "config_globais": "⚙️ Configurações Globais",
@@ -151,12 +253,104 @@ _TEXTOS_BASE_PT_BR = {
     "acima": "acima",
     "abaixo": "abaixo",
     "preco_atual": "Preço atual",
-    "monitorando": "📡 Monitorando os 50 ativos mais líquidos (timeframe 4h)",
-    "top_ativos": "🏆 Top 50 por Volume (24h)",
-    "horario_brasilia": "🕒 Horário de Brasília (UTC-3)"
+    "monitorando": "📡 Monitorando os 50 ativos mais líquidos (sem stablecoins/derivativos)",
+    "top_ativos": "🏆 Top 50 por Volume (24h) - sem stablecoins/derivativos",
+    "horario_brasilia": "🕒 Horário de Brasília (UTC-3)",
+    "telegram_config": "📲 Configuração do Telegram",
+    "telegram_status": "Status da conexão:",
+    "testar_conexao": "🔍 Testar Conexão com Telegram",
+    "conectado": "✅ Conexão com Telegram estabelecida!",
+    "nao_configurado": "⚠️ Token ou Chat ID não configurados. Edite o código.",
+    "erro_chat": "⚠️ Não foi possível enviar mensagem de boas-vindas. Envie /start para o bot manualmente.",
+    "enviando_teste": "Enviando mensagem de teste...",
+    "ultimo_envio": "Último envio:"
 }
 
-_TRADUCOES = {IDIOMA_PADRAO: _TEXTOS_BASE_PT_BR}
+_TRADUCOES = {
+    "Português (BR)": _TEXTOS_BASE_PT_BR,
+    "English (EN)": {
+        "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine",
+        "config_globais": "⚙️ Global Settings",
+        "selecione_cripto": "Select Any Cryptocurrency (/USDT):",
+        "tempo_grafico": "Timeframe:",
+        "modo_vivo": "Enable Real-Time Monitoring",
+        "intervalo_refresh": "Refresh Interval (Seconds):",
+        "preco_spot": "Real Spot Price",
+        "variacao_24h": "24h Variation",
+        "volume_24h": "24h Volume (USDT)",
+        "market_cap": "Market Cap (USDT)",
+        "stop_atr": "ATR Stop Price",
+        "compra_forte": "🟢 STRONG BUY (SMC + FIBONACCI ALIGNED)",
+        "venda_forte": "🔴 STRONG SELL (SMC + FIBONACCI ALIGNED)",
+        "neutro": "🟡 NEUTRAL (AWAIT SMC)",
+        "erro_dados": "Insufficient historical data. Try another asset or reduce the Timeframe.",
+        "ctx_desconto": "Asset in Fibonacci Discount Zone (Excellent risk/reward for Institutionals).",
+        "ctx_premium": "Asset in Fibonacci Premium Zone (Price stretched, suitable for profit-taking).",
+        "ctx_neutro": "Price in neutral Fibonacci zone (Fair Value Zone).",
+        "ultima_atualizacao": "Last Update",
+        "proximo_refresh": "Next refresh in",
+        "segundos": "seconds",
+        "pontos_compra": "Buy Points",
+        "pontos_venda": "Sell Points",
+        "grafico_titulo": "📈 Interactive Price Chart",
+        "buscando_marketcap": "🔍 Fetching Market Cap...",
+        "marketcap_nao_disponivel": "Not available",
+        "idioma_label": "🌐 Language / Idioma",
+        "idioma_selecao": "Select Interface Language:",
+        "aviso_aquecimento": "⚠️ Warm-up candles used in calculation",
+        "escore_liquido": "Net Score",
+        "plano_trade": "🎯 Trade Plan",
+        "entrada": "Entry",
+        "stop_loss": "STOP LOSS",
+        "alvo": "Target",
+        "risco_retorno": "Risk/Reward at Target 1",
+        "base_stop": "Stop basis",
+        "book_titulo": "📊 Aggregated Order Book",
+        "zonas_compra": "LARGEST BUY ZONES",
+        "zonas_venda": "LARGEST SELL ZONES",
+        "pressao_global": "GLOBAL MARKET PRESSURE",
+        "compra": "BUY",
+        "venda": "SELL",
+        "desequilibrio": "Imbalance",
+        "book_equilibrado": "BALANCED MARKET",
+        "book_comprador": "BUYING PRESSURE",
+        "book_vendedor": "SELLING PRESSURE",
+        "book_indisponivel": "Order book unavailable right now. The score remains valid.",
+        "profundidade": "AGGREGATED DEPTH (±1.5% of mid)",
+        "wyckoff_titulo": "🧭 Wyckoff Structure",
+        "wyckoff_sem_evento": "No Phase C/D event found in the recent window.",
+        "wyckoff_range": "Trading Range",
+        "wyckoff_evento": "Event",
+        "wyckoff_fase": "Phase",
+        "wyckoff_teste": "Secondary Test",
+        "wyckoff_sos": "SOS / SOW",
+        "wyckoff_lps": "LPS / LPSY",
+        "confirmado": "confirmed",
+        "nao_confirmado": "not confirmed",
+        "alerta_muralha": "⚠️ Significant opposing liquidity wall ahead of price.",
+        "valor_memorizado": "last known value",
+        "fontes_book": "Exchanges in book",
+        "intervalos": {
+            "1 Minute": "1m", "5 Minutes": "5m", "15 Minutes": "15m", "30 Minutes": "30m",
+            "1 Hour": "1h", "4 Hours": "4h", "1 Day": "1d", "1 Week": "1w"
+        },
+        "medias_moveis": "📊 Moving Averages (SMA)",
+        "acima": "above",
+        "abaixo": "below",
+        "preco_atual": "Current price",
+        "monitorando": "📡 Monitoring the top 50 most liquid assets (no stablecoins/derivatives)",
+        "top_ativos": "🏆 Top 50 by Volume (24h) - no stablecoins/derivatives",
+        "horario_brasilia": "🕒 Brasília Time (UTC-3)",
+        "telegram_config": "📲 Telegram Configuration",
+        "telegram_status": "Connection status:",
+        "testar_conexao": "🔍 Test Telegram Connection",
+        "conectado": "✅ Telegram connection established!",
+        "nao_configurado": "⚠️ Token or Chat ID not configured. Edit the code.",
+        "erro_chat": "⚠️ Could not send welcome message. Send /start to the bot manually.",
+        "enviando_teste": "Sending test message...",
+        "ultimo_envio": "Last send:"
+    }
+}
 
 def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIOMA_PADRAO) -> Dict:
     base = traducoes[idioma_padrao]
@@ -169,20 +363,27 @@ def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIO
 
 DICIONARIO_LINGUAS = construir_dicionario_com_fallback(_TRADUCOES)
 
-# ==========================================================================
-# FUNÇÃO AUXILIAR PARA HORÁRIO DE BRASÍLIA
-# ==========================================================================
+def obter_resumo_wyckoff(evento_tipo: str, idioma: str) -> str:
+    chave_idioma = {
+        "Português (BR)": "pt",
+        "English (EN)": "en",
+        "Español": "es",
+        "Français": "fr",
+        "Deutsch": "de",
+        "Italiano": "it",
+        "Русский": "ru",
+        "日本語": "ja",
+        "中文 (简体)": "zh",
+        "हिन्दी": "hi"
+    }.get(idioma, "pt")
+    return RESUMOS_WYCKOFF.get(evento_tipo, {}).get(chave_idioma, "Evento Wyckoff detectado")
+
 def horario_brasilia() -> datetime:
-    """Retorna o datetime atual no fuso horário de Brasília (UTC-3)."""
     return datetime.now(ZoneInfo("America/Sao_Paulo"))
 
 def formatar_horario_brasilia(dt: datetime) -> str:
-    """Formata um datetime para string no formato brasileiro."""
     return dt.strftime("%d/%m/%Y %H:%M:%S")
 
-# ==========================================================================
-# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM
-# ==========================================================================
 def enviar_sinal_telegram(mensagem: str) -> Tuple[bool, str]:
     if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
         return False, "⚠️ Configuração do Telegram não realizada."
@@ -198,8 +399,8 @@ def enviar_sinal_telegram(mensagem: str) -> Tuple[bool, str]:
             if "chat not found" in error_desc.lower():
                 return False, "❌ Chat não encontrado! Envie uma mensagem para o bot e tente novamente."
             return False, f"❌ Erro {response.status_code}: {error_desc}"
-    except Exception as e:
-        return False, f"❌ Falha na conexão: {str(e)}"
+    except Exception:
+        return False, "❌ Falha na conexão."
 
 def testar_conexao_telegram() -> Tuple[bool, str]:
     msg = "🔍 Teste de conexão do BRICSVAULT. Monitoramento automático ativo!"
@@ -291,7 +492,7 @@ def obter_exchange_manager() -> ExchangeManager:
     return _construir_exchange_manager(VERSAO_MANAGER)
 
 # ==========================================================================
-# FUNÇÃO PARA OBTER OS TOP 50 ATIVOS POR VOLUME (CACHE DE 2 HORAS)
+# FUNÇÃO PARA OBTER OS TOP 50 ATIVOS POR VOLUME (FILTRANDO)
 # ==========================================================================
 @st.cache_data(ttl=TTL_TOP_ATIVOS, show_spinner=False)
 def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
@@ -299,20 +500,26 @@ def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
     client = manager.get_client("Gate.io")
     padrao = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT",
               "ADA/USDT", "DOT/USDT", "AVAX/USDT", "MATIC/USDT", "LINK/USDT"]
+    # Filtra o padrão
+    padrao_filtrado = [p for p in padrao if is_valid_spot_pair(p)]
     if not client:
-        return padrao[:quantidade]
+        return padrao_filtrado[:quantidade]
     try:
         tickers = client.fetch_tickers()
         usdt_pairs = {symbol: ticker for symbol, ticker in tickers.items() if symbol.endswith('/USDT')}
+        # Filtra validando spot pair
+        usdt_pairs = {symbol: ticker for symbol, ticker in usdt_pairs.items() if is_valid_spot_pair(symbol)}
+        if not usdt_pairs:
+            return padrao_filtrado[:quantidade]
         sorted_pairs = sorted(usdt_pairs.items(), key=lambda x: x[1].get('quoteVolume', 0) or 0, reverse=True)
         top_symbols = [symbol for symbol, _ in sorted_pairs[:quantidade]]
-        return top_symbols if top_symbols else padrao[:quantidade]
+        return top_symbols if top_symbols else padrao_filtrado[:quantidade]
     except Exception:
-        return padrao[:quantidade]
+        return padrao_filtrado[:quantidade]
 
-# ==========================================================================
-# FUNÇÕES DE MERCADO COM CACHE SEPARADO PARA INTERFACE E MONITORAMENTO
-# ==========================================================================
+# -----------------------------------------------------------------------------
+# FUNÇÕES DE MERCADO (REST e OHLCV)
+# -----------------------------------------------------------------------------
 def _obter_dados_24h_rest_direto(exchange_name: str, simbolo: str) -> Optional[Dict]:
     try:
         if exchange_name == "Gate.io":
@@ -408,7 +615,6 @@ def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Opti
             if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
                 df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                 df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-                # Indicadores
                 df['RSI_14'] = calcular_rsi(df['close'], 14)
                 k, d = calcular_rsi_estocastico(df['close'])
                 df['STOCH_K'] = k
@@ -436,7 +642,7 @@ def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Opti
     return None
 
 # -----------------------------------------------------------------------------
-# INDICADORES TÉCNICOS
+# INDICADORES TÉCNICOS (funções mantidas)
 # -----------------------------------------------------------------------------
 def calcular_rsi(serie: pd.Series, periodo: int = 14) -> pd.Series:
     delta = serie.diff()
@@ -762,7 +968,7 @@ def detectar_wyckoff(df: pd.DataFrame, janela_base: int = JANELA_BASE_WYCKOFF,
     }
 
 # -----------------------------------------------------------------------------
-# ANÁLISE DE CONFLUÊNCIA (com pesos e OBV)
+# ANÁLISE DE CONFLUÊNCIA
 # -----------------------------------------------------------------------------
 PESOS = {
     "rsi": 2.0, "stoch": 1.5, "macd": 2.0, "mfi": 1.0, "ssl": 1.0, "atr": 1.0,
@@ -1058,22 +1264,22 @@ def lucro_percentual(direcao: str, entrada: float, alvo: float) -> float:
     return (entrada / alvo - 1) * 100
 
 # ==========================================================================
-# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (COM ACUMULAÇÃO E ENVIO DOS TOP 5)
+# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (COM CONTROLE DE ESTADO)
 # ==========================================================================
 def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
     if not ativos:
         return
 
-    # Inicializa estado para acumular sinais
+    if "_estado_ativo" not in st.session_state:
+        st.session_state["_estado_ativo"] = {}
     if "_sinais_acumulados" not in st.session_state:
         st.session_state["_sinais_acumulados"] = []
     if "_ultimo_envio" not in st.session_state:
-        st.session_state["_ultimo_envio"] = datetime.now(ZoneInfo("America/Sao_Paulo")) - timedelta(seconds=INTERVALO_ENVIO_SINAIS)
+        st.session_state["_ultimo_envio"] = horario_brasilia() - timedelta(seconds=INTERVALO_ENVIO_SINAIS)
 
     agora = horario_brasilia()
-    sinais = []  # lista para armazenar sinais deste ciclo (já que o monitoramento é chamado a cada refresh)
+    sinais = []
 
-    # Itera sobre os ativos e coleta todos os sinais
     for simbolo in ativos:
         try:
             df = carregar_dados_monitoramento(simbolo, timeframe)
@@ -1085,14 +1291,16 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
             res = analisar_confluencia(df, txt, book, wyk)
             preco_atual = float(df.iloc[-1]['close'])
 
-            # Só nos interessa se houver sinal (long ou short)
-            if res["direcao"] in ("long", "short"):
+            estado_atual = st.session_state["_estado_ativo"].get(simbolo, "neutro")
+
+            if res["direcao"] in ("long", "short") and estado_atual == "neutro":
                 atr_atual = float(df.iloc[-1]['ATR']) if not math.isnan(df.iloc[-1]['ATR']) else preco_atual * 0.01
                 stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
                                                 df.iloc[-1]['ATR_Stop'], wyk, book)
                 alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
 
-                # Adiciona o sinal à lista com todos os detalhes
+                st.session_state["_estado_ativo"][simbolo] = res["direcao"]
+
                 sinais.append({
                     "simbolo": simbolo,
                     "direcao": res["direcao"],
@@ -1103,22 +1311,21 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
                     "base_stop": base_stop,
                     "alvos": alvos,
                 })
+
+            elif res["direcao"] == "neutro" and estado_atual != "neutro":
+                st.session_state["_estado_ativo"][simbolo] = "neutro"
+
         except Exception:
             continue
 
-    # Acumula os sinais encontrados neste ciclo
     if sinais:
         st.session_state["_sinais_acumulados"].extend(sinais)
 
-    # Verifica se já passou 2 horas desde o último envio
     if (agora - st.session_state["_ultimo_envio"]).total_seconds() >= INTERVALO_ENVIO_SINAIS:
         if st.session_state["_sinais_acumulados"]:
-            # Ordena os sinais acumulados por |liquido| (melhor primeiro)
             st.session_state["_sinais_acumulados"].sort(key=lambda x: abs(x["liquido"]), reverse=True)
-            # Seleciona os TOP 5
             top_sinais = st.session_state["_sinais_acumulados"][:MAX_SINAIS_POR_ENVIO]
 
-            # Monta a mensagem com os TOP 5
             if top_sinais:
                 mensagem = f"<b>🚨 BRICSVAULT - TOP {len(top_sinais)} SINAIS DO PERÍODO</b>\n\n"
                 for idx, sinal in enumerate(top_sinais, start=1):
@@ -1140,10 +1347,8 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
 
                 mensagem += f"🕒 {formatar_horario_brasilia(agora)} (Horário de Brasília)"
 
-                # Envia a mensagem
                 enviar_sinal_telegram(mensagem)
 
-            # Limpa a lista de acumulados e atualiza o timestamp do último envio
             st.session_state["_sinais_acumulados"] = []
             st.session_state["_ultimo_envio"] = agora
 
@@ -1280,13 +1485,13 @@ def renderizar_book(txt: Dict, book: Optional[Dict]) -> None:
     _bloco(col_c, txt["zonas_compra"], book["muralhas_compra"], "#22c55e")
     _bloco(col_v, txt["zonas_venda"], book["muralhas_venda"], "#f43f5e")
 
-def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
+def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict], idioma: str) -> None:
     if not wyk or not wyk.get("evento"):
         st.info(txt["wyckoff_sem_evento"])
         return
     ev = wyk["evento"]
     cor = "#22c55e" if wyk["direcao"] == 1 else "#f43f5e"
-    resumo = RESUMOS_WYCKOFF.get(ev["tipo"], "Evento Wyckoff detectado")
+    resumo = obter_resumo_wyckoff(ev["tipo"], idioma)
     st.markdown(
         f"""
         <div style="background:#0b0f19;border:1px solid #1e293b;border-radius:18px;padding:20px;
@@ -1325,7 +1530,7 @@ def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
     )
 
 # ==========================================================================
-# FUNÇÕES AUXILIARES DE MARKET CAP E TICKER (com cache)
+# FUNÇÕES AUXILIARES
 # ==========================================================================
 @st.cache_data(ttl=600, show_spinner=False)
 def obter_dados_24h(simbolo: str) -> Optional[Dict]:
@@ -1462,23 +1667,24 @@ def obter_todos_pares_usdt() -> List[str]:
     client = manager.get_client("Gate.io")
     padrao = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT"]
     if not client:
-        return padrao
+        return [p for p in padrao if is_valid_spot_pair(p)]
     try:
         markets = client.load_markets()
         pairs = [s for s in markets.keys() if s.endswith('/USDT')]
-        return sorted(pairs) if pairs else padrao
+        pairs = [p for p in pairs if is_valid_spot_pair(p)]
+        return sorted(pairs) if pairs else [p for p in padrao if is_valid_spot_pair(p)]
     except Exception:
-        return padrao
+        return [p for p in padrao if is_valid_spot_pair(p)]
 
 # ==========================================================================
-# PAINEL PRINCIPAL (fragmento com refresh automático)
+# PAINEL PRINCIPAL
 # ==========================================================================
 @st.fragment(run_every=0)
 def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Dict,
-                     modo_vivo: bool, intervalo_refresh: int) -> None:
+                     modo_vivo: bool, intervalo_refresh: int, idioma_selecionado: str) -> None:
     if modo_vivo:
         top_ativos = obter_top_ativos_por_volume(TOP_ATIVOS_QTD)
-        with st.spinner("🔄 Analisando os 50 ativos mais líquidos..."):
+        with st.spinner("🔄 Analisando os 50 ativos mais líquidos (sem stablecoins/derivativos)..."):
             monitorar_ativos(top_ativos, TIMEFRAME_MONITORAMENTO, txt)
 
     df_dados = carregar_dados_interface(simbolo_selecionado, timeframe_interface)
@@ -1578,7 +1784,7 @@ def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Di
 
     # Wyckoff
     st.markdown(f"### {txt['wyckoff_titulo']}")
-    renderizar_wyckoff(txt, wyk)
+    renderizar_wyckoff(txt, wyk, idioma_selecionado)
 
     # Book
     st.markdown(f"### {txt['book_titulo']}")
@@ -1597,7 +1803,7 @@ def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Di
             renderizar_card_plano(txt, simbolo_selecionado, res["direcao"], preco_atual,
                                   stop, alvos, base_stop, preco_atual)
 
-    # Rodapé com horário de Brasília
+    # Rodapé
     agora_br = horario_brasilia()
     hora_br = formatar_horario_brasilia(agora_br)
     prefixo = "🟢" if modo_vivo else "⏸"
@@ -1610,7 +1816,7 @@ def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Di
     )
 
 # -----------------------------------------------------------------------------
-# MAIN - Interface e execução
+# MAIN
 # -----------------------------------------------------------------------------
 def main() -> None:
     idiomas_disponiveis = list(DICIONARIO_LINGUAS.keys())
@@ -1626,7 +1832,7 @@ def main() -> None:
     st.title(txt["titulo"])
     st.sidebar.header(txt["config_globais"])
 
-    # Configuração do Telegram
+    # Config Telegram
     with st.sidebar.expander("📲 Configuração do Telegram", expanded=False):
         st.write("**Status da conexão:**")
         if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
@@ -1640,7 +1846,7 @@ def main() -> None:
                     else:
                         st.error(msg)
             if not st.session_state.get("_telegram_initialized", False):
-                msg_welcome = "🤖 *BRICSVAULT conectado!*\n\nMonitorando os top 50 ativos e enviando os 5 melhores sinais a cada 2h."
+                msg_welcome = "🤖 *BRICSVAULT conectado!*\n\nMonitorando top 50 ativos (sem stablecoins/derivativos)."
                 sucesso, _ = enviar_sinal_telegram(msg_welcome)
                 if sucesso:
                     st.session_state["_telegram_initialized"] = True
@@ -1648,12 +1854,16 @@ def main() -> None:
                 else:
                     st.warning("⚠️ Não foi possível enviar mensagem de boas-vindas. Envie /start para o bot manualmente.")
 
-    # Seleção do ativo para interface
+    # Seleção de ativo
     todos_ativos = obter_todos_pares_usdt()
+    if not todos_ativos:
+        st.warning("Nenhum par spot válido encontrado. Verifique sua conexão com a exchange.")
+        return
+    indice_padrao = todos_ativos.index("SOL/USDT") if "SOL/USDT" in todos_ativos else 0
     simbolo_selecionado = st.sidebar.selectbox(
         txt["selecione_cripto"],
         todos_ativos,
-        index=todos_ativos.index("SOL/USDT") if "SOL/USDT" in todos_ativos else 0
+        index=indice_padrao
     )
 
     intervalos = txt["intervalos"]
@@ -1672,13 +1882,13 @@ def main() -> None:
         txt["intervalo_refresh"], min_value=20, max_value=120, value=30
     )
 
-    # Exibe lista dos top 50 ativos monitorados
+    # Top 50
     with st.sidebar.expander(txt["top_ativos"], expanded=False):
         top_ativos = obter_top_ativos_por_volume(TOP_ATIVOS_QTD)
         for i, ativo in enumerate(top_ativos, start=1):
             st.write(f"{i}. {ativo}")
 
-    painel_principal(simbolo_selecionado, timeframe_interface, txt, modo_vivo, intervalo_refresh)
+    painel_principal(simbolo_selecionado, timeframe_interface, txt, modo_vivo, intervalo_refresh, idioma_selecionado)
 
 if __name__ == "__main__":
     main()
