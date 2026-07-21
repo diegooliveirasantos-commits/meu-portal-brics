@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - COM DISPARO DE SINAIS VIA TELEGRAM
+# Versão 2.0 - COM DISPARO DE SINAIS VIA TELEGRAM E SALVAGUARDAS
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
 # -----------------------------------------------------------------------------
 
@@ -735,13 +735,17 @@ def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIO
 DICIONARIO_LINGUAS = construir_dicionario_com_fallback(_TRADUCOES)
 
 # ==========================================================================
-# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM
+# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM (COM TRATAMENTO DE ERROS)
 # ==========================================================================
-def enviar_sinal_telegram(mensagem: str) -> None:
-    """Envia uma mensagem para o Telegram via Bot API."""
-    # Só tenta enviar se o token e o chat_id foram configurados
+def enviar_sinal_telegram(mensagem: str) -> Tuple[bool, str]:
+    """
+    Envia uma mensagem para o Telegram via Bot API.
+    Retorna: (sucesso: bool, mensagem_erro: str)
+    """
+    # Verifica se a configuração foi feita
     if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
-        return  # Configuração não realizada
+        return False, "⚠️ Configuração do Telegram não realizada. Configure TOKEN e CHAT_ID no código."
+
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         payload = {
@@ -750,11 +754,30 @@ def enviar_sinal_telegram(mensagem: str) -> None:
             "parse_mode": "HTML"
         }
         response = requests.post(url, json=payload, timeout=10)
-        if response.status_code != 200:
-            st.warning(f"Erro ao enviar para Telegram: {response.text}")
+        
+        if response.status_code == 200:
+            return True, "✅ Enviado com sucesso!"
+        else:
+            error_data = response.json()
+            error_desc = error_data.get("description", "Erro desconhecido")
+            
+            # Tratamento específico para "chat not found"
+            if "chat not found" in error_desc.lower():
+                return False, "❌ Chat não encontrado! Envie uma mensagem qualquer (ex: /start) para o BOT no Telegram, e depois tente novamente."
+            
+            return False, f"❌ Erro {response.status_code}: {error_desc}"
+            
+    except requests.exceptions.Timeout:
+        return False, "❌ Tempo limite excedido. Verifique sua conexão com a internet."
     except Exception as e:
-        st.warning(f"Falha ao enviar mensagem para Telegram: {e}")
+        return False, f"❌ Falha na conexão: {str(e)}"
 # ==========================================================================
+
+# Função de teste de conexão (usada na sidebar)
+def testar_conexao_telegram() -> Tuple[bool, str]:
+    """Testa a conexão com o Telegram enviando uma mensagem de teste."""
+    msg = "🔍 Teste de conexão do BRICSVAULT. Se você está vendo isso, o Telegram está configurado corretamente!"
+    return enviar_sinal_telegram(msg)
 
 # -----------------------------------------------------------------------------
 # FUNÇÕES DE FORMATAÇÃO
@@ -2121,7 +2144,10 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
                     f"📋 <b>Contexto:</b> {res['contexto']}\n\n"
                     f"🕐 {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
                 )
-                enviar_sinal_telegram(mensagem)
+                sucesso, msg_retorno = enviar_sinal_telegram(mensagem)
+                if not sucesso:
+                    # Mostra o erro no rodapé ou em um local visível, mas sem travar
+                    st.warning(f"⚠️ Telegram: {msg_retorno}")
                 
                 if "_ultimo_sinal" not in st.session_state:
                     st.session_state["_ultimo_sinal"] = {}
@@ -2136,7 +2162,10 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
                 f"📈 <b>Escore atual:</b> {res['liquido']:.1f}/100 (NEUTRO)\n\n"
                 f"🕐 {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
             )
-            enviar_sinal_telegram(mensagem)
+            sucesso, msg_retorno = enviar_sinal_telegram(mensagem)
+            if not sucesso:
+                st.warning(f"⚠️ Telegram: {msg_retorno}")
+            
             if "_ultimo_sinal" not in st.session_state:
                 st.session_state["_ultimo_sinal"] = {}
             st.session_state["_ultimo_sinal"][simbolo_id] = {"direcao": "neutro", "preco": preco_atual}
@@ -2262,6 +2291,36 @@ def main() -> None:
     txt = DICIONARIO_LINGUAS[idioma_selecionado]
     st.title(txt["titulo"])
     st.sidebar.header(txt["config_globais"])
+
+    # ====================================================================
+    # SEÇÃO DE TESTE DO TELEGRAM NA BARRA LATERAL
+    # ====================================================================
+    with st.sidebar.expander("📲 Configuração do Telegram", expanded=False):
+        st.write("**Status da conexão:**")
+        
+        # Verifica se o token e chat_id foram configurados
+        if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
+            st.error("⚠️ Token ou Chat ID não configurados. Edite o código.")
+        else:
+            if st.button("🔍 Testar Conexão com Telegram", use_container_width=True):
+                with st.spinner("Enviando mensagem de teste..."):
+                    sucesso, msg = testar_conexao_telegram()
+                    if sucesso:
+                        st.success(msg)
+                    else:
+                        st.error(msg)
+            
+            # Tenta enviar uma mensagem de boas-vindas na primeira execução (apenas para ativar o chat)
+            if not st.session_state.get("_telegram_initialized", False):
+                # Envia uma mensagem silenciosa de boas-vindas para inicializar o chat
+                msg_welcome = "🤖 *BRICSVAULT conectado!*\n\nAguarde os sinais automáticos de LONG e SHORT."
+                sucesso, _ = enviar_sinal_telegram(msg_welcome)
+                if sucesso:
+                    st.session_state["_telegram_initialized"] = True
+                    st.success("✅ Conexão com Telegram estabelecida! Você receberá os sinais aqui.")
+                else:
+                    st.warning("⚠️ Não foi possível enviar mensagem de boas-vindas. Envie /start para o bot manualmente.")
+    # ====================================================================
 
     lista_criptos = obter_todos_pares_usdt()
     simbolo_id = st.sidebar.selectbox(
