@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - COM DISPARO DE SINAIS VIA TELEGRAM E SALVAGUARDAS
+# Versão 2.0 - COM STOP LOSS E ALVOS NO TELEGRAM (CORRIGIDO)
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
 # -----------------------------------------------------------------------------
 
@@ -1810,7 +1810,7 @@ def analisar_confluencia(df_completo: pd.DataFrame, txt: Dict,
     }
 
 # -----------------------------------------------------------------------------
-# PLANO DE TRADE (stop, alvos)
+# PLANO DE TRADE (stop, alvos) - FUNÇÃO CONSTRUIR_ALVOS CORRIGIDA
 # -----------------------------------------------------------------------------
 def escolher_stop(direcao: str, entrada: float, atr: float,
                   atr_stop_val: float, wyk: Optional[Dict],
@@ -1849,43 +1849,72 @@ def escolher_stop(direcao: str, entrada: float, atr: float,
 def construir_alvos(direcao: str, entrada: float, atr: float,
                     wyk: Optional[Dict], book: Optional[Dict],
                     n: int = 8) -> List[float]:
-    """Constrói lista de alvos de take profit com base em várias referências."""
+    """
+    Constrói lista de alvos de take profit com base em várias referências.
+    AGORA SEMPRE RETORNA PELO MENOS 5 ALVOS, USANDO PERCENTUAIS FIXOS COMO FALLBACK.
+    """
     candidatos = set()
     atr = atr if (atr and atr > 0 and not math.isnan(atr)) else entrada * 0.01
+
     if direcao == "long":
+        # 1) Níveis de Wyckoff (resistência + extensões)
         if wyk and wyk.get("range_valido") and wyk.get("altura"):
             res, altura = wyk["resistencia"], wyk["altura"]
             for k in (0.0, 0.382, 0.618, 1.0, 1.618, 2.618):
                 candidatos.add(res + altura * k)
+        # 2) Muralhas de venda (book)
         if book:
             for m in book["muralhas_venda"]:
                 candidatos.add(m["preco"])
+        # 3) Múltiplos do ATR
         for k in (1, 1.5, 2, 3, 4, 5, 6.5, 8, 10, 13):
             candidatos.add(entrada + k * atr)
-        for k in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55, 0.89):
-            candidatos.add(entrada * (1 + k))
+        # 4) Percentuais fixos (garantia de ter alvos)
+        for pct in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55, 0.89):
+            candidatos.add(entrada * (1 + pct))
+
+        # Filtra apenas níveis acima da entrada com margem mínima de 0.4%
         niveis = sorted(x for x in candidatos if x > entrada * 1.004)
-    else:
+
+    else:  # short
+        # 1) Níveis de Wyckoff (suporte - extensões)
         if wyk and wyk.get("range_valido") and wyk.get("altura"):
             sup, altura = wyk["suporte"], wyk["altura"]
             for k in (0.0, 0.382, 0.618, 1.0, 1.618, 2.618):
                 candidatos.add(max(sup - altura * k, entrada * 0.02))
+        # 2) Muralhas de compra (book)
         if book:
             for m in book["muralhas_compra"]:
                 candidatos.add(m["preco"])
+        # 3) Múltiplos do ATR
         for k in (1, 1.5, 2, 3, 4, 5, 6.5, 8, 10, 13):
             candidatos.add(entrada - k * atr)
-        for k in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55):
-            candidatos.add(entrada * (1 - k))
+        # 4) Percentuais fixos (garantia)
+        for pct in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55):
+            candidatos.add(entrada * (1 - pct))
+
+        # Filtra apenas níveis abaixo da entrada com margem mínima de 0.4%
         niveis = sorted((x for x in candidatos if 0 < x < entrada * 0.996), reverse=True)
 
+    # Remove duplicatas próximas (distância > 0.6%)
     finais = []
     for x in niveis:
         if not finais or abs(x / finais[-1] - 1) > 0.006:
             finais.append(float(x))
             if len(finais) == n:
                 break
-    return finais
+
+    # Se ainda assim não tiver alvos (caso extremo), usa percentuais fixos como fallback definitivo
+    if not finais:
+        if direcao == "long":
+            for pct in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55):
+                finais.append(entrada * (1 + pct))
+        else:
+            for pct in (0.03, 0.05, 0.08, 0.13, 0.21, 0.34, 0.55):
+                finais.append(entrada * (1 - pct))
+        finais = sorted(finais) if direcao == "long" else sorted(finais, reverse=True)
+
+    return finais[:n]
 
 def lucro_percentual(direcao: str, entrada: float, alvo: float) -> float:
     if entrada <= 0:
@@ -2125,7 +2154,13 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
     if modo_vivo:
         estado_anterior = st.session_state.get("_ultimo_sinal", {}).get(simbolo_id)
 
+        # Só calcula stop e alvos se houver sinal
         if res["direcao"] in ("long", "short"):
+            # Calcula stop e alvos (agora com fallback garantido)
+            stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
+                                            ultimo['ATR_Stop'], wyk, book)
+            alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
+
             sinal_atual = {
                 "direcao": res["direcao"],
                 "preco": preco_atual,
@@ -2135,18 +2170,37 @@ def painel_principal(simbolo_id: str, timeframe: str, txt: Dict,
             # Se mudou de direção OU é o primeiro sinal
             if estado_anterior is None or estado_anterior.get("direcao") != res["direcao"]:
                 lado = "🟢 COMPRA (LONG)" if res["direcao"] == "long" else "🔴 VENDA (SHORT)"
+                
+                # Monta a mensagem com stop loss e alvos
                 mensagem = (
                     f"<b>🚨 NOVO SINAL BRICSVAULT</b>\n\n"
                     f"📌 <b>Ativo:</b> {simbolo_id}\n"
                     f"📊 <b>Sinal:</b> {lado}\n"
-                    f"💰 <b>Preço:</b> {formatar_preco(preco_atual)}\n"
+                    f"💰 <b>Preço de entrada:</b> {formatar_preco(preco_atual)}\n"
                     f"📈 <b>Escore Líquido:</b> {res['liquido']:.1f}/100\n"
                     f"📋 <b>Contexto:</b> {res['contexto']}\n\n"
-                    f"🕐 {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
+                    f"🛑 <b>Stop Loss:</b> {formatar_preco(stop)} ({lucro_percentual(res['direcao'], preco_atual, stop):+.2f}%)\n"
                 )
+                
+                # Adiciona os alvos (agora com certeza existem)
+                if alvos:
+                    mensagem += f"\n🎯 <b>Alvos:</b>\n"
+                    for i, alvo in enumerate(alvos, start=1):
+                        pct = lucro_percentual(res['direcao'], preco_atual, alvo)
+                        mensagem += f"   {i}) {formatar_preco(alvo)} ({pct:+.2f}%)\n"
+                    
+                    # Adiciona o risco/retorno do primeiro alvo
+                    risco = abs(preco_atual - stop)
+                    if risco > 0:
+                        rr = abs(alvos[0] - preco_atual) / risco
+                        mensagem += f"\n📊 <b>Risco/Retorno (Alvo 1):</b> {rr:.2f} : 1"
+                else:
+                    mensagem += "\n⚠️ Nenhum alvo calculado (verifique a configuração)."
+                
+                mensagem += f"\n\n🕐 {pd.Timestamp.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
+                
                 sucesso, msg_retorno = enviar_sinal_telegram(mensagem)
                 if not sucesso:
-                    # Mostra o erro no rodapé ou em um local visível, mas sem travar
                     st.warning(f"⚠️ Telegram: {msg_retorno}")
                 
                 if "_ultimo_sinal" not in st.session_state:
