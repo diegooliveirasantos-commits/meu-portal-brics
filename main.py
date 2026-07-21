@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - MONITORAMENTO AUTOMÁTICO DOS TOP 50 ATIVOS (OTIMIZADO)
-# Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal
+# Versão 2.0 - MONITORAMENTO AUTOMÁTICO COM ENVIO DOS TOP 5 SINAIS A CADA 2H
+# Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal, zoneinfo
 # -----------------------------------------------------------------------------
 
 import streamlit as st
@@ -14,7 +14,8 @@ import time
 from decimal import Decimal
 import plotly.graph_objects as go
 from typing import Optional, Dict, Any, List, Tuple, Union
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 # ==========================================================================
 # CONFIGURAÇÃO DO TELEGRAM (SUBSTITUA PELOS SEUS DADOS)
@@ -62,6 +63,8 @@ PONTOS_MAX_WYCKOFF: float = 3.0
 
 TOP_ATIVOS_QTD: int = 50                    # Número de ativos a monitorar
 TIMEFRAME_MONITORAMENTO: str = "4h"         # Timeframe padrão para monitoramento
+INTERVALO_ENVIO_SINAIS: int = 7200          # 2 horas em segundos
+MAX_SINAIS_POR_ENVIO: int = 5               # Máximo de sinais por mensagem
 
 # ==========================================================================
 # DICIONÁRIO DE RESUMOS WYCKOFF EM LINGUAGEM LEIGA
@@ -137,7 +140,7 @@ _TEXTOS_BASE_PT_BR = {
     "wyckoff_lps": "LPS / LPSY",
     "confirmado": "confirmado",
     "nao_confirmado": "não confirmado",
-    "alerta_muralha": "⚠️ Muralha de liquidez contrária relevante à frente do preço.",
+    "alerta_muralha": "⚠️ Muralha de liquidez contrária à frente do preço.",
     "valor_memorizado": "último valor conhecido",
     "fontes_book": "Corretoras no book",
     "intervalos": {
@@ -149,7 +152,8 @@ _TEXTOS_BASE_PT_BR = {
     "abaixo": "abaixo",
     "preco_atual": "Preço atual",
     "monitorando": "📡 Monitorando os 50 ativos mais líquidos (timeframe 4h)",
-    "top_ativos": "🏆 Top 50 por Volume (24h)"
+    "top_ativos": "🏆 Top 50 por Volume (24h)",
+    "horario_brasilia": "🕒 Horário de Brasília (UTC-3)"
 }
 
 _TRADUCOES = {IDIOMA_PADRAO: _TEXTOS_BASE_PT_BR}
@@ -166,7 +170,18 @@ def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIO
 DICIONARIO_LINGUAS = construir_dicionario_com_fallback(_TRADUCOES)
 
 # ==========================================================================
-# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM (COM TRATAMENTO DE ERROS)
+# FUNÇÃO AUXILIAR PARA HORÁRIO DE BRASÍLIA
+# ==========================================================================
+def horario_brasilia() -> datetime:
+    """Retorna o datetime atual no fuso horário de Brasília (UTC-3)."""
+    return datetime.now(ZoneInfo("America/Sao_Paulo"))
+
+def formatar_horario_brasilia(dt: datetime) -> str:
+    """Formata um datetime para string no formato brasileiro."""
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
+
+# ==========================================================================
+# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM
 # ==========================================================================
 def enviar_sinal_telegram(mensagem: str) -> Tuple[bool, str]:
     if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
@@ -1043,15 +1058,23 @@ def lucro_percentual(direcao: str, entrada: float, alvo: float) -> float:
     return (entrada / alvo - 1) * 100
 
 # ==========================================================================
-# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (OTIMIZADA)
+# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (COM ACUMULAÇÃO E ENVIO DOS TOP 5)
 # ==========================================================================
 def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
     if not ativos:
         return
-    if "_ultimo_sinal" not in st.session_state:
-        st.session_state["_ultimo_sinal"] = {}
 
-    for i, simbolo in enumerate(ativos):
+    # Inicializa estado para acumular sinais
+    if "_sinais_acumulados" not in st.session_state:
+        st.session_state["_sinais_acumulados"] = []
+    if "_ultimo_envio" not in st.session_state:
+        st.session_state["_ultimo_envio"] = datetime.now(ZoneInfo("America/Sao_Paulo")) - timedelta(seconds=INTERVALO_ENVIO_SINAIS)
+
+    agora = horario_brasilia()
+    sinais = []  # lista para armazenar sinais deste ciclo (já que o monitoramento é chamado a cada refresh)
+
+    # Itera sobre os ativos e coleta todos os sinais
+    for simbolo in ativos:
         try:
             df = carregar_dados_monitoramento(simbolo, timeframe)
             if df is None or df.empty:
@@ -1062,61 +1085,70 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
             res = analisar_confluencia(df, txt, book, wyk)
             preco_atual = float(df.iloc[-1]['close'])
 
-            estado_anterior = st.session_state["_ultimo_sinal"].get(simbolo)
-
+            # Só nos interessa se houver sinal (long ou short)
             if res["direcao"] in ("long", "short"):
                 atr_atual = float(df.iloc[-1]['ATR']) if not math.isnan(df.iloc[-1]['ATR']) else preco_atual * 0.01
                 stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
                                                 df.iloc[-1]['ATR_Stop'], wyk, book)
                 alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
 
-                sinal_atual = {"direcao": res["direcao"], "preco": preco_atual, "liquido": res["liquido"]}
-
-                if estado_anterior is None or estado_anterior.get("direcao") != res["direcao"]:
-                    lado = "🟢 COMPRA (LONG)" if res["direcao"] == "long" else "🔴 VENDA (SHORT)"
-                    mensagem = (
-                        f"<b>🚨 NOVO SINAL BRICSVAULT</b>\n\n"
-                        f"📌 <b>Ativo:</b> {simbolo}\n"
-                        f"📊 <b>Sinal:</b> {lado}\n"
-                        f"💰 <b>Preço de entrada:</b> {formatar_preco(preco_atual)}\n"
-                        f"📈 <b>Escore Líquido:</b> {res['liquido']:.1f}/100\n"
-                        f"📋 <b>Contexto:</b> {res['contexto']}\n\n"
-                        f"🛑 <b>Stop Loss:</b> {formatar_preco(stop)} ({lucro_percentual(res['direcao'], preco_atual, stop):+.2f}%)\n"
-                    )
-                    if alvos:
-                        mensagem += f"\n🎯 <b>Alvos:</b>\n"
-                        for j, alvo in enumerate(alvos, start=1):
-                            pct = lucro_percentual(res['direcao'], preco_atual, alvo)
-                            mensagem += f"   {j}) {formatar_preco(alvo)} ({pct:+.2f}%)\n"
-                        risco = abs(preco_atual - stop)
-                        if risco > 0:
-                            rr = abs(alvos[0] - preco_atual) / risco
-                            mensagem += f"\n📊 <b>Risco/Retorno (Alvo 1):</b> {rr:.2f} : 1"
-                    else:
-                        mensagem += "\n⚠️ Nenhum alvo calculado."
-                    mensagem += f"\n\n🕐 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
-
-                    enviar_sinal_telegram(mensagem)
-                    st.session_state["_ultimo_sinal"][simbolo] = sinal_atual
-
-            elif estado_anterior is not None and estado_anterior.get("direcao") in ("long", "short"):
-                mensagem = (
-                    f"<b>⏹️ SINAL ENCERRADO</b>\n\n"
-                    f"📌 <b>Ativo:</b> {simbolo}\n"
-                    f"📊 <b>Sinal anterior:</b> {'🟢 COMPRA' if estado_anterior['direcao'] == 'long' else '🔴 VENDA'}\n"
-                    f"📈 <b>Escore atual:</b> {res['liquido']:.1f}/100 (NEUTRO)\n\n"
-                    f"🕐 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
-                )
-                enviar_sinal_telegram(mensagem)
-                st.session_state["_ultimo_sinal"][simbolo] = {"direcao": "neutro", "preco": preco_atual}
-
+                # Adiciona o sinal à lista com todos os detalhes
+                sinais.append({
+                    "simbolo": simbolo,
+                    "direcao": res["direcao"],
+                    "preco": preco_atual,
+                    "liquido": res["liquido"],
+                    "contexto": res["contexto"],
+                    "stop": stop,
+                    "base_stop": base_stop,
+                    "alvos": alvos,
+                })
         except Exception:
             continue
 
-        time.sleep(0.2)  # delay entre ativos
+    # Acumula os sinais encontrados neste ciclo
+    if sinais:
+        st.session_state["_sinais_acumulados"].extend(sinais)
+
+    # Verifica se já passou 2 horas desde o último envio
+    if (agora - st.session_state["_ultimo_envio"]).total_seconds() >= INTERVALO_ENVIO_SINAIS:
+        if st.session_state["_sinais_acumulados"]:
+            # Ordena os sinais acumulados por |liquido| (melhor primeiro)
+            st.session_state["_sinais_acumulados"].sort(key=lambda x: abs(x["liquido"]), reverse=True)
+            # Seleciona os TOP 5
+            top_sinais = st.session_state["_sinais_acumulados"][:MAX_SINAIS_POR_ENVIO]
+
+            # Monta a mensagem com os TOP 5
+            if top_sinais:
+                mensagem = f"<b>🚨 BRICSVAULT - TOP {len(top_sinais)} SINAIS DO PERÍODO</b>\n\n"
+                for idx, sinal in enumerate(top_sinais, start=1):
+                    lado = "🟢 COMPRA (LONG)" if sinal["direcao"] == "long" else "🔴 VENDA (SHORT)"
+                    mensagem += (
+                        f"<b>{idx}.</b> 📌 <b>{sinal['simbolo']}</b>\n"
+                        f"   📊 {lado}\n"
+                        f"   💰 Preço: {formatar_preco(sinal['preco'])}\n"
+                        f"   📈 Escore: {sinal['liquido']:.1f}/100\n"
+                        f"   📋 Contexto: {sinal['contexto']}\n"
+                        f"   🛑 Stop: {formatar_preco(sinal['stop'])}\n"
+                    )
+                    if sinal["alvos"]:
+                        mensagem += "   🎯 Alvos:\n"
+                        for i, alvo in enumerate(sinal["alvos"], start=1):
+                            pct = lucro_percentual(sinal["direcao"], sinal["preco"], alvo)
+                            mensagem += f"      {i}) {formatar_preco(alvo)} ({pct:+.2f}%)\n"
+                    mensagem += "\n"
+
+                mensagem += f"🕒 {formatar_horario_brasilia(agora)} (Horário de Brasília)"
+
+                # Envia a mensagem
+                enviar_sinal_telegram(mensagem)
+
+            # Limpa a lista de acumulados e atualiza o timestamp do último envio
+            st.session_state["_sinais_acumulados"] = []
+            st.session_state["_ultimo_envio"] = agora
 
 # -----------------------------------------------------------------------------
-# RENDERIZAÇÃO (UI) - mantida
+# RENDERIZAÇÃO (UI)
 # -----------------------------------------------------------------------------
 def renderizar_card_plano(txt: Dict, simbolo_id: str, direcao: str,
                           entrada: float, stop: float, alvos: List[float],
@@ -1565,13 +1597,14 @@ def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Di
             renderizar_card_plano(txt, simbolo_selecionado, res["direcao"], preco_atual,
                                   stop, alvos, base_stop, preco_atual)
 
-    # Rodapé
-    hora = pd.Timestamp.now().strftime("%H:%M:%S")
+    # Rodapé com horário de Brasília
+    agora_br = horario_brasilia()
+    hora_br = formatar_horario_brasilia(agora_br)
     prefixo = "🟢" if modo_vivo else "⏸"
     extra = f" | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}" if modo_vivo else ""
     info_monitoramento = f" | {txt['monitorando']}" if modo_vivo else ""
     st.info(
-        f"{prefixo} {txt['ultima_atualizacao']}: {hora}{extra}{info_monitoramento} | "
+        f"{prefixo} {txt['ultima_atualizacao']}: {hora_br} (Brasília){extra}{info_monitoramento} | "
         f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
         f"Velas analisadas: {len(df_analise)}"
     )
@@ -1607,7 +1640,7 @@ def main() -> None:
                     else:
                         st.error(msg)
             if not st.session_state.get("_telegram_initialized", False):
-                msg_welcome = "🤖 *BRICSVAULT conectado!*\n\nMonitorando os top 50 ativos automaticamente (timeframe 4h)."
+                msg_welcome = "🤖 *BRICSVAULT conectado!*\n\nMonitorando os top 50 ativos e enviando os 5 melhores sinais a cada 2h."
                 sucesso, _ = enviar_sinal_telegram(msg_welcome)
                 if sucesso:
                     st.session_state["_telegram_initialized"] = True
