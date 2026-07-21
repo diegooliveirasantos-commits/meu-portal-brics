@@ -76,7 +76,7 @@ RESUMOS_WYCKOFF = {
 }
 
 # -----------------------------------------------------------------------------
-# DICIONÁRIO DE IDIOMAS (mantido, mas resumido para economia de espaço)
+# DICIONÁRIO DE IDIOMAS (resumido para este exemplo)
 # -----------------------------------------------------------------------------
 _TEXTOS_BASE_PT_BR = {
     "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -125,10 +125,10 @@ _TEXTOS_BASE_PT_BR = {
     "book_equilibrado": "MERCADO EQUILIBRADO",
     "book_comprador": "PRESSÃO COMPRADORA",
     "book_vendedor": "PRESSÃO VENDEDORA",
-    "book_indisponivel": "Livro de ofertas indisponível no momento (nenhuma corretora respondeu). O escore segue válido sem este fator.",
+    "book_indisponivel": "Livro de ofertas indisponível no momento. O escore segue válido.",
     "profundidade": "PROFUNDIDADE AGREGADA (±1,5% do mid)",
     "wyckoff_titulo": "🧭 Estrutura Wyckoff",
-    "wyckoff_sem_evento": "Nenhum evento de Fase C/D identificado na janela recente. Range em construção (Fase B) ou preço fora de range.",
+    "wyckoff_sem_evento": "Nenhum evento de Fase C/D identificado na janela recente.",
     "wyckoff_range": "Trading Range",
     "wyckoff_evento": "Evento",
     "wyckoff_fase": "Fase",
@@ -137,7 +137,7 @@ _TEXTOS_BASE_PT_BR = {
     "wyckoff_lps": "LPS / LPSY",
     "confirmado": "confirmado",
     "nao_confirmado": "não confirmado",
-    "alerta_muralha": "⚠️ Muralha de liquidez contrária relevante logo à frente do preço --- sinal rebaixado para NEUTRO até o rompimento.",
+    "alerta_muralha": "⚠️ Muralha de liquidez contrária relevante à frente do preço.",
     "valor_memorizado": "último valor conhecido",
     "fontes_book": "Corretoras no book",
     "intervalos": {
@@ -152,7 +152,6 @@ _TEXTOS_BASE_PT_BR = {
     "top_ativos": "🏆 Top 50 por Volume (24h)"
 }
 
-# (Traduções para outros idiomas foram omitidas para brevidade, mas você pode mantê-las)
 _TRADUCOES = {IDIOMA_PADRAO: _TEXTOS_BASE_PT_BR}
 
 def construir_dicionario_com_fallback(traducoes: Dict, idioma_padrao: str = IDIOMA_PADRAO) -> Dict:
@@ -192,7 +191,7 @@ def testar_conexao_telegram() -> Tuple[bool, str]:
     return enviar_sinal_telegram(msg)
 
 # -----------------------------------------------------------------------------
-# FUNÇÕES DE FORMATAÇÃO (mantidas)
+# FUNÇÕES DE FORMATAÇÃO
 # -----------------------------------------------------------------------------
 def formatar_preco(valor: Optional[float], prefixo: str = "$ ") -> str:
     if valor is None or (isinstance(valor, float) and math.isnan(valor)):
@@ -281,25 +280,19 @@ def obter_exchange_manager() -> ExchangeManager:
 # ==========================================================================
 @st.cache_data(ttl=TTL_TOP_ATIVOS, show_spinner=False)
 def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
-    """
-    Retorna a lista dos N pares USDT com maior volume em 24h.
-    Usa a Gate.io como fonte primária; fallback para lista padrão.
-    """
     manager = obter_exchange_manager()
     client = manager.get_client("Gate.io")
     padrao = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT",
               "ADA/USDT", "DOT/USDT", "AVAX/USDT", "MATIC/USDT", "LINK/USDT"]
     if not client:
         return padrao[:quantidade]
-    
     try:
         tickers = client.fetch_tickers()
         usdt_pairs = {symbol: ticker for symbol, ticker in tickers.items() if symbol.endswith('/USDT')}
         sorted_pairs = sorted(usdt_pairs.items(), key=lambda x: x[1].get('quoteVolume', 0) or 0, reverse=True)
         top_symbols = [symbol for symbol, _ in sorted_pairs[:quantidade]]
         return top_symbols if top_symbols else padrao[:quantidade]
-    except Exception as e:
-        st.warning(f"⚠️ Não foi possível obter a lista de ativos por volume: {e}. Usando lista padrão.")
+    except Exception:
         return padrao[:quantidade]
 
 # ==========================================================================
@@ -377,26 +370,19 @@ def _obter_dados_24h_rest_direto(exchange_name: str, simbolo: str) -> Optional[D
         pass
     return None
 
-# ===== Funções com cache específico para interface (TTL curto) e monitoramento (TTL longo) =====
-# Para a interface, usamos TTL_DADOS_INTERFACE_SEGUNDOS
-# Para o monitoramento, usamos TTL_DADOS_LIVE_SEGUNDOS (mais longo)
-
 def carregar_dados_interface(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.DataFrame]:
-    """Versão com cache curto para a interface do usuário."""
     @st.cache_data(ttl=TTL_DADOS_INTERFACE_SEGUNDOS, show_spinner=False)
     def _carregar(simbolo, timeframe):
         return _carregar_dados_interno(simbolo, timeframe)
     return _carregar(simbolo_id, timeframe_selecionado)
 
 def carregar_dados_monitoramento(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.DataFrame]:
-    """Versão com cache mais longo para o monitoramento em background."""
     @st.cache_data(ttl=TTL_DADOS_LIVE_SEGUNDOS, show_spinner=False)
     def _carregar(simbolo, timeframe):
         return _carregar_dados_interno(simbolo, timeframe)
     return _carregar(simbolo_id, timeframe_selecionado)
 
 def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Optional[pd.DataFrame]:
-    """Função interna que realmente busca os dados (sem cache)."""
     manager = obter_exchange_manager()
     for exchange_name in PRIORITY_EXCHANGES:
         try:
@@ -435,7 +421,7 @@ def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Opti
     return None
 
 # -----------------------------------------------------------------------------
-# INDICADORES TÉCNICOS (funções mantidas)
+# INDICADORES TÉCNICOS
 # -----------------------------------------------------------------------------
 def calcular_rsi(serie: pd.Series, periodo: int = 14) -> pd.Series:
     delta = serie.diff()
@@ -563,7 +549,7 @@ def calcular_retracao_fibonacci(df_analise: pd.DataFrame) -> Dict[str, float]:
     }
 
 # -----------------------------------------------------------------------------
-# LIVRO DE OFERTAS AGREGADO (com cache)
+# LIVRO DE OFERTAS AGREGADO
 # -----------------------------------------------------------------------------
 @st.cache_data(ttl=TTL_BOOK_SEGUNDOS, show_spinner=False)
 def obter_book_agregado(simbolo: str, faixa: float = FAIXA_BOOK) -> Optional[Dict]:
@@ -1057,57 +1043,37 @@ def lucro_percentual(direcao: str, entrada: float, alvo: float) -> float:
     return (entrada / alvo - 1) * 100
 
 # ==========================================================================
-# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (otimizada)
+# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (OTIMIZADA)
 # ==========================================================================
 def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
-    """
-    Itera sobre a lista de ativos, analisa cada um e dispara sinais via Telegram.
-    Usa cache de dados com TTL longo e evita chamadas excessivas.
-    """
     if not ativos:
         return
-
-    # Inicializa o estado dos sinais se não existir
     if "_ultimo_sinal" not in st.session_state:
         st.session_state["_ultimo_sinal"] = {}
 
-    # Processa cada ativo com um pequeno delay para evitar sobrecarga
     for i, simbolo in enumerate(ativos):
         try:
-            # Carrega dados do ativo usando a versão com cache longo
             df = carregar_dados_monitoramento(simbolo, timeframe)
             if df is None or df.empty:
                 continue
 
-            # Obtém dados complementares (com cache próprio)
             book = obter_book_agregado(simbolo)
             wyk = detectar_wyckoff(df.iloc[PERIODO_AQUECIMENTO:].reset_index(drop=True))
-            
-            # Analisa confluência
             res = analisar_confluencia(df, txt, book, wyk)
             preco_atual = float(df.iloc[-1]['close'])
 
-            # Recupera o estado anterior do ativo
             estado_anterior = st.session_state["_ultimo_sinal"].get(simbolo)
 
-            # Se houver sinal (long ou short)
             if res["direcao"] in ("long", "short"):
-                # Calcula stop e alvos
                 atr_atual = float(df.iloc[-1]['ATR']) if not math.isnan(df.iloc[-1]['ATR']) else preco_atual * 0.01
                 stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
                                                 df.iloc[-1]['ATR_Stop'], wyk, book)
                 alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
 
-                sinal_atual = {
-                    "direcao": res["direcao"],
-                    "preco": preco_atual,
-                    "liquido": res["liquido"]
-                }
+                sinal_atual = {"direcao": res["direcao"], "preco": preco_atual, "liquido": res["liquido"]}
 
-                # Se mudou de direção ou é o primeiro sinal
                 if estado_anterior is None or estado_anterior.get("direcao") != res["direcao"]:
                     lado = "🟢 COMPRA (LONG)" if res["direcao"] == "long" else "🔴 VENDA (SHORT)"
-                    
                     mensagem = (
                         f"<b>🚨 NOVO SINAL BRICSVAULT</b>\n\n"
                         f"📌 <b>Ativo:</b> {simbolo}\n"
@@ -1128,17 +1094,12 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
                             mensagem += f"\n📊 <b>Risco/Retorno (Alvo 1):</b> {rr:.2f} : 1"
                     else:
                         mensagem += "\n⚠️ Nenhum alvo calculado."
-                    
                     mensagem += f"\n\n🕐 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
-                    
-                    sucesso, _ = enviar_sinal_telegram(mensagem)
-                    # Não trata erro aqui para não poluir a interface
-                    
-                    # Atualiza o estado
+
+                    enviar_sinal_telegram(mensagem)
                     st.session_state["_ultimo_sinal"][simbolo] = sinal_atual
 
             elif estado_anterior is not None and estado_anterior.get("direcao") in ("long", "short"):
-                # Sinal voltou para NEUTRO
                 mensagem = (
                     f"<b>⏹️ SINAL ENCERRADO</b>\n\n"
                     f"📌 <b>Ativo:</b> {simbolo}\n"
@@ -1146,18 +1107,16 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
                     f"📈 <b>Escore atual:</b> {res['liquido']:.1f}/100 (NEUTRO)\n\n"
                     f"🕐 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} BRT"
                 )
-                sucesso, _ = enviar_sinal_telegram(mensagem)
+                enviar_sinal_telegram(mensagem)
                 st.session_state["_ultimo_sinal"][simbolo] = {"direcao": "neutro", "preco": preco_atual}
 
         except Exception:
-            # Silencia erros de ativos individuais para não travar o monitoramento
             continue
 
-        # Pequeno delay entre ativos para evitar múltiplas requisições simultâneas
-        time.sleep(0.2)  # 200ms entre cada ativo
+        time.sleep(0.2)  # delay entre ativos
 
 # -----------------------------------------------------------------------------
-# RENDERIZAÇÃO (UI) - mantida, mas com uso do cache de interface
+# RENDERIZAÇÃO (UI) - mantida
 # -----------------------------------------------------------------------------
 def renderizar_card_plano(txt: Dict, simbolo_id: str, direcao: str,
                           entrada: float, stop: float, alvos: List[float],
@@ -1334,157 +1293,7 @@ def renderizar_wyckoff(txt: Dict, wyk: Optional[Dict]) -> None:
     )
 
 # ==========================================================================
-# PAINEL PRINCIPAL (fragmento com refresh automático)
-# ==========================================================================
-@st.fragment(run_every=0)
-def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Dict,
-                     modo_vivo: bool, intervalo_refresh: int) -> None:
-    """
-    Função principal:
-    - Exibe os dados do ativo selecionado (usando cache rápido).
-    - Se modo_vivo = True, chama o monitoramento automático para os top 50 ativos.
-    """
-    if modo_vivo:
-        # ====================================================================
-        # MONITORAMENTO AUTOMÁTICO DOS TOP 50 ATIVOS (em background, com cache)
-        # ====================================================================
-        top_ativos = obter_top_ativos_por_volume(TOP_ATIVOS_QTD)
-        # Usa o timeframe fixo de 4h para o monitoramento
-        with st.spinner("🔄 Analisando os 50 ativos mais líquidos..."):
-            monitorar_ativos(top_ativos, TIMEFRAME_MONITORAMENTO, txt)
-        # ====================================================================
-
-    # ---- Exibição do ativo selecionado (interface) ----
-    # Usa a versão com cache curto para a interface
-    df_dados = carregar_dados_interface(simbolo_selecionado, timeframe_interface)
-    if df_dados is None or df_dados.empty:
-        st.warning(txt["erro_dados"])
-        return
-
-    df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
-    if df_analise.empty:
-        st.warning(txt["erro_dados"])
-        return
-
-    ultimo = df_analise.iloc[-1]
-    preco_atual = float(ultimo['close'])
-    atr_atual = float(ultimo['ATR']) if not math.isnan(ultimo['ATR']) else preco_atual * 0.01
-    simbolo_base = simbolo_selecionado.split('/')[0]
-
-    book = obter_book_agregado(simbolo_selecionado)
-    wyk = detectar_wyckoff(df_analise.reset_index(drop=True))
-    dados_24h = obter_dados_24h(simbolo_selecionado)
-    variacao_24h = dados_24h.get("change") if dados_24h else None
-    dados_gecko = obter_dados_coingecko(simbolo_base)
-    dados_paprika = None
-    if not dados_gecko or not dados_gecko.get("market_cap"):
-        dados_paprika = obter_dados_coinpaprika(simbolo_base)
-
-    volume_bruto = resolver_volume_usdt(dados_24h, preco_atual, dados_gecko)
-    volume_usdt, volume_da_memoria = valor_com_memoria(f"vol::{simbolo_selecionado}", volume_bruto)
-    mc_bruto = resolver_market_cap(simbolo_base, preco_atual, dados_gecko, dados_paprika)
-    market_cap, mc_da_memoria = valor_com_memoria(f"mc::{simbolo_selecionado}", mc_bruto)
-
-    res = analisar_confluencia(df_dados, txt, book, wyk)
-
-    # ---- Cabeçalho da recomendação ----
-    st.markdown(
-        f"""
-        <div style="background:{res['cor']}22;padding:20px;border-radius:10px;
-            border:2px solid {res['cor']};margin-bottom:20px;">
-            <h2 style="margin:0;color:{res['cor']};">{res['recomendacao']}</h2>
-            <p style="margin:8px 0 0 0;color:#ddd;">{res['contexto']}
-            | <b>{txt['escore_liquido']}: {res['liquido']:+.1f} / 100</b></p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    if res["bloqueado"]:
-        st.warning(txt["alerta_muralha"])
-
-    # ---- Métricas principais ----
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
-    m1.metric(f"{simbolo_base} | {txt['preco_spot']}", formatar_preco(preco_atual))
-    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "---")
-    m3.metric(txt["volume_24h"], formatar_usdt_compacto(volume_usdt),
-              delta=txt["valor_memorizado"] if volume_da_memoria else None, delta_color="off")
-    m4.metric(txt["market_cap"], formatar_usdt_compacto(market_cap) if market_cap else txt["marketcap_nao_disponivel"],
-              delta=txt["valor_memorizado"] if mc_da_memoria else None, delta_color="off")
-    m5.metric(txt["pontos_compra"], f"{res['alta']:.1f}")
-    m6.metric(txt["pontos_venda"], f"{res['baixa']:.1f}")
-
-    # ---- Médias Móveis ----
-    st.markdown(f"### {txt['medias_moveis']}")
-    sma8 = ultimo['SMA_8']
-    sma21 = ultimo['SMA_21']
-    sma50 = ultimo['SMA_50']
-    sma200 = ultimo['SMA_200']
-
-    def _ma_label(valor, nome):
-        if math.isnan(valor):
-            return f"{nome}: ---"
-        status = txt["acima"] if preco_atual > valor else txt["abaixo"]
-        cor = "#22c55e" if preco_atual > valor else "#f43f5e"
-        return f"**{nome}** {formatar_preco(valor, '')}  <span style='color:{cor};font-size:0.9em;'>({status})</span>"
-
-    cols_ma = st.columns(4)
-    with cols_ma[0]:
-        st.markdown(_ma_label(sma8, "SMA 8"), unsafe_allow_html=True)
-    with cols_ma[1]:
-        st.markdown(_ma_label(sma21, "SMA 21"), unsafe_allow_html=True)
-    with cols_ma[2]:
-        st.markdown(_ma_label(sma50, "SMA 50"), unsafe_allow_html=True)
-    with cols_ma[3]:
-        st.markdown(_ma_label(sma200, "SMA 200"), unsafe_allow_html=True)
-
-    # ---- Outros indicadores resumidos ----
-    stoch_k = float(ultimo['STOCH_K']) if not math.isnan(ultimo['STOCH_K']) else None
-    partes = [f"**{txt['stop_atr']}:** {formatar_preco(ultimo['ATR_Stop'])}"]
-    if not math.isnan(ultimo['RSI_14']):
-        partes.append(f"RSI: **{ultimo['RSI_14']:.1f}**")
-    if stoch_k is not None:
-        partes.append(f"RSI Stoch %K: **{stoch_k:.1f}**")
-    if not math.isnan(ultimo['MFI']):
-        partes.append(f"MFI: **{ultimo['MFI']:.1f}**")
-    if not math.isnan(ultimo['MACD_HIST']):
-        partes.append(f"MACD Hist: **{ultimo['MACD_HIST']:+.4f}**")
-    partes.append(f"SSL: **{'ALTA' if ultimo['ssl_dir'] == 1 else 'BAIXA'}**")
-    st.markdown(" | ".join(partes))
-
-    # ---- Wyckoff ----
-    st.markdown(f"### {txt['wyckoff_titulo']}")
-    renderizar_wyckoff(txt, wyk)
-
-    # ---- Livro de ofertas ----
-    st.markdown(f"### {txt['book_titulo']}")
-    renderizar_book(txt, book)
-
-    # ---- Plano de trade ----
-    stop = None
-    alvos = []
-    base_stop = ""
-    if res["direcao"] in ("long", "short"):
-        stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
-                                        ultimo['ATR_Stop'], wyk, book)
-        alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
-        if alvos:
-            st.markdown(f"### {txt['plano_trade']}")
-            renderizar_card_plano(txt, simbolo_selecionado, res["direcao"], preco_atual,
-                                  stop, alvos, base_stop, preco_atual)
-
-    # ---- Rodapé com timestamp e info de monitoramento ----
-    hora = pd.Timestamp.now().strftime("%H:%M:%S")
-    prefixo = "🟢" if modo_vivo else "⏸"
-    extra = f" | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}" if modo_vivo else ""
-    info_monitoramento = f" | {txt['monitorando']}" if modo_vivo else ""
-    st.info(
-        f"{prefixo} {txt['ultima_atualizacao']}: {hora}{extra}{info_monitoramento} | "
-        f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
-        f"Velas analisadas: {len(df_analise)}"
-    )
-
-# ==========================================================================
-# FUNÇÕES AUXILIARES DE MARKET CAP E TICKER (mantidas)
+# FUNÇÕES AUXILIARES DE MARKET CAP E TICKER (com cache)
 # ==========================================================================
 @st.cache_data(ttl=600, show_spinner=False)
 def obter_dados_24h(simbolo: str) -> Optional[Dict]:
@@ -1615,9 +1424,6 @@ def resolver_market_cap(simbolo_base: str, preco_atual: float,
             return mc
     return None
 
-# ==========================================================================
-# FUNÇÃO PARA OBTER TODOS OS PARES USDT (para a interface)
-# ==========================================================================
 @st.cache_data(ttl=TTL_MERCADOS_SEGUNDOS, show_spinner=False)
 def obter_todos_pares_usdt() -> List[str]:
     manager = obter_exchange_manager()
@@ -1631,6 +1437,144 @@ def obter_todos_pares_usdt() -> List[str]:
         return sorted(pairs) if pairs else padrao
     except Exception:
         return padrao
+
+# ==========================================================================
+# PAINEL PRINCIPAL (fragmento com refresh automático)
+# ==========================================================================
+@st.fragment(run_every=0)
+def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Dict,
+                     modo_vivo: bool, intervalo_refresh: int) -> None:
+    if modo_vivo:
+        top_ativos = obter_top_ativos_por_volume(TOP_ATIVOS_QTD)
+        with st.spinner("🔄 Analisando os 50 ativos mais líquidos..."):
+            monitorar_ativos(top_ativos, TIMEFRAME_MONITORAMENTO, txt)
+
+    df_dados = carregar_dados_interface(simbolo_selecionado, timeframe_interface)
+    if df_dados is None or df_dados.empty:
+        st.warning(txt["erro_dados"])
+        return
+
+    df_analise = df_dados.iloc[PERIODO_AQUECIMENTO:]
+    if df_analise.empty:
+        st.warning(txt["erro_dados"])
+        return
+
+    ultimo = df_analise.iloc[-1]
+    preco_atual = float(ultimo['close'])
+    atr_atual = float(ultimo['ATR']) if not math.isnan(ultimo['ATR']) else preco_atual * 0.01
+    simbolo_base = simbolo_selecionado.split('/')[0]
+
+    book = obter_book_agregado(simbolo_selecionado)
+    wyk = detectar_wyckoff(df_analise.reset_index(drop=True))
+    dados_24h = obter_dados_24h(simbolo_selecionado)
+    variacao_24h = dados_24h.get("change") if dados_24h else None
+    dados_gecko = obter_dados_coingecko(simbolo_base)
+    dados_paprika = None
+    if not dados_gecko or not dados_gecko.get("market_cap"):
+        dados_paprika = obter_dados_coinpaprika(simbolo_base)
+
+    volume_bruto = resolver_volume_usdt(dados_24h, preco_atual, dados_gecko)
+    volume_usdt, volume_da_memoria = valor_com_memoria(f"vol::{simbolo_selecionado}", volume_bruto)
+    mc_bruto = resolver_market_cap(simbolo_base, preco_atual, dados_gecko, dados_paprika)
+    market_cap, mc_da_memoria = valor_com_memoria(f"mc::{simbolo_selecionado}", mc_bruto)
+
+    res = analisar_confluencia(df_dados, txt, book, wyk)
+
+    # Cabeçalho
+    st.markdown(
+        f"""
+        <div style="background:{res['cor']}22;padding:20px;border-radius:10px;
+            border:2px solid {res['cor']};margin-bottom:20px;">
+            <h2 style="margin:0;color:{res['cor']};">{res['recomendacao']}</h2>
+            <p style="margin:8px 0 0 0;color:#ddd;">{res['contexto']}
+            | <b>{txt['escore_liquido']}: {res['liquido']:+.1f} / 100</b></p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    if res["bloqueado"]:
+        st.warning(txt["alerta_muralha"])
+
+    # Métricas
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    m1.metric(f"{simbolo_base} | {txt['preco_spot']}", formatar_preco(preco_atual))
+    m2.metric(txt["variacao_24h"], f"{variacao_24h:+.2f}%" if variacao_24h is not None else "---")
+    m3.metric(txt["volume_24h"], formatar_usdt_compacto(volume_usdt),
+              delta=txt["valor_memorizado"] if volume_da_memoria else None, delta_color="off")
+    m4.metric(txt["market_cap"], formatar_usdt_compacto(market_cap) if market_cap else txt["marketcap_nao_disponivel"],
+              delta=txt["valor_memorizado"] if mc_da_memoria else None, delta_color="off")
+    m5.metric(txt["pontos_compra"], f"{res['alta']:.1f}")
+    m6.metric(txt["pontos_venda"], f"{res['baixa']:.1f}")
+
+    # Médias Móveis
+    st.markdown(f"### {txt['medias_moveis']}")
+    sma8 = ultimo['SMA_8']
+    sma21 = ultimo['SMA_21']
+    sma50 = ultimo['SMA_50']
+    sma200 = ultimo['SMA_200']
+
+    def _ma_label(valor, nome):
+        if math.isnan(valor):
+            return f"{nome}: ---"
+        status = txt["acima"] if preco_atual > valor else txt["abaixo"]
+        cor = "#22c55e" if preco_atual > valor else "#f43f5e"
+        return f"**{nome}** {formatar_preco(valor, '')}  <span style='color:{cor};font-size:0.9em;'>({status})</span>"
+
+    cols_ma = st.columns(4)
+    with cols_ma[0]:
+        st.markdown(_ma_label(sma8, "SMA 8"), unsafe_allow_html=True)
+    with cols_ma[1]:
+        st.markdown(_ma_label(sma21, "SMA 21"), unsafe_allow_html=True)
+    with cols_ma[2]:
+        st.markdown(_ma_label(sma50, "SMA 50"), unsafe_allow_html=True)
+    with cols_ma[3]:
+        st.markdown(_ma_label(sma200, "SMA 200"), unsafe_allow_html=True)
+
+    # Outros indicadores
+    stoch_k = float(ultimo['STOCH_K']) if not math.isnan(ultimo['STOCH_K']) else None
+    partes = [f"**{txt['stop_atr']}:** {formatar_preco(ultimo['ATR_Stop'])}"]
+    if not math.isnan(ultimo['RSI_14']):
+        partes.append(f"RSI: **{ultimo['RSI_14']:.1f}**")
+    if stoch_k is not None:
+        partes.append(f"RSI Stoch %K: **{stoch_k:.1f}**")
+    if not math.isnan(ultimo['MFI']):
+        partes.append(f"MFI: **{ultimo['MFI']:.1f}**")
+    if not math.isnan(ultimo['MACD_HIST']):
+        partes.append(f"MACD Hist: **{ultimo['MACD_HIST']:+.4f}**")
+    partes.append(f"SSL: **{'ALTA' if ultimo['ssl_dir'] == 1 else 'BAIXA'}**")
+    st.markdown(" | ".join(partes))
+
+    # Wyckoff
+    st.markdown(f"### {txt['wyckoff_titulo']}")
+    renderizar_wyckoff(txt, wyk)
+
+    # Book
+    st.markdown(f"### {txt['book_titulo']}")
+    renderizar_book(txt, book)
+
+    # Plano de trade
+    stop = None
+    alvos = []
+    base_stop = ""
+    if res["direcao"] in ("long", "short"):
+        stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
+                                        ultimo['ATR_Stop'], wyk, book)
+        alvos = construir_alvos(res["direcao"], preco_atual, atr_atual, wyk, book)
+        if alvos:
+            st.markdown(f"### {txt['plano_trade']}")
+            renderizar_card_plano(txt, simbolo_selecionado, res["direcao"], preco_atual,
+                                  stop, alvos, base_stop, preco_atual)
+
+    # Rodapé
+    hora = pd.Timestamp.now().strftime("%H:%M:%S")
+    prefixo = "🟢" if modo_vivo else "⏸"
+    extra = f" | {txt['proximo_refresh']} {intervalo_refresh} {txt['segundos']}" if modo_vivo else ""
+    info_monitoramento = f" | {txt['monitorando']}" if modo_vivo else ""
+    st.info(
+        f"{prefixo} {txt['ultima_atualizacao']}: {hora}{extra}{info_monitoramento} | "
+        f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
+        f"Velas analisadas: {len(df_analise)}"
+    )
 
 # -----------------------------------------------------------------------------
 # MAIN - Interface e execução
@@ -1649,9 +1593,7 @@ def main() -> None:
     st.title(txt["titulo"])
     st.sidebar.header(txt["config_globais"])
 
-    # ====================================================================
-    # SEÇÃO DE TESTE DO TELEGRAM NA BARRA LATERAL
-    # ====================================================================
+    # Configuração do Telegram
     with st.sidebar.expander("📲 Configuração do Telegram", expanded=False):
         st.write("**Status da conexão:**")
         if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
@@ -1672,9 +1614,8 @@ def main() -> None:
                     st.success("✅ Conexão com Telegram estabelecida! Você receberá os sinais aqui.")
                 else:
                     st.warning("⚠️ Não foi possível enviar mensagem de boas-vindas. Envie /start para o bot manualmente.")
-    # ====================================================================
 
-    # ---- Obter lista de ativos para exibição ----
+    # Seleção do ativo para interface
     todos_ativos = obter_todos_pares_usdt()
     simbolo_selecionado = st.sidebar.selectbox(
         txt["selecione_cripto"],
@@ -1698,7 +1639,7 @@ def main() -> None:
         txt["intervalo_refresh"], min_value=20, max_value=120, value=30
     )
 
-    # ---- Exibe lista dos top 50 ativos monitorados ----
+    # Exibe lista dos top 50 ativos monitorados
     with st.sidebar.expander(txt["top_ativos"], expanded=False):
         top_ativos = obter_top_ativos_por_volume(TOP_ATIVOS_QTD)
         for i, ativo in enumerate(top_ativos, start=1):
