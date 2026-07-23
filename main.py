@@ -39,8 +39,8 @@ def formatar_horario_brasilia(dt: datetime) -> str:
 # ==========================================================================
 # CONFIGURAÇÃO DO TELEGRAM (SUBSTITUA PELOS SEUS DADOS)
 # ==========================================================================
-TELEGRAM_TOKEN = "SEU_TOKEN_AQUI"
-TELEGRAM_CHAT_ID = "SEU_CHAT_ID_AQUI"
+TELEGRAM_TOKEN = "8923739480:AAH8WXthla04LrEv4tT5horPzM7P5SYTT9s"
+TELEGRAM_CHAT_ID = "1143799141"
 # ==========================================================================
 
 # -----------------------------------------------------------------------------
