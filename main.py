@@ -1,8 +1,40 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - CONSULTA IRRESTRITA A PAres SPOT + TELEGRAM APENAS SPOT
+# Versão 2.0 - AUTO-DEPLOY PARA DISCLOUD (SEM ARQUIVOS ADICIONAIS)
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal, zoneinfo
 # -----------------------------------------------------------------------------
+
+import os
+import sys
+import subprocess
+
+# ==========================================================================
+# SE ESTIVER SENDO EXECUTADO DIRETAMENTE (NÃO PELO STREAMLIT),
+# INICIA O STREAMLIT COM A PORTA CORRETA
+# ==========================================================================
+if __name__ == "__main__":
+    # Se o script foi executado com "python main.py" (e não com "streamlit run")
+    # então nós mesmos iniciamos o Streamlit com a porta adequada.
+    if not os.environ.get("STREAMLIT_RUN", False):
+        # Define a porta (padrão 8080 para Discloud)
+        port = os.environ.get("PORT", "8080")
+        # Verifica se o streamlit está instalado
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "streamlit", "run", __file__,
+                 "--server.port", port, "--server.address", "0.0.0.0"],
+                env={**os.environ, "STREAMLIT_RUN": "true"},
+                check=True
+            )
+        except Exception as e:
+            print(f"Erro ao iniciar Streamlit: {e}")
+            sys.exit(1)
+        sys.exit(0)
+
+# ==========================================================================
+# A PARTIR DAQUI, É O CÓDIGO NORMAL DO BRICSVAULT
+# (SÓ É EXECUTADO QUANDO O STREAMLIT RODA)
+# ==========================================================================
 
 import streamlit as st
 import ccxt
@@ -41,15 +73,13 @@ VELAS_TOTAL: int = 500
 PERIODO_AQUECIMENTO: int = 100
 IDIOMA_PADRAO: str = "Português (BR)"
 
-# ===== OTIMIZAÇÃO: TTLs para reduzir chamadas e evitar bloqueios =====
-TTL_MERCADOS_SEGUNDOS: int = 3600          # Lista de pares (1 hora)
-TTL_DADOS_LIVE_SEGUNDOS: int = 180         # Dados OHLCV (3 minutos) - aumentado
-TTL_DADOS_INTERFACE_SEGUNDOS: int = 60     # Dados para a interface (1 minuto)
-TTL_BOOK_SEGUNDOS: int = 60                # Livro de ofertas (1 minuto)
-TTL_TOP_ATIVOS: int = 7200                 # Top 50 ativos (2 horas)
-# ================================================================
+TTL_MERCADOS_SEGUNDOS: int = 3600
+TTL_DADOS_LIVE_SEGUNDOS: int = 180
+TTL_DADOS_INTERFACE_SEGUNDOS: int = 60
+TTL_BOOK_SEGUNDOS: int = 60
+TTL_TOP_ATIVOS: int = 7200
 
-EXCHANGE_TIMEOUT_MS: int = 15000           # Aumentado para 15 segundos
+EXCHANGE_TIMEOUT_MS: int = 15000
 
 LIMITE_BOOK: int = 100
 FAIXA_BOOK: float = 0.015
@@ -63,7 +93,7 @@ PONTOS_MAX_WYCKOFF: float = 3.0
 
 TOP_ATIVOS_QTD: int = 50
 TIMEFRAME_MONITORAMENTO: str = "4h"
-INTERVALO_ENVIO_SINAIS: int = 7200          # 2 horas
+INTERVALO_ENVIO_SINAIS: int = 7200
 MAX_SINAIS_POR_ENVIO: int = 5
 
 # ==========================================================================
@@ -96,7 +126,6 @@ def is_derivative(symbol: str) -> bool:
     return False
 
 def is_valid_spot_pair(symbol: str) -> bool:
-    """Verifica se o par é spot (não derivativo) e não é stablecoin."""
     if not symbol.endswith('/USDT'):
         return False
     if is_derivative(symbol):
@@ -329,7 +358,7 @@ def formatar_horario_brasilia(dt: datetime) -> str:
     return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 # ==========================================================================
-# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM (COM TRATAMENTO DE ERROS)
+# FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM
 # ==========================================================================
 def enviar_sinal_telegram(mensagem: str) -> Tuple[bool, str]:
     if TELEGRAM_TOKEN == "SEU_TOKEN_AQUI" or TELEGRAM_CHAT_ID == "SEU_CHAT_ID_AQUI":
@@ -443,7 +472,6 @@ def obter_exchange_manager() -> ExchangeManager:
 # ==========================================================================
 @st.cache_data(ttl=TTL_MERCADOS_SEGUNDOS, show_spinner=False)
 def obter_todos_pares_usdt() -> List[str]:
-    """Obtém todos os pares /USDT disponíveis nas corretoras (apenas spot)."""
     manager = obter_exchange_manager()
     client = manager.get_client("Gate.io")
     padrao = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "XRP/USDT", "BNB/USDT",
@@ -452,9 +480,7 @@ def obter_todos_pares_usdt() -> List[str]:
         return padrao
     try:
         markets = client.load_markets()
-        # Filtra apenas pares que terminam com /USDT
         pairs = [s for s in markets.keys() if s.endswith('/USDT')]
-        # Remove stablecoins e derivativos
         pairs = [p for p in pairs if is_valid_spot_pair(p)]
         return sorted(pairs) if pairs else padrao
     except Exception:
@@ -474,7 +500,6 @@ def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
     try:
         tickers = client.fetch_tickers()
         usdt_pairs = {symbol: ticker for symbol, ticker in tickers.items() if symbol.endswith('/USDT')}
-        # Filtra apenas pares spot válidos
         usdt_pairs = {symbol: ticker for symbol, ticker in usdt_pairs.items() if is_valid_spot_pair(symbol)}
         if not usdt_pairs:
             return [p for p in padrao if is_valid_spot_pair(p)][:quantidade]
@@ -485,7 +510,7 @@ def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
         return [p for p in padrao if is_valid_spot_pair(p)][:quantidade]
 
 # ==========================================================================
-# FUNÇÕES DE MERCADO (REST e OHLCV) - COM CACHE E FALLBACK
+# FUNÇÕES DE MERCADO (REST e OHLCV)
 # ==========================================================================
 def _obter_dados_24h_rest_direto(exchange_name: str, simbolo: str) -> Optional[Dict]:
     try:
@@ -582,7 +607,6 @@ def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Opti
             if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
                 df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                 df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
-                # Indicadores
                 df['RSI_14'] = calcular_rsi(df['close'], 14)
                 k, d = calcular_rsi_estocastico(df['close'])
                 df['STOCH_K'] = k
@@ -1250,9 +1274,7 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
 
     for simbolo in ativos:
         try:
-            # Delay entre requisições para evitar bloqueios
             time.sleep(0.15)
-
             df = carregar_dados_monitoramento(simbolo, timeframe)
             if df is None or df.empty:
                 continue
@@ -1264,7 +1286,6 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
 
             estado_atual = st.session_state["_estado_ativo"].get(simbolo, "neutro")
 
-            # Só gera sinal se o ativo estiver em estado "neutro"
             if res["direcao"] in ("long", "short") and estado_atual == "neutro":
                 atr_atual = float(df.iloc[-1]['ATR']) if not math.isnan(df.iloc[-1]['ATR']) else preco_atual * 0.01
                 stop, base_stop = escolher_stop(res["direcao"], preco_atual, atr_atual,
@@ -1293,7 +1314,6 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
     if sinais:
         st.session_state["_sinais_acumulados"].extend(sinais)
 
-    # Envio dos top 5 sinais a cada 2 horas
     if (agora - st.session_state["_ultimo_envio"]).total_seconds() >= INTERVALO_ENVIO_SINAIS:
         if st.session_state["_sinais_acumulados"]:
             st.session_state["_sinais_acumulados"].sort(key=lambda x: abs(x["liquido"]), reverse=True)
@@ -1812,7 +1832,7 @@ def main() -> None:
                 else:
                     st.warning("⚠️ Não foi possível enviar mensagem de boas-vindas. Envie /start para o bot manualmente.")
 
-    # Seleção de ativo - agora exibe TODOS os pares spot disponíveis
+    # Seleção de ativo
     todos_ativos = obter_todos_pares_usdt()
     if not todos_ativos:
         st.warning("Nenhum par spot válido encontrado. Verifique sua conexão com a exchange.")
@@ -1849,5 +1869,22 @@ def main() -> None:
 
     painel_principal(simbolo_selecionado, timeframe_interface, txt, modo_vivo, intervalo_refresh, idioma_selecionado)
 
+# ==========================================================================
+# O CÓDIGO ABAIXO GARANTE QUE, AO EXECUTAR python main.py,
+# O STREAMLIT SEJA INICIADO AUTOMATICAMENTE COM A PORTA CORRETA.
+# ==========================================================================
 if __name__ == "__main__":
-    main()
+    # Se este script foi executado diretamente (não via streamlit run),
+    # a variável de ambiente STREAMLIT_RUN não está definida.
+    # Nesse caso, invocamos o streamlit com a porta adequada.
+    if not os.environ.get("STREAMLIT_RUN", False):
+        port = os.environ.get("PORT", "8080")
+        subprocess.run(
+            [sys.executable, "-m", "streamlit", "run", __file__,
+             "--server.port", port, "--server.address", "0.0.0.0"],
+            env={**os.environ, "STREAMLIT_RUN": "true"},
+            check=True
+        )
+    else:
+        # Se o streamlit já estiver rodando, executamos a função main
+        main()
