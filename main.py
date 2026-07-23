@@ -1,6 +1,6 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - MULTILÍNGUE + OTIMIZADO PARA DISCLOUD
+# Versão 2.0 - MULTILÍNGUE + AVISO DE SEGURANÇA EDUCACIONAL
 # Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, zoneinfo
 # -----------------------------------------------------------------------------
 
@@ -39,8 +39,8 @@ def formatar_horario_brasilia(dt: datetime) -> str:
 # ==========================================================================
 # CONFIGURAÇÃO DO TELEGRAM (SUBSTITUA PELOS SEUS DADOS)
 # ==========================================================================
-TELEGRAM_TOKEN = "8923739480:AAH8WXthla04LrEv4tT5horPzM7P5SYTT9s"
-TELEGRAM_CHAT_ID = "1143799141"
+TELEGRAM_TOKEN = "SEU_TOKEN_AQUI"
+TELEGRAM_CHAT_ID = "SEU_CHAT_ID_AQUI"
 # ==========================================================================
 
 # -----------------------------------------------------------------------------
@@ -282,7 +282,8 @@ _TEXTOS_BASE_PT_BR = {
     "nao_configurado": "⚠️ Token ou Chat ID não configurados. Edite o código.",
     "erro_chat": "⚠️ Não foi possível enviar mensagem de boas-vindas. Envie /start para o bot manualmente.",
     "enviando_teste": "Enviando mensagem de teste...",
-    "ultimo_envio": "Último envio:"
+    "ultimo_envio": "Último envio:",
+    "aviso_seguranca": "⚠️ AVISO: O BRICSVAULT é uma ferramenta educacional. As análises e sinais gerados não constituem aconselhamento financeiro. Cada usuário é responsável por suas próprias decisões de investimento."
 }
 
 # ==========================================================================
@@ -370,7 +371,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ Token or Chat ID not configured. Edit the code.",
         "erro_chat": "⚠️ Could not send welcome message. Send /start to the bot manually.",
         "enviando_teste": "Sending test message...",
-        "ultimo_envio": "Last send:"
+        "ultimo_envio": "Last send:",
+        "aviso_seguranca": "⚠️ DISCLAIMER: BRICSVAULT is an educational tool. The analyses and signals generated do not constitute financial advice. Each user is responsible for their own investment decisions."
     },
     "Español": {
         "titulo": "🏦 BRICSVAULT PORTAL - Motor de Smart Money Concepts (SMC)",
@@ -452,7 +454,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ Token o Chat ID no configurados. Edite el código.",
         "erro_chat": "⚠️ No se pudo enviar mensaje de bienvenida. Envíe /start al bot manualmente.",
         "enviando_teste": "Enviando mensaje de prueba...",
-        "ultimo_envio": "Último envío:"
+        "ultimo_envio": "Último envío:",
+        "aviso_seguranca": "⚠️ AVISO: BRICSVAULT es una herramienta educativa. Los análisis y señales generados no constituyen asesoramiento financiero. Cada usuario es responsable de sus propias decisiones de inversión."
     },
     "Français": {
         "titulo": "🏦 BRICSVAULT PORTAL - Moteur Smart Money Concepts (SMC)",
@@ -534,7 +537,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ Token ou Chat ID non configuré. Modifiez le code.",
         "erro_chat": "⚠️ Impossible d'envoyer le message de bienvenue. Envoyez /start au bot manuellement.",
         "enviando_teste": "Envoi du message de test...",
-        "ultimo_envio": "Dernier envoi:"
+        "ultimo_envio": "Dernier envoi:",
+        "aviso_seguranca": "⚠️ AVERTISSEMENT : BRICSVAULT est un outil pédagogique. Les analyses et signaux générés ne constituent pas des conseils financiers. Chaque utilisateur est responsable de ses propres décisions d'investissement."
     },
     "Deutsch": {
         "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC) Motor",
@@ -616,7 +620,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ Token oder Chat-ID nicht konfiguriert. Code bearbeiten.",
         "erro_chat": "⚠️ Willkommensnachricht konnte nicht gesendet werden. Senden Sie /start manuell an den Bot.",
         "enviando_teste": "Testnachricht wird gesendet...",
-        "ultimo_envio": "Letzter Versand:"
+        "ultimo_envio": "Letzter Versand:",
+        "aviso_seguranca": "⚠️ HINWEIS: BRICSVAULT ist ein Bildungswerkzeug. Die generierten Analysen und Signale stellen keine Finanzberatung dar. Jeder Benutzer ist für seine eigenen Anlageentscheidungen verantwortlich."
     },
     "Italiano": {
         "titulo": "🏦 BRICSVAULT PORTAL - Motore Smart Money Concepts (SMC)",
@@ -698,7 +703,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ Token o Chat ID non configurati. Modifica il codice.",
         "erro_chat": "⚠️ Impossibile inviare messaggio di benvenuto. Invia /start manualmente al bot.",
         "enviando_teste": "Invio messaggio di test...",
-        "ultimo_envio": "Ultimo invio:"
+        "ultimo_envio": "Ultimo invio:",
+        "aviso_seguranca": "⚠️ AVVISO: BRICSVAULT è uno strumento educativo. Le analisi e i segnali generati non costituiscono consulenza finanziaria. Ogni utente è responsabile delle proprie decisioni di investimento."
     },
     "Русский": {
         "titulo": "🏦 BRICSVAULT PORTAL - Двигатель Smart Money Concepts (SMC)",
@@ -780,7 +786,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ Токен или Chat ID не настроены. Отредактируйте код.",
         "erro_chat": "⚠️ Не удалось отправить приветственное сообщение. Отправьте /start боту вручную.",
         "enviando_teste": "Отправка тестового сообщения...",
-        "ultimo_envio": "Последняя отправка:"
+        "ultimo_envio": "Последняя отправка:",
+        "aviso_seguranca": "⚠️ ПРЕДУПРЕЖДЕНИЕ: BRICSVAULT является образовательным инструментом. Генерируемые анализы и сигналы не являются финансовыми консультациями. Каждый пользователь несет ответственность за свои собственные инвестиционные решения."
     },
     "日本語": {
         "titulo": "🏦 BRICSVAULT PORTAL - スマートマネーコンセプト（SMC）エンジン",
@@ -862,7 +869,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ トークンまたはChat IDが設定されていません。コードを編集してください。",
         "erro_chat": "⚠️ ウェルカムメッセージを送信できませんでした。手動でボットに/startを送信してください。",
         "enviando_teste": "テストメッセージ送信中...",
-        "ultimo_envio": "最終送信:"
+        "ultimo_envio": "最終送信:",
+        "aviso_seguranca": "⚠️ 免責事項：BRICSVAULTは教育ツールです。生成される分析やシグナルは金融アドバイスを構成するものではありません。各ユーザーは自己の投資判断について責任を負います。"
     },
     "中文 (简体)": {
         "titulo": "🏦 BRICSVAULT PORTAL - 智能资金概念（SMC）引擎",
@@ -944,7 +952,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ 未配置Token或Chat ID。请编辑代码。",
         "erro_chat": "⚠️ 无法发送欢迎消息。请手动向机器人发送/start。",
         "enviando_teste": "正在发送测试消息...",
-        "ultimo_envio": "最后发送："
+        "ultimo_envio": "最后发送：",
+        "aviso_seguranca": "⚠️ 免责声明：BRICSVAULT 是一个教育工具。生成的分析和信号不构成财务建议。每位用户应对自己的投资决策负责。"
     },
     "हिन्दी": {
         "titulo": "🏦 BRICSVAULT PORTAL - स्मार्ट मनी कॉन्सेप्ट्स (SMC) इंजन",
@@ -1026,7 +1035,8 @@ _TRADUCOES = {
         "nao_configurado": "⚠️ टोकन या चैट आईडी कॉन्फ़िगर नहीं है। कोड संपादित करें।",
         "erro_chat": "⚠️ स्वागत संदेश नहीं भेजा जा सका। मैन्युअल रूप से बॉट को /start भेजें।",
         "enviando_teste": "परीक्षण संदेश भेजा जा रहा है...",
-        "ultimo_envio": "अंतिम भेजा गया:"
+        "ultimo_envio": "अंतिम भेजा गया:",
+        "aviso_seguranca": "⚠️ अस्वीकरण: BRICSVAULT एक शैक्षिक उपकरण है। उत्पन्न विश्लेषण और सिग्नल वित्तीय सलाह नहीं हैं। प्रत्येक उपयोगकर्ता अपने निवेश निर्णयों के लिए स्वयं जिम्मेदार है।"
     }
 }
 
@@ -2482,7 +2492,7 @@ def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Di
             renderizar_card_plano(txt, simbolo_selecionado, res["direcao"], preco_atual,
                                   stop, alvos, base_stop, preco_atual)
 
-    # Rodapé
+    # Rodapé com horário de Brasília + AVISO DE SEGURANÇA
     agora_br = horario_brasilia()
     hora_br = formatar_horario_brasilia(agora_br)
     prefixo = "🟢" if modo_vivo else "⏸"
@@ -2492,6 +2502,24 @@ def painel_principal(simbolo_selecionado: str, timeframe_interface: str, txt: Di
         f"{prefixo} {txt['ultima_atualizacao']}: {hora_br} (Brasília){extra}{info_monitoramento} | "
         f"{txt['aviso_aquecimento']}: {PERIODO_AQUECIMENTO} | "
         f"Velas analisadas: {len(df_analise)}"
+    )
+
+    # ===== AVISO DE SEGURANÇA EDUCACIONAL =====
+    st.markdown(
+        f"""
+        <div style="background:#fef2f2;border-left:6px solid #dc2626;border-radius:8px;
+                    padding:16px 20px;margin-top:20px;margin-bottom:0px;
+                    font-family:ui-monospace,monospace;font-size:0.9em;
+                    color:#7f1d1d;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+                <span style="font-size:1.2em;">⚠️</span>
+                <div>
+                    <strong>⚠️ {txt['aviso_seguranca']}</strong>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
     )
 
 # -----------------------------------------------------------------------------
