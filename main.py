@@ -1,40 +1,8 @@
 # -----------------------------------------------------------------------------
 # BRICSVAULT PORTAL - Smart Money Concepts (SMC) Engine
-# Versão 2.0 - AUTO-DEPLOY PARA DISCLOUD (SEM ARQUIVOS ADICIONAIS)
-# Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, decimal, zoneinfo
+# Versão 2.0 - OTIMIZADO PARA DISCLOUD (SEM AUTO-INICIALIZAÇÃO)
+# Requisitos: streamlit, ccxt, pandas, numpy, requests, plotly, zoneinfo
 # -----------------------------------------------------------------------------
-
-import os
-import sys
-import subprocess
-
-# ==========================================================================
-# SE ESTIVER SENDO EXECUTADO DIRETAMENTE (NÃO PELO STREAMLIT),
-# INICIA O STREAMLIT COM A PORTA CORRETA
-# ==========================================================================
-if __name__ == "__main__":
-    # Se o script foi executado com "python main.py" (e não com "streamlit run")
-    # então nós mesmos iniciamos o Streamlit com a porta adequada.
-    if not os.environ.get("STREAMLIT_RUN", False):
-        # Define a porta (padrão 8080 para Discloud)
-        port = os.environ.get("PORT", "8080")
-        # Verifica se o streamlit está instalado
-        try:
-            subprocess.run(
-                [sys.executable, "-m", "streamlit", "run", __file__,
-                 "--server.port", port, "--server.address", "0.0.0.0"],
-                env={**os.environ, "STREAMLIT_RUN": "true"},
-                check=True
-            )
-        except Exception as e:
-            print(f"Erro ao iniciar Streamlit: {e}")
-            sys.exit(1)
-        sys.exit(0)
-
-# ==========================================================================
-# A PARTIR DAQUI, É O CÓDIGO NORMAL DO BRICSVAULT
-# (SÓ É EXECUTADO QUANDO O STREAMLIT RODA)
-# ==========================================================================
 
 import streamlit as st
 import ccxt
@@ -47,7 +15,27 @@ from decimal import Decimal
 import plotly.graph_objects as go
 from typing import Optional, Dict, Any, List, Tuple, Union
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+
+# ===== TRATAMENTO DE ZONEINFO (fallback para pytz) =====
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    import pytz
+    class ZoneInfo:
+        def __init__(self, key):
+            self._tz = pytz.timezone(key)
+        def __call__(self, *args, **kwargs):
+            return self._tz
+    # Ajusta a função horario_brasilia para usar o fallback
+
+def horario_brasilia() -> datetime:
+    try:
+        return datetime.now(ZoneInfo("America/Sao_Paulo"))
+    except:
+        return datetime.now()
+
+def formatar_horario_brasilia(dt: datetime) -> str:
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 # ==========================================================================
 # CONFIGURAÇÃO DO TELEGRAM (SUBSTITUA PELOS SEUS DADOS)
@@ -57,7 +45,7 @@ TELEGRAM_CHAT_ID = "1143799141"
 # ==========================================================================
 
 # -----------------------------------------------------------------------------
-# CONFIGURAÇÃO DA PÁGINA
+# CONFIGURAÇÃO DA PÁGINA (DEVE SER A PRIMEIRA CHAMADA STREAMLIT)
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="BRICSVAULT PORTAL SMC",
@@ -73,10 +61,11 @@ VELAS_TOTAL: int = 500
 PERIODO_AQUECIMENTO: int = 100
 IDIOMA_PADRAO: str = "Português (BR)"
 
+# TTLs mais longos para evitar bloqueios
 TTL_MERCADOS_SEGUNDOS: int = 3600
-TTL_DADOS_LIVE_SEGUNDOS: int = 180
-TTL_DADOS_INTERFACE_SEGUNDOS: int = 60
-TTL_BOOK_SEGUNDOS: int = 60
+TTL_DADOS_LIVE_SEGUNDOS: int = 300          # 5 minutos
+TTL_DADOS_INTERFACE_SEGUNDOS: int = 120     # 2 minutos
+TTL_BOOK_SEGUNDOS: int = 120
 TTL_TOP_ATIVOS: int = 7200
 
 EXCHANGE_TIMEOUT_MS: int = 15000
@@ -165,7 +154,7 @@ RESUMOS_WYCKOFF = {
 }
 
 # ==========================================================================
-# DICIONÁRIO DE IDIOMAS
+# DICIONÁRIO DE IDIOMAS (resumido para economia de espaço, mas mantido)
 # ==========================================================================
 _TEXTOS_BASE_PT_BR = {
     "titulo": "🏦 BRICSVAULT PORTAL - Smart Money Concepts (SMC)",
@@ -351,12 +340,6 @@ def obter_resumo_wyckoff(evento_tipo: str, idioma: str) -> str:
     chave_idioma = {"Português (BR)": "pt", "English (EN)": "en"}.get(idioma, "pt")
     return RESUMOS_WYCKOFF.get(evento_tipo, {}).get(chave_idioma, "Evento Wyckoff detectado")
 
-def horario_brasilia() -> datetime:
-    return datetime.now(ZoneInfo("America/Sao_Paulo"))
-
-def formatar_horario_brasilia(dt: datetime) -> str:
-    return dt.strftime("%d/%m/%Y %H:%M:%S")
-
 # ==========================================================================
 # FUNÇÃO PARA ENVIAR MENSAGEM AO TELEGRAM
 # ==========================================================================
@@ -435,7 +418,7 @@ def valor_com_memoria(chave: str, valor: Optional[float]) -> Tuple[Optional[floa
     return None, False
 
 # -----------------------------------------------------------------------------
-# GERENCIADOR DE EXCHANGES (COM CONFIGURAÇÃO SPOT)
+# GERENCIADOR DE EXCHANGES
 # -----------------------------------------------------------------------------
 PRIORITY_EXCHANGES = ["Gate.io", "Kraken", "MEXC", "KuCoin"]
 SIGLAS_EXCHANGES = {"Gate.io": "GATE", "Kraken": "KRK", "MEXC": "MEXC", "KuCoin": "KUC"}
@@ -487,7 +470,7 @@ def obter_todos_pares_usdt() -> List[str]:
         return padrao
 
 # ==========================================================================
-# FUNÇÃO PARA OBTER OS TOP 50 ATIVOS POR VOLUME (APENAS SPOT)
+# FUNÇÃO PARA OBTER OS TOP 50 ATIVOS POR VOLUME
 # ==========================================================================
 @st.cache_data(ttl=TTL_TOP_ATIVOS, show_spinner=False)
 def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
@@ -510,7 +493,7 @@ def obter_top_ativos_por_volume(quantidade: int = TOP_ATIVOS_QTD) -> List[str]:
         return [p for p in padrao if is_valid_spot_pair(p)][:quantidade]
 
 # ==========================================================================
-# FUNÇÕES DE MERCADO (REST e OHLCV)
+# FUNÇÕES DE MERCADO
 # ==========================================================================
 def _obter_dados_24h_rest_direto(exchange_name: str, simbolo: str) -> Optional[Dict]:
     try:
@@ -607,6 +590,7 @@ def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Opti
             if velas and len(velas) >= PERIODO_AQUECIMENTO + 50:
                 df = pd.DataFrame(velas, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
                 df['time'] = pd.to_datetime(df['timestamp'], unit='ms')
+                # Indicadores
                 df['RSI_14'] = calcular_rsi(df['close'], 14)
                 k, d = calcular_rsi_estocastico(df['close'])
                 df['STOCH_K'] = k
@@ -634,7 +618,7 @@ def _carregar_dados_interno(simbolo_id: str, timeframe_selecionado: str) -> Opti
     return None
 
 # -----------------------------------------------------------------------------
-# INDICADORES TÉCNICOS
+# INDICADORES TÉCNICOS (funções mantidas)
 # -----------------------------------------------------------------------------
 def calcular_rsi(serie: pd.Series, periodo: int = 14) -> pd.Series:
     delta = serie.diff()
@@ -1256,7 +1240,7 @@ def lucro_percentual(direcao: str, entrada: float, alvo: float) -> float:
     return (entrada / alvo - 1) * 100
 
 # ==========================================================================
-# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO (APENAS SPOT, COM CONTROLE DE ESTADO)
+# FUNÇÃO DE MONITORAMENTO AUTOMÁTICO
 # ==========================================================================
 def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
     if not ativos:
@@ -1346,7 +1330,7 @@ def monitorar_ativos(ativos: List[str], timeframe: str, txt: Dict) -> None:
             st.session_state["_ultimo_envio"] = agora
 
 # ==========================================================================
-# RENDERIZAÇÃO (UI)
+# RENDERIZAÇÃO (UI) - mantida
 # ==========================================================================
 def renderizar_card_plano(txt: Dict, simbolo_id: str, direcao: str,
                           entrada: float, stop: float, alvos: List[float],
@@ -1869,22 +1853,5 @@ def main() -> None:
 
     painel_principal(simbolo_selecionado, timeframe_interface, txt, modo_vivo, intervalo_refresh, idioma_selecionado)
 
-# ==========================================================================
-# O CÓDIGO ABAIXO GARANTE QUE, AO EXECUTAR python main.py,
-# O STREAMLIT SEJA INICIADO AUTOMATICAMENTE COM A PORTA CORRETA.
-# ==========================================================================
 if __name__ == "__main__":
-    # Se este script foi executado diretamente (não via streamlit run),
-    # a variável de ambiente STREAMLIT_RUN não está definida.
-    # Nesse caso, invocamos o streamlit com a porta adequada.
-    if not os.environ.get("STREAMLIT_RUN", False):
-        port = os.environ.get("PORT", "8080")
-        subprocess.run(
-            [sys.executable, "-m", "streamlit", "run", __file__,
-             "--server.port", port, "--server.address", "0.0.0.0"],
-            env={**os.environ, "STREAMLIT_RUN": "true"},
-            check=True
-        )
-    else:
-        # Se o streamlit já estiver rodando, executamos a função main
-        main()
+    main()
